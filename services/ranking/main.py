@@ -4,6 +4,7 @@ import torch
 import numpy as np
 import pandas as pd
 import faiss
+import requests
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
@@ -114,19 +115,50 @@ def rank(request: RankRequest):
         i_tensor = torch.tensor(candidate_ids, dtype=torch.long)
         rank_scores = deepfm(u_tensor, i_tensor).numpy().tolist()
 
+    # ── Real-Time Features ──────────────────────────────────────────
+    user_features = {}
+    try:
+        resp = requests.get(f"http://127.0.0.1:8002/features/user/{request.user_id}", timeout=1)
+        if resp.status_code == 200:
+            user_features = resp.json()
+    except Exception:
+        pass
+        
+    top_genres = {g[0]: g[1] for g in user_features.get("top_genres", [])}
+    recent_items = set(user_features.get("recent_items", []))
+
     # Build results and sort by ranking score (higher = better)
     results = []
     for cid, r_score, rk_score in zip(candidate_ids, retrieval_scores, rank_scores):
         title = ""
+        movie_genres = ""
         if movies_df is not None:
             row = movies_df[movies_df['item_id'] == cid]
             if not row.empty:
                 title = row.iloc[0]['title']
+                if 'genres' in row.columns:
+                    movie_genres = row.iloc[0]['genres']
+                    
+        # Real-time score adjustments
+        rt_boost = 0.0
+        
+        # 1. Genre Boost: if movie matches top real-time genres
+        if top_genres and movie_genres:
+            for g in movie_genres.split('|'):
+                if g in top_genres:
+                    rt_boost += top_genres[g] * 0.5  # 50% of the genre score as boost
+                    
+        # 2. Recent items penalty: don't recommend what they just interacted with
+        if cid in recent_items:
+            rt_boost -= 10.0
+            
+        final_score = float(rk_score) + rt_boost
+
         results.append(RankedItem(
             item_id=cid,
             title=title,
             retrieval_score=float(r_score),
-            ranking_score=float(rk_score),
+            ranking_score=final_score,
         ))
 
     results.sort(key=lambda r: r.ranking_score, reverse=True)

@@ -9,3 +9,5 @@ torch
 pytest
 mlflow
 requests
+fakeredis
+redis
