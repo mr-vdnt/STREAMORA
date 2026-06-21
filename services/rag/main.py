@@ -100,6 +100,69 @@ def explain_recommendation(request: ExplainRequest):
         graph_path=graph_path
     )
 
+class ExplainSimilarityRequest(BaseModel):
+    source_item_id: int
+    target_item_id: int
+
+class ExplainSimilarityResponse(BaseModel):
+    source_item_id: int
+    target_item_id: int
+    target_title: str
+    explanation: str
+    graph_path: list[str]
+    rich_metadata: dict
+
+@app.post("/explain_similarity", response_model=ExplainSimilarityResponse)
+def explain_similarity(request: ExplainSimilarityRequest):
+    """
+    Generates an explanation for why two movies are similar by finding
+    the shortest path between them in the Knowledge Graph.
+    """
+    # 1. Get Target Movie Title
+    title = f"Movie {request.target_item_id}"
+    if not movies_df.empty:
+        row = movies_df[movies_df['item_id'] == request.target_item_id]
+        if not row.empty:
+            title = row.iloc[0]['title']
+
+    # 2. Find Graph Path directly between the two movies
+    source_node = f"Movie:{request.source_item_id}"
+    target_node = f"Movie:{request.target_item_id}"
+    
+    graph_path = graph_engine.find_path(source_node, target_node, max_depth=3)
+    if not graph_path:
+        graph_path = []
+
+    # 3. Generate LLM Explanation
+    # We can reuse the LLM generator, passing the source movie as "user_context"
+    source_title = f"Movie {request.source_item_id}"
+    if not movies_df.empty:
+        s_row = movies_df[movies_df['item_id'] == request.source_item_id]
+        if not s_row.empty:
+            source_title = s_row.iloc[0]['title']
+            
+    explanation = llm_provider.generate_explanation(
+        user_context=f"the movie '{source_title}'",
+        movie_title=title,
+        graph_path=graph_path
+    )
+    
+    rich_metadata = llm_provider.generate_rich_metadata(
+        item_id=request.target_item_id,
+        title=title,
+        explanation=explanation,
+        score=0.0 # Handled in the metadata gen
+    )
+
+    return ExplainSimilarityResponse(
+        source_item_id=request.source_item_id,
+        target_item_id=request.target_item_id,
+        target_title=title,
+        explanation=explanation,
+        graph_path=graph_path,
+        rich_metadata=rich_metadata
+    )
+
 
 @app.get("/")
 def health():

@@ -65,6 +65,10 @@ class FeatureStore:
                 self.r.hset(user_key, "device", metadata["device"])
             if "session_id" in metadata:
                 self.r.hset(user_key, "session_id", metadata["session_id"])
+                
+        # 5. Track global trending items
+        weight = {"purchase": 5, "click": 2, "view": 1}.get(event_type, 1)
+        self.r.zincrby("global:trending_items", weight, item_id)
 
     # ── Read Operations ─────────────────────────────────────────────
 
@@ -109,6 +113,11 @@ class FeatureStore:
         genres = profile.get("genre_scores", {})
         sorted_genres = sorted(genres.items(), key=lambda x: x[1], reverse=True)
         return sorted_genres[:top_k]
+
+    def get_global_trending(self, top_k: int = 10) -> list[tuple[int, float]]:
+        """Get global trending items using Redis Sorted Set."""
+        items = self.r.zrevrange("global:trending_items", 0, top_k - 1, withscores=True)
+        return [(int(i), float(s)) for i, s in items]
 
     # ── Stats ───────────────────────────────────────────────────────
 

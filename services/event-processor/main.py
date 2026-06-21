@@ -126,6 +126,14 @@ def get_user_features(user_id: int):
     profile["top_genres"] = feature_store.get_top_genres(user_id, top_k=5)
     return profile
 
+@app.get("/features/global")
+def get_global_features():
+    """Get global trending items."""
+    trending = feature_store.get_global_trending(top_k=5)
+    # If no trending data yet (e.g., fresh start without event simulator), return some defaults
+    if not trending:
+        trending = [(1, 5.0), (2, 4.5), (3, 4.0), (4, 3.5), (5, 3.0)]
+    return {"popular_items": trending}
 
 # ── Multimodal Feature Endpoints ────────────────────────────────────
 visual_embeddings_cache = {}

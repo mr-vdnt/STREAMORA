@@ -40,3 +40,45 @@ def get_trending() -> dict:
         return {"status": "error", "message": f"Feature Store returned {resp.status_code}"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+import pandas as pd
+import os
+
+def search_movie_by_title(title_query: str) -> dict:
+    """Searches local movies.csv for a fuzzy title match and returns item_id and title."""
+    print(f"Agent Tool: Searching for movie '{title_query}'")
+    try:
+        if os.path.exists("data/raw/movies.csv"):
+            df = pd.read_csv("data/raw/movies.csv")
+            # Simple case-insensitive substring match
+            matches = df[df['title'].str.contains(title_query, case=False, na=False)]
+            if not matches.empty:
+                first_match = matches.iloc[0]
+                return {"status": "success", "item_id": int(first_match['item_id']), "title": str(first_match['title'])}
+        return {"status": "error", "message": f"Could not find movie matching '{title_query}'"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+def get_similar_movies(item_id: int) -> dict:
+    """Hits the Ranking Service (Port 8001) for item-to-item similarity."""
+    print(f"Agent Tool: Fetching similar movies for Item {item_id}")
+    try:
+        req = {"item_id": item_id, "top_k": 20}
+        resp = requests.post("http://127.0.0.1:8001/similar", json=req, timeout=5)
+        if resp.status_code == 200:
+            return {"status": "success", "data": resp.json()}
+        return {"status": "error", "message": f"Ranking API returned {resp.status_code}"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+def get_similarity_explanation(source_item_id: int, target_item_id: int) -> dict:
+    """Hits the Graph RAG Service (Port 8003) to explain why two items are similar."""
+    print(f"Agent Tool: Explaining similarity between {source_item_id} and {target_item_id}")
+    try:
+        req = {"source_item_id": source_item_id, "target_item_id": target_item_id}
+        resp = requests.post("http://127.0.0.1:8003/explain_similarity", json=req, timeout=30)
+        if resp.status_code == 200:
+            return {"status": "success", "data": resp.json()}
+        return {"status": "error", "message": f"RAG API returned {resp.status_code}"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}

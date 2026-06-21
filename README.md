@@ -141,3 +141,50 @@ To run the full decoupled microservices ecosystem:
 - [x] **Phase 4**: Enterprise RAG & Graph Intelligence (Local Knowledge Graph, HuggingFace LLM RAG)
 - [x] **Phase 5**: Agentic Intelligence (Intent-Based Orchestrator Agent for tool routing)
 - [ ] **Phase 6**: Multimodal AI & Autonomous Optimization (Online Learning, Feature Fusion)
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+Created run_all.bat
+
+To run the AURORA AI platform locally, you need to spin up the 4 microservices. Since typing out the commands for all 4 ports every time is tedious, I just wrote a handy helper script for you!
+
+### The Easiest Way
+I just created a `run_all.bat` file in your repository. 
+Simply open your File Explorer, navigate to the `aurora-ai` folder, and **double-click on `run_all.bat`**. 
+This will instantly pop open 4 terminal windows and start all the microservices simultaneously! Once they are running, open your web browser and go to `http://127.0.0.1:8004` to access the UI.
+
+### The Manual Way (via PowerShell)
+If you prefer to start them manually or inspect the logs in your own terminal tabs, you can run these 4 commands (each in a separate terminal tab inside the project folder):
+
+**1. Start the Ranking Engine (Port 8001)**
+```powershell
+.\venv\Scripts\activate
+$env:PYTHONPATH = "."
+uvicorn services.ranking.main:app --host 127.0.0.1 --port 8001
+```
+
+**2. Start the Event Processor (Port 8002)**
+```powershell
+.\venv\Scripts\activate
+$env:PYTHONPATH = "."
+uvicorn services.event-processor.main:app --host 127.0.0.1 --port 8002
+```
+
+**3. Start the Graph RAG Service (Port 8003)**
+```powershell
+.\venv\Scripts\activate
+$env:PYTHONPATH = "."
+uvicorn services.rag.main:app --host 127.0.0.1 --port 8003
+```
+
+**4. Start the Orchestrator Agent & UI (Port 8004)**
+```powershell
+.\venv\Scripts\activate
+$env:PYTHONPATH = "."
+uvicorn services.agent.main:app --host 127.0.0.1 --port 8004
+```
+
+Once Port 8004 is running, your UI is live!
+
+*(Note: If you run `run_all.bat` right now, you might get an error because I am currently running the servers for you in the background. If you want to take over manual control, just let me know and I will kill my background processes!)*

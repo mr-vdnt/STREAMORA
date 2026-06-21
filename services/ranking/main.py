@@ -55,17 +55,13 @@ async def startup_event():
     num_users = int(ratings['user_id'].max())
     num_items = int(ratings['item_id'].max())
 
-    # ── Two-Tower (retrieval) ───────────────────────────────────────
-    tt_weights = "models/collaborative/twotower_weights.pth"
-    tt_index   = "data/index/twotower_items.index"
-    if os.path.exists(tt_weights) and os.path.exists(tt_index):
-        two_tower = TwoTowerModel(num_users=num_users, num_items=num_items, embedding_dim=64)
-        two_tower.load_state_dict(torch.load(tt_weights, map_location="cpu", weights_only=True))
-        two_tower.eval()
-        faiss_index = faiss.read_index(tt_index)
-        print("  [OK] Two-Tower model loaded")
+    # ── Semantic Search (retrieval) ─────────────────────────────────
+    semantic_index_path = "data/index/semantic_items.index"
+    if os.path.exists(semantic_index_path):
+        faiss_index = faiss.read_index(semantic_index_path)
+        print("  [OK] Semantic Content FAISS index loaded")
     else:
-        print("  [MISSING] Two-Tower weights or index not found - retrieval disabled")
+        print("  [MISSING] Semantic FAISS index not found - retrieval disabled")
 
     # ── DeepFM (re-ranking) ─────────────────────────────────────────
     dfm_weights = "models/rerankers/deepfm_weights.pth"
@@ -90,10 +86,61 @@ async def startup_event():
 def health():
     return {
         "status": "AURORA AI Ranking Service Running",
-        "retrieval_ready": two_tower is not None,
+        "retrieval_ready": faiss_index is not None,
         "ranking_ready": deepfm is not None,
     }
 
+
+class SimilarRequest(BaseModel):
+    item_id: int
+    top_k: int = 20
+
+@app.post("/similar", response_model=list[RankedItem])
+def get_similar_items(request: SimilarRequest):
+    """
+    Finds mathematically similar movies by searching the 384-D Semantic Space
+    via FAISS using Sentence-Transformer embeddings of the plot and genres.
+    """
+    if faiss_index is None:
+        raise HTTPException(status_code=503, detail="Semantic FAISS index not loaded.")
+        
+    try:
+        # FAISS is 0-indexed, our item_ids are 1-based sequential
+        idx = request.item_id - 1
+        item_emb = faiss_index.reconstruct(idx)
+        # Reshape to (1, D)
+        item_emb = np.array([item_emb]).astype('float32')
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=f"Could not reconstruct embedding for item {request.item_id}: {e}")
+
+    # We ask for top_k + 1 because the most similar item to X is X itself.
+    distances, indices = faiss_index.search(item_emb, request.top_k + 1)
+    
+    candidate_ids = (indices[0] + 1).tolist()
+    retrieval_scores = distances[0].tolist()
+    
+    results = []
+    for cid, r_score in zip(candidate_ids, retrieval_scores):
+        if cid == request.item_id:
+            continue # Skip the seed movie itself
+            
+        title = ""
+        if movies_df is not None:
+            row = movies_df[movies_df['item_id'] == cid]
+            if not row.empty:
+                title = row.iloc[0]['title']
+                
+        results.append(RankedItem(
+            item_id=cid,
+            title=title,
+            retrieval_score=float(r_score),
+            ranking_score=float(r_score) # no deepfm re-ranking for pure similarity yet
+        ))
+        
+        if len(results) == request.top_k:
+            break
+            
+    return results
 
 @app.post("/rank", response_model=list[RankedItem])
 def rank(request: RankRequest):
@@ -102,22 +149,51 @@ def rank(request: RankRequest):
       Stage 1 → Two-Tower retrieval via FAISS (fast, 100k→50)
       Stage 2 → DeepFM re-ranking (precise, 50→10)
     """
-    if two_tower is None or faiss_index is None:
-        raise HTTPException(status_code=503, detail="Two-Tower retrieval model not loaded.")
+    if faiss_index is None:
+        raise HTTPException(status_code=503, detail="Semantic FAISS retrieval model not loaded.")
     if deepfm is None:
         raise HTTPException(status_code=503, detail="DeepFM ranking model not loaded.")
     if request.user_id < 1 or request.user_id > num_users:
         raise HTTPException(status_code=400, detail=f"user_id must be between 1 and {num_users}")
 
-    # ── Stage 1: Retrieval ──────────────────────────────────────────
-    with torch.no_grad():
-        user_tensor = torch.tensor([request.user_id])
-        user_emb = two_tower.get_user_embedding(user_tensor).numpy().astype('float32')
+    # ── Real-Time Features ──────────────────────────────────────────
+    user_features = {}
+    try:
+        resp = requests.get(f"http://127.0.0.1:8002/features/user/{request.user_id}", timeout=1)
+        if resp.status_code == 200:
+            user_features = resp.json()
+    except Exception:
+        pass
+        
+    top_genres = {g[0]: g[1] for g in user_features.get("top_genres", [])}
+    recent_items = user_features.get("recent_items", [])
 
-    distances, indices = faiss_index.search(user_emb, request.top_k_retrieval)
-    # FAISS indices are 0-based; item_ids are 1-based
-    candidate_ids = (indices[0] + 1).tolist()
-    retrieval_scores = distances[0].tolist()
+    # ── Stage 1: Retrieval (Content-Based) ──────────────────────────
+    candidate_ids = []
+    retrieval_scores = []
+    
+    if len(recent_items) > 0:
+        # Get semantic similar items for the user's most recent interaction
+        last_item = recent_items[0]
+        try:
+            item_emb = faiss_index.reconstruct(last_item - 1)
+            item_emb = np.array([item_emb]).astype('float32')
+            distances, indices = faiss_index.search(item_emb, request.top_k_retrieval + 1)
+            candidate_ids = (indices[0] + 1).tolist()
+            retrieval_scores = distances[0].tolist()
+            # Remove the seed item
+            if last_item in candidate_ids:
+                idx = candidate_ids.index(last_item)
+                candidate_ids.pop(idx)
+                retrieval_scores.pop(idx)
+        except Exception:
+            # Fallback to popular items if reconstruction fails
+            candidate_ids = list(range(1, min(request.top_k_retrieval + 1, num_items + 1)))
+            retrieval_scores = [1.0] * len(candidate_ids)
+    else:
+        # Fallback to general popular items (e.g. first N items, assuming sorted by popularity)
+        candidate_ids = list(range(1, min(request.top_k_retrieval + 1, num_items + 1)))
+        retrieval_scores = [1.0] * len(candidate_ids)
 
     # ── Stage 2: Re-ranking with DeepFM ─────────────────────────────
     with torch.no_grad():
@@ -139,17 +215,6 @@ def rank(request: RankRequest):
         v_tensor = torch.tensor(visual_features, dtype=torch.float32)
         rank_scores = deepfm(u_tensor, i_tensor, v_tensor).numpy().tolist()
 
-    # ── Real-Time Features ──────────────────────────────────────────
-    user_features = {}
-    try:
-        resp = requests.get(f"http://127.0.0.1:8002/features/user/{request.user_id}", timeout=1)
-        if resp.status_code == 200:
-            user_features = resp.json()
-    except Exception:
-        pass
-        
-    top_genres = {g[0]: g[1] for g in user_features.get("top_genres", [])}
-    recent_items = set(user_features.get("recent_items", []))
 
     # Build results and sort by ranking score (higher = better)
     results = []
