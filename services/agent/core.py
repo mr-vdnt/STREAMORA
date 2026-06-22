@@ -34,6 +34,7 @@ class OrchestratorAgent:
     def __init__(self):
         print("Loading Agent Intent Classifier (Mock rules to save 250MB RAM)...")
         self.intents = ["recommendation", "explanation", "trending", "similar_movies", "genre_search"]
+        self.conversation_memory = {} # {user_id: [history]}
         print("Agent ready.")
         
     def _extract_item_id(self, query: str) -> int:
@@ -50,16 +51,34 @@ class OrchestratorAgent:
         return " ".join(title_words) if title_words else "Toy Story"
 
     def process_query(self, user_id: int, query: str) -> dict:
+        if user_id not in self.conversation_memory:
+            self.conversation_memory[user_id] = []
+        self.conversation_memory[user_id].append(query)
+        
+        # Analyze history for context
+        context_query = " ".join(self.conversation_memory[user_id][-3:])
+        
         top_intent = "recommendation" # Default
         
         # Heuristic overrides for better accuracy
         lower_q = query.lower()
+        context_lower = context_query.lower()
+        
         if "similar" in lower_q or "like" in lower_q:
             top_intent = "similar_movies"
         elif "trend" in lower_q or "popular" in lower_q or "hot" in lower_q:
             top_intent = "trending"
         elif "why" in lower_q or "explain" in lower_q:
             top_intent = "explanation"
+        elif any(g in lower_q for g in ["horror", "comedy", "action", "thriller", "drama", "anime", "k-drama", "bollywood", "romance", "psychological", "family"]):
+            top_intent = "genre_search"
+        elif "recommend" in lower_q:
+            top_intent = "recommendation"
+        elif any(g in context_lower for g in ["horror", "comedy", "action", "thriller", "drama", "anime"]):
+            # Memory fallback
+            if top_intent == "recommendation" and "similar" not in lower_q:
+                top_intent = "genre_search"
+                lower_q = context_lower # pass history to genre extractor
         elif any(g in lower_q for g in ["horror", "comedy", "action", "thriller", "drama", "anime", "k-drama", "bollywood", "romance", "psychological", "family"]):
             top_intent = "genre_search"
         elif "recommend" in lower_q:

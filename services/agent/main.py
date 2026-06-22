@@ -40,6 +40,25 @@ def chat_endpoint(req: ChatRequest):
         response=result["response"]
     )
 
+import pandas as pd
+@app.get("/autocomplete")
+def autocomplete(q: str):
+    """Real-time autocomplete endpoint matching movie titles."""
+    if len(q) < 2:
+        return []
+    try:
+        if os.path.exists("data/raw/movies.csv"):
+            df = pd.read_csv("data/raw/movies.csv")
+            # Return top 5 exact/prefix or substring matches
+            matches = df[df['title'].str.contains(q, case=False, na=False)].head(5)
+            titles = matches['title'].tolist()
+            # Clean up trailing year "(1995)" for cleaner search
+            titles = [t.split(" (")[0] for t in titles]
+            return titles
+    except Exception as e:
+        print("Autocomplete error:", e)
+    return []
+
 # Mount frontend directory at root
 frontend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../frontend'))
 app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
