@@ -73,12 +73,56 @@ document.addEventListener('DOMContentLoaded', () => {
         navigateTo('home');
     }
 
+    let loginMode = 'signin';
+    const toggleBtn = document.getElementById('toggle-login-mode');
+    const loginTitle = document.getElementById('login-title');
+    const toggleMsg = document.getElementById('toggle-message');
+    const submitBtn = document.getElementById('login-submit-btn');
+
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (loginMode === 'signin') {
+                loginMode = 'signup';
+                loginTitle.textContent = 'AURORA SIGN UP';
+                submitBtn.textContent = 'Sign Up';
+                toggleMsg.textContent = 'Already have an account?';
+                toggleBtn.textContent = 'Sign In';
+            } else {
+                loginMode = 'signin';
+                loginTitle.textContent = 'AURORA SIGN IN';
+                submitBtn.textContent = 'Sign In';
+                toggleMsg.textContent = 'New to Aurora?';
+                toggleBtn.textContent = 'Sign Up';
+            }
+            loginError.style.display = 'none';
+        });
+    }
+
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const fd = new FormData();
-        fd.append('username', document.getElementById('login-username').value);
-        fd.append('password', document.getElementById('login-password').value);
+        const usernameVal = document.getElementById('login-username').value;
+        const passwordVal = document.getElementById('login-password').value;
+
         try {
+            if (loginMode === 'signup') {
+                // Call Signup Endpoint
+                const signupRes = await fetch('/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: usernameVal, password: passwordVal })
+                });
+                if (!signupRes.ok) {
+                    const errData = await signupRes.json().catch(() => ({}));
+                    throw new Error(errData.detail || 'Sign up failed');
+                }
+            }
+
+            // Perform Sign In / Token Retrieval
+            const fd = new FormData();
+            fd.append('username', usernameVal);
+            fd.append('password', passwordVal);
+
             const res = await fetch('/token', { method: 'POST', body: fd });
             if (!res.ok) {
                 const errData = await res.json().catch(() => ({}));
@@ -90,10 +134,10 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('aurora_token', token);
             localStorage.setItem('aurora_user_id', userId);
             localStorage.setItem('aurora_role', data.role);
-            localStorage.setItem('aurora_username', document.getElementById('login-username').value);
+            localStorage.setItem('aurora_username', usernameVal);
             loginOverlay.style.display = 'none';
             loginError.style.display = 'none';
-            userDisplay.textContent = `User: ${document.getElementById('login-username').value}`;
+            userDisplay.textContent = `User: ${usernameVal}`;
             logoutBtn.style.display = 'inline-block';
             if(data.role === 'Administrator') adminLink.style.display = 'inline-block';
             navigateTo('home');

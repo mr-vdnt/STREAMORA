@@ -23,7 +23,7 @@ mimetypes.add_type('text/css', '.css')
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from services.agent.core import agent
-from services.security.auth import get_current_user, create_access_token, verify_password, get_user, FAKE_DB, ACCESS_TOKEN_EXPIRE_MINUTES, timedelta
+from services.security.auth import get_current_user, create_access_token, verify_password, get_user, FAKE_DB, ACCESS_TOKEN_EXPIRE_MINUTES, timedelta, save_users_db, pwd_context
 from services.security.audit import log_event
 
 load_dotenv(os.path.join(os.path.dirname(__file__), '../../.env'))
@@ -58,31 +58,46 @@ async def add_security_headers(request: Request, call_next):
     return response
 
 # --- AUTHENTICATION ---
+class SignupRequest(BaseModel):
+    username: str
+    password: str
+
+@app.post("/signup")
+@limiter.limit("5/minute")
+async def signup_endpoint(request: Request, req: SignupRequest):
+    username = req.username.strip()
+    # If signing up with email, restrict to Gmail
+    if "@" in username:
+        if not username.lower().endswith("@gmail.com"):
+            return JSONResponse(
+                status_code=400,
+                content={"detail": "Sign up via email is restricted to Gmail (@gmail.com) addresses."}
+            )
+    
+    # Check if user already exists
+    if get_user(username):
+        return JSONResponse(
+            status_code=400,
+            content={"detail": "Username or Gmail address is already registered."}
+        )
+    
+    # Register the user
+    new_uid = len(FAKE_DB) + 32
+    FAKE_DB[username] = {
+        "user_id": new_uid,
+        "username": username,
+        "hashed_password": pwd_context.hash(req.password),
+        "role": "Standard"
+    }
+    save_users_db()
+    log_event(who=username, what="USER_SIGNED_UP", where="/signup", details=f"Assigned ID: {new_uid}")
+    return {"status": "success", "message": "User registered successfully"}
+
 @app.post("/token")
 @limiter.limit("10/minute")
 async def login_for_access_token(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
     user = get_user(form_data.username)
-    if not user:
-        # If new user is signing up using email, it must be a Gmail address
-        if "@" in form_data.username:
-            if not form_data.username.strip().lower().endswith("@gmail.com"):
-                return JSONResponse(
-                    status_code=400, 
-                    content={"detail": "Registration via email is restricted to Gmail (@gmail.com) addresses."}
-                )
-        
-        # Automatically register new users dynamically
-        new_uid = len(FAKE_DB) + 32
-        FAKE_DB[form_data.username] = {
-            "user_id": new_uid,
-            "username": form_data.username,
-            "hashed_password": pwd_context.hash(form_data.password),
-            "role": "Standard"
-        }
-        user = FAKE_DB[form_data.username]
-        log_event(who=form_data.username, what="USER_AUTO_REGISTERED", where="/token", details=f"Assigned ID: {new_uid}")
-    
-    if not verify_password(form_data.password, user["hashed_password"]):
+    if not user or not verify_password(form_data.password, user["hashed_password"]):
         log_event(who=form_data.username, what="LOGIN_FAILED", where="/token", details="Invalid credentials")
         return JSONResponse(status_code=401, content={"detail": "Incorrect username or password"})
     

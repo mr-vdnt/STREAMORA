@@ -81,6 +81,32 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         raise credentials_exception
     return user
 
+import json
+
+USERS_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../data/users.json"))
+
+def load_users_db():
+    global FAKE_DB
+    if os.path.exists(USERS_FILE):
+        try:
+            with open(USERS_FILE, "r") as f:
+                data = json.load(f)
+                for k, v in data.items():
+                    FAKE_DB[k] = v
+        except Exception as e:
+            print("Error loading users database:", e)
+
+def save_users_db():
+    try:
+        os.makedirs(os.path.dirname(USERS_FILE), exist_ok=True)
+        with open(USERS_FILE, "w") as f:
+            json.dump(FAKE_DB, f, indent=4)
+    except Exception as e:
+        print("Error saving users database:", e)
+
+# Load database on startup
+load_users_db()
+
 async def require_admin(current_user: dict = Depends(get_current_user)):
     if current_user.get("role") != "Administrator":
         log_event(
