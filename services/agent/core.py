@@ -100,6 +100,8 @@ class OrchestratorAgent:
                         "item_id": int(row['item_id']),
                         "title": row['title'],
                         "poster_url": row.get('poster_url', ''),
+                        "backdrop_url": row.get('backdrop_url', ''),
+                        "overview": row.get('overview', ''),
                         "rich_metadata": _get_movie_metadata(row)
                     })
                 if not response_data:
@@ -139,7 +141,26 @@ class OrchestratorAgent:
         elif top_intent == "recommendation":
             tool_resp = get_recommendations(user_id)
             if tool_resp["status"] == "success":
-                response_data = tool_resp["data"]["recommendations"]
+                raw_items = tool_resp["data"]["recommendations"]
+                enriched = []
+                for item in raw_items:
+                    iid = item.get("item_id", 0)
+                    entry = {
+                        "item_id": iid,
+                        "title": item.get("title", ""),
+                        "poster_url": "",
+                        "rich_metadata": {}
+                    }
+                    if movies_df is not None:
+                        row = movies_df[movies_df['item_id'] == iid]
+                        if not row.empty:
+                            entry["title"] = row.iloc[0]['title']
+                            entry["poster_url"] = row.iloc[0].get('poster_url', '')
+                            entry["backdrop_url"] = row.iloc[0].get('backdrop_url', '')
+                            entry["overview"] = row.iloc[0].get('overview', '')
+                            entry["rich_metadata"] = _get_movie_metadata(row.iloc[0])
+                    enriched.append(entry)
+                response_data = enriched
             else:
                 response_data = tool_resp["message"]
                 
@@ -169,11 +190,20 @@ class OrchestratorAgent:
                             poster_url = row.iloc[0].get('poster_url', '')
                             meta = _get_movie_metadata(row.iloc[0])
                     
+                    backdrop_url = ""
+                    overview = ""
+                    if movies_df is not None:
+                        trow = movies_df[movies_df['item_id'] == item_id]
+                        if not trow.empty:
+                            backdrop_url = trow.iloc[0].get('backdrop_url', '')
+                            overview = trow.iloc[0].get('overview', '')
                     response_data.append({
                         "item_id": item_id, 
                         "score": score, 
                         "title": title,
                         "poster_url": poster_url,
+                        "backdrop_url": backdrop_url,
+                        "overview": overview,
                         "rich_metadata": meta
                     })
             else:
