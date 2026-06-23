@@ -51,24 +51,9 @@ async function authFetch(url, options = {}) {
 //  INIT
 // ══════════════════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
-    const loginOverlay = document.getElementById('login-overlay');
-    const logoutBtn = document.getElementById('logout-btn');
-    const adminLink = document.getElementById('admin-link');
     const userDisplay = document.getElementById('current-user-display');
-    const loginError = document.getElementById('login-error');
-
-    if (loginOverlay) loginOverlay.style.display = 'none';
     if (userDisplay) userDisplay.textContent = `User: guest`;
     navigateTo('home');
-
-
-    logoutBtn.addEventListener('click', () => {
-        localStorage.removeItem('aurora_token');
-        localStorage.removeItem('aurora_user_id');
-        localStorage.removeItem('aurora_role');
-        localStorage.removeItem('aurora_username');
-        window.location.reload();
-    });
 });
 
 // ══════════════════════════════════════════════════════════════════════
