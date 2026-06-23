@@ -1,69 +1,90 @@
-/* ==========================================================================
-   AURORA AI — Premium Netflix & Apple TV Frontend Logic
-   ========================================================================== */
+/* ======================================================================
+   AURORA AI — 3D Spatial Cinematic Frontend
+   Netflix × Apple TV × VisionOS Experience
+   ====================================================================== */
 
-// ── DOM ELEMENTS ────────────────────────────────────────────────────────
-const nav = document.getElementById('aurora-nav');
-const navLinks = document.getElementById('nav-links').querySelectorAll('a');
-const profileTrigger = document.getElementById('profile-trigger');
-const profileDropdown = document.getElementById('profile-dropdown');
-const userIdInput = document.getElementById('user-id-input');
+// ── DOM References ────────────────────────────────────────────────────
+const sidebar       = document.getElementById('sidebar');
+const sidebarToggle = document.getElementById('sidebar-toggle');
+const sidebarNav    = document.getElementById('sidebar-nav');
+const profileTrig   = document.getElementById('profile-trigger');
+const userIdInput   = document.getElementById('user-id-input');
+const topbar        = document.getElementById('topbar');
 
-// Search
 const searchTrigger = document.getElementById('search-trigger');
 const searchOverlay = document.getElementById('search-overlay');
-const searchClose = document.getElementById('search-close');
-const searchInput = document.getElementById('search-input');
+const searchClose   = document.getElementById('search-close');
+const searchInput   = document.getElementById('search-input');
 const searchResults = document.getElementById('search-results');
 
-// AI Panel
-const aiTrigger = document.getElementById('ai-trigger');
-const aiPanel = document.getElementById('ai-panel');
-const aiPanelClose = document.getElementById('ai-panel-close');
-const chatInput = document.getElementById('chat-input');
-const sendBtn = document.getElementById('send-btn');
-const chatHistory = document.getElementById('chat-history');
-const autocompleteDropdown = document.getElementById('autocomplete-dropdown');
+const aiTrigger     = document.getElementById('ai-trigger');
+const aiPanel       = document.getElementById('ai-panel');
+const aiPanelClose  = document.getElementById('ai-panel-close');
+const chatInput     = document.getElementById('chat-input');
+const sendBtn       = document.getElementById('send-btn');
+const chatHistory   = document.getElementById('chat-history');
+const acDropdown    = document.getElementById('autocomplete-dropdown');
 
-// Main Content
-const auroraMain = document.getElementById('aurora-main');
-const heroSection = document.getElementById('hero-section');
-const contentRows = document.getElementById('content-rows');
+const mainEl        = document.getElementById('main');
+const heroSection   = document.getElementById('hero-section');
+const contentRows   = document.getElementById('content-rows');
 
-// Modal
-const modalOverlay = document.getElementById('movie-detail-modal');
-const modalBody = document.getElementById('modal-body');
+const modalOverlay  = document.getElementById('movie-detail-modal');
+const modalBody     = document.getElementById('modal-body');
 const closeModalBtn = document.getElementById('close-modal-btn');
 
-// State
+// ── State ─────────────────────────────────────────────────────────────
 let globalMovies = [];
+let myList = JSON.parse(localStorage.getItem('aurora_mylist') || '[]');
+let currentPage = 'home';
 
-// ── INIT ───────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
-    // Initial Route
     navigateTo('home');
 });
 
-// ── SCROLL NAV ─────────────────────────────────────────────────────────
-window.addEventListener('scroll', () => {
-    if (window.scrollY > 30) nav.classList.add('scrolled');
-    else nav.classList.remove('scrolled');
+// ══════════════════════════════════════════════════════════════════════
+//  SIDEBAR
+// ══════════════════════════════════════════════════════════════════════
+sidebarToggle.addEventListener('click', () => {
+    sidebar.classList.toggle('expanded');
 });
 
-// ── PROFILE DROPDOWN ───────────────────────────────────────────────────
-profileTrigger.addEventListener('click', (e) => {
-    // Prevent closing immediately when clicking inside
+// Close sidebar on mobile when clicking outside
+document.addEventListener('click', (e) => {
+    if (window.innerWidth <= 768 && sidebar.classList.contains('expanded')) {
+        if (!sidebar.contains(e.target)) {
+            sidebar.classList.remove('expanded');
+        }
+    }
+});
+
+// ══════════════════════════════════════════════════════════════════════
+//  TOPBAR SCROLL
+// ══════════════════════════════════════════════════════════════════════
+window.addEventListener('scroll', () => {
+    topbar.classList.toggle('scrolled', window.scrollY > 40);
+}, { passive: true });
+
+// ══════════════════════════════════════════════════════════════════════
+//  PROFILE DROPDOWN
+// ══════════════════════════════════════════════════════════════════════
+profileTrig.addEventListener('click', (e) => {
     if (e.target.closest('.profile-dropdown') && e.target.tagName !== 'A') return;
-    profileTrigger.classList.toggle('open');
+    profileTrig.classList.toggle('open');
 });
 document.addEventListener('click', (e) => {
-    if (!profileTrigger.contains(e.target)) profileTrigger.classList.remove('open');
+    if (!profileTrig.contains(e.target)) profileTrig.classList.remove('open');
 });
 
-// ── SEARCH OVERLAY ─────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════
+//  SEARCH OVERLAY
+// ══════════════════════════════════════════════════════════════════════
 searchTrigger.addEventListener('click', () => {
-    searchOverlay.style.display = 'flex';
-    searchInput.focus();
+    searchOverlay.classList.add('open');
+    setTimeout(() => searchInput.focus(), 100);
 });
 searchClose.addEventListener('click', closeSearch);
 searchOverlay.addEventListener('click', (e) => {
@@ -71,51 +92,51 @@ searchOverlay.addEventListener('click', (e) => {
 });
 
 function closeSearch() {
-    searchOverlay.style.display = 'none';
+    searchOverlay.classList.remove('open');
     searchInput.value = '';
     searchResults.innerHTML = '';
 }
 
-let searchTimeout;
-searchInput.addEventListener('input', (e) => {
-    const q = e.target.value.trim();
+let searchTimer;
+searchInput.addEventListener('input', () => {
+    const q = searchInput.value.trim();
     if (q.length < 2) { searchResults.innerHTML = ''; return; }
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(async () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(async () => {
         try {
-            const resp = await fetch(`/autocomplete?q=${encodeURIComponent(q)}`);
-            if (resp.ok) {
-                const titles = await resp.json();
-                searchResults.innerHTML = titles.map(t => `
-                    <div class="search-result" onclick="executeSearch('Similar to ${t.replace(/'/g, "\\'")}')">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-muted)"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                        <div style="flex:1;">
-                            <div style="font-weight:600;">${t}</div>
-                            <div style="font-size:0.8rem;color:var(--text-muted)">Search similar titles</div>
-                        </div>
+            const r = await fetch(`/autocomplete?q=${encodeURIComponent(q)}`);
+            if (!r.ok) return;
+            const titles = await r.json();
+            searchResults.innerHTML = titles.map(t => `
+                <div class="search-hit" onclick="executeSearch('Similar to ${esc(t)}')">
+                    <div>
+                        <div class="search-hit__title">${t}</div>
+                        <div class="search-hit__sub">Find similar titles</div>
                     </div>
-                `).join('');
-            }
-        } catch (err) { console.error('Search error', err); }
+                </div>
+            `).join('');
+        } catch (e) { /* network error */ }
     }, 250);
 });
 
 function executeSearch(query) {
     closeSearch();
-    chatInput.value = query;
     aiPanel.classList.add('open');
+    chatInput.value = query;
     handleSend();
 }
 
-// ── AI PANEL ───────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════
+//  AI PANEL
+// ══════════════════════════════════════════════════════════════════════
 aiTrigger.addEventListener('click', () => aiPanel.classList.add('open'));
 aiPanelClose.addEventListener('click', () => aiPanel.classList.remove('open'));
 
-function addMessage(text, isUser) {
-    const div = document.createElement('div');
-    div.className = `ai-message ${isUser ? 'ai-message--user' : 'ai-message--system'}`;
-    div.innerHTML = text;
-    chatHistory.appendChild(div);
+function addMsg(text, isUser) {
+    const d = document.createElement('div');
+    d.className = `ai-msg ${isUser ? 'ai-msg--user' : 'ai-msg--bot'}`;
+    d.innerHTML = text;
+    chatHistory.appendChild(d);
     chatHistory.scrollTop = chatHistory.scrollHeight;
 }
 
@@ -124,180 +145,277 @@ async function handleSend() {
     if (!query) return;
     const userId = parseInt(userIdInput.value) || 32;
 
-    addMessage(query, true);
+    addMsg(query, true);
     chatInput.value = '';
-    autocompleteDropdown.style.display = 'none';
-    
-    // Skeleton loading in content
-    contentRows.innerHTML = `
-        <div class="content-section" style="padding-top:100px;">
-            <div style="width:200px;height:24px;background:var(--glass-border);border-radius:4px;margin-bottom:20px;animation:pulse 1.5s infinite;"></div>
-            <div class="content-row">
-                ${Array(6).fill('<div class="movie-card-wrapper"><div style="width:100%;aspect-ratio:2/3;background:var(--glass-border);border-radius:var(--radius-sm);animation:pulse 1.5s infinite;"></div></div>').join('')}
-            </div>
-        </div>
-    `;
+    acDropdown.style.display = 'none';
+
+    showSkeletonRows();
 
     try {
-        const response = await fetch('/chat', {
+        const resp = await fetch('/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId, query: query })
+            body: JSON.stringify({ user_id: userId, query })
         });
-        const data = await response.json();
+        const data = await resp.json();
 
         if (data.intent === 'explanation') {
-            addMessage(data.response, false);
+            addMsg(data.response, false);
             contentRows.innerHTML = '';
+            return;
+        }
+
+        let movies = Array.isArray(data.response) ? data.response : (data.response && data.response.value);
+        if (movies && movies.length > 0) {
+            let rowTitle = 'Aurora Recommendations';
+            if (data.intent === 'trending') rowTitle = 'Trending Now';
+            else if (data.intent === 'similar_movies') rowTitle = 'Because You Searched';
+            else if (data.intent === 'genre_search') rowTitle = 'Genre Discovery';
+
+            renderResults(movies, rowTitle);
+            addMsg(`Found ${movies.length} titles for you.`, false);
         } else {
-            let movies = Array.isArray(data.response) ? data.response : data.response.value;
-            if (movies && movies.length > 0) {
-                let title = 'Aurora Recommendations';
-                if (data.intent === 'trending') title = 'Trending Now';
-                else if (data.intent === 'similar_movies') title = 'Because You Searched';
-                else if (data.intent === 'genre_search') title = 'Genre Results';
-                
-                renderResults(movies, title);
-                addMessage(`I found ${movies.length} matches for you.`, false);
-            } else {
-                contentRows.innerHTML = '';
-                addMessage("I couldn't find anything matching that.", false);
-            }
+            contentRows.innerHTML = '';
+            addMsg("I couldn't find anything matching that.", false);
         }
     } catch (err) {
         contentRows.innerHTML = '';
-        addMessage('Trouble connecting to the recommendation core.', false);
+        addMsg('Connection issue. Please try again.', false);
     }
 }
 
 sendBtn.addEventListener('click', handleSend);
-chatInput.addEventListener('keypress', e => { if (e.key === 'Enter') handleSend(); });
+chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleSend(); });
 
-let acTimeout;
-chatInput.addEventListener('input', (e) => {
-    const q = e.target.value.trim();
-    if (q.length < 2) { autocompleteDropdown.style.display = 'none'; return; }
-    clearTimeout(acTimeout);
-    acTimeout = setTimeout(async () => {
-        const resp = await fetch(`/autocomplete?q=${encodeURIComponent(q)}`);
-        if (resp.ok) {
-            const results = await resp.json();
-            if (results.length > 0) {
-                autocompleteDropdown.innerHTML = results.map(r => `
-                    <div class="autocomplete-item" onclick="chatInput.value='Similar to ${r.replace(/'/g, "\\'")}'; autocompleteDropdown.style.display='none'; handleSend();">${r}</div>
-                `).join('');
-                autocompleteDropdown.style.display = 'block';
-            } else autocompleteDropdown.style.display = 'none';
-        }
+// Autocomplete
+let acTimer;
+chatInput.addEventListener('input', () => {
+    const q = chatInput.value.trim();
+    if (q.length < 2) { acDropdown.style.display = 'none'; return; }
+    clearTimeout(acTimer);
+    acTimer = setTimeout(async () => {
+        try {
+            const r = await fetch(`/autocomplete?q=${encodeURIComponent(q)}`);
+            if (!r.ok) return;
+            const list = await r.json();
+            if (list.length > 0) {
+                acDropdown.innerHTML = list.map(t =>
+                    `<div class="ac-item" onclick="pickAc('${esc(t)}')">${t}</div>`
+                ).join('');
+                acDropdown.style.display = 'block';
+            } else {
+                acDropdown.style.display = 'none';
+            }
+        } catch (e) { /* ignore */ }
     }, 300);
 });
 
-// ── SPA ROUTER ─────────────────────────────────────────────────────────
+function pickAc(title) {
+    chatInput.value = `Similar to ${title}`;
+    acDropdown.style.display = 'none';
+    handleSend();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  SPA ROUTER
+// ══════════════════════════════════════════════════════════════════════
 function navigateTo(page) {
-    navLinks.forEach(l => {
-        if (l.dataset.page === page) l.classList.add('active');
-        else l.classList.remove('active');
+    currentPage = page;
+
+    // Update sidebar active state
+    sidebarNav.querySelectorAll('.sidebar__link').forEach(l => {
+        l.classList.toggle('active', l.dataset.page === page);
     });
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    if (page === 'home') {
-        loadHomePage();
-    } else if (page === 'trending') {
-        chatInput.value = "What is trending?";
-        handleSend();
-    } else {
-        heroSection.style.display = 'none';
-        contentRows.innerHTML = `
-            <div class="content-section" style="padding-top:120px;text-align:center;">
-                <h2 style="font-size:2.5rem;margin-bottom:16px;">${page.replace('-', ' ').toUpperCase()}</h2>
-                <p style="color:var(--text-muted);">Explore the full catalog coming soon in Phase 4.</p>
-            </div>
-        `;
+    switch (page) {
+        case 'home':
+            loadHomePage();
+            break;
+        case 'movies':
+            loadCategoryPage('Recommend popular movies', [
+                'Recommend action movies',
+                'Recommend comedy movies',
+                'Recommend sci-fi movies',
+                'Recommend drama movies'
+            ], 'Movies');
+            break;
+        case 'tv-series':
+            loadCategoryPage('Recommend popular TV series', [
+                'Recommend crime series',
+                'Recommend sci-fi series'
+            ], 'TV Series');
+            break;
+        case 'trending':
+            heroSection.innerHTML = '';
+            heroSection.style.display = 'none';
+            contentRows.innerHTML = '';
+            fetchAndRender('What is trending?', 'Trending Now');
+            break;
+        case 'my-list':
+            renderMyList();
+            break;
     }
 }
 
-// ── LOAD HOME PAGE ─────────────────────────────────────────────────────
+// ── Home Page ─────────────────────────────────────────────────────────
 async function loadHomePage() {
+    showSkeletonRows();
     const userId = parseInt(userIdInput.value) || 32;
-    
-    // Fetch Recommendations to populate Home
+
     try {
-        const response = await fetch('/chat', {
+        const resp = await fetch('/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId, query: "Recommend me movies" })
+            body: JSON.stringify({ user_id: userId, query: 'Recommend me movies' })
         });
-        const data = await response.json();
-        const movies = Array.isArray(data.response) ? data.response : data.response.value;
+        const data = await resp.json();
+        let movies = Array.isArray(data.response) ? data.response : (data.response && data.response.value);
+
         if (movies && movies.length > 0) {
             renderResults(movies, 'Top Picks For You', true);
+        } else {
+            contentRows.innerHTML = emptyStateHTML();
         }
     } catch (err) {
-        console.error("Failed to load home page", err);
+        contentRows.innerHTML = emptyStateHTML();
     }
 }
 
-// ── RENDER ENGINE ──────────────────────────────────────────────────────
-function renderResults(movies, mainRowTitle, isHome = false) {
+// ── Category Page ─────────────────────────────────────────────────────
+async function loadCategoryPage(mainQuery, extraQueries, pageTitle) {
+    heroSection.innerHTML = '';
+    heroSection.style.display = 'none';
+    contentRows.innerHTML = `
+        <div class="row-section" style="padding-top:80px;">
+            <h1 class="row-section__title" style="font-size:2.2rem;margin-bottom:32px;">${pageTitle}</h1>
+        </div>
+    `;
+    showSkeletonRows(false);
+    await fetchAndRender(mainQuery, `Popular ${pageTitle}`);
+
+    for (const q of extraQueries) {
+        const label = q.replace('Recommend ', '').replace(' movies', ' Movies').replace(' series', ' Series');
+        await fetchAndRender(q, label.charAt(0).toUpperCase() + label.slice(1));
+    }
+}
+
+async function fetchAndRender(query, rowTitle) {
+    const userId = parseInt(userIdInput.value) || 32;
+    try {
+        const resp = await fetch('/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId, query })
+        });
+        const data = await resp.json();
+        let movies = Array.isArray(data.response) ? data.response : (data.response && data.response.value);
+        if (movies && movies.length > 0) {
+            globalMovies = [...globalMovies, ...movies];
+            if (!heroSection.innerHTML && currentPage !== 'trending') {
+                renderHero(movies[0]);
+                appendRow(rowTitle, movies.slice(1));
+            } else {
+                appendRow(rowTitle, movies);
+            }
+        }
+    } catch (e) { /* silently skip failed row */ }
+}
+
+// ── My List ───────────────────────────────────────────────────────────
+function renderMyList() {
+    heroSection.innerHTML = '';
+    heroSection.style.display = 'none';
+
+    if (myList.length === 0) {
+        contentRows.innerHTML = `
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:70vh;text-align:center;padding:0 20px;">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+                <h2 style="font-size:2rem;font-weight:700;color:var(--text-primary);margin:24px 0 12px;">Your List is Empty</h2>
+                <p style="color:var(--text-muted);max-width:400px;">Browse movies and click the + button on any card to save it here.</p>
+            </div>
+        `;
+        return;
+    }
+
+    contentRows.innerHTML = '';
+    appendRow('My Watchlist', myList);
+}
+
+function toggleMyList(movie) {
+    const idx = myList.findIndex(m => m.item_id === movie.item_id);
+    if (idx >= 0) {
+        myList.splice(idx, 1);
+    } else {
+        myList.push(movie);
+    }
+    localStorage.setItem('aurora_mylist', JSON.stringify(myList));
+}
+
+function isInMyList(id) {
+    return myList.some(m => m.item_id === id);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  RENDER ENGINE
+// ══════════════════════════════════════════════════════════════════════
+
+function renderResults(movies, mainTitle, isHome = false) {
     globalMovies = movies;
     contentRows.innerHTML = '';
-    
+
     const sorted = [...movies].sort((a, b) => {
-        const sa = (a.rich_metadata || {}).match_percentage || 80;
-        const sb = (b.rich_metadata || {}).match_percentage || 80;
-        return sb - sa;
+        return getScore(b) - getScore(a);
     });
 
-    // #1 Recommendation is Hero
+    // Hero = #1
     renderHero(sorted[0]);
 
-    // Rows
-    const remaining = sorted.slice(1);
-    const tierS = remaining.filter(m => ((m.rich_metadata || {}).match_percentage || 80) >= 95);
-    const tierA = remaining.filter(m => { const s = (m.rich_metadata || {}).match_percentage || 80; return s >= 90 && s < 95; });
-    const tierB = remaining.filter(m => { const s = (m.rich_metadata || {}).match_percentage || 80; return s < 90; });
+    const rest = sorted.slice(1);
 
     if (isHome) {
-        if (remaining.length > 0) appendRow(mainRowTitle, remaining);
+        appendRow(mainTitle, rest);
+        const tierS = rest.filter(m => getScore(m) >= 95);
+        const tierA = rest.filter(m => { const s = getScore(m); return s >= 88 && s < 95; });
+        const tierB = rest.filter(m => getScore(m) < 88);
         if (tierS.length > 0) appendRow('Perfect Matches', tierS);
         if (tierA.length > 0) appendRow('Because You Watched Similar', tierA);
         if (tierB.length > 0) appendRow('Hidden Gems', tierB);
     } else {
-        appendRow(mainRowTitle, remaining);
+        appendRow(mainTitle, rest);
     }
 }
 
 function renderHero(movie) {
     if (!movie) { heroSection.style.display = 'none'; return; }
-    
-    const meta = movie.rich_metadata || {};
+    const m = movie.rich_metadata || {};
     const title = movie.title || 'Unknown';
-    const backdropUrl = movie.backdrop_url || movie.poster_url || `https://placehold.co/1920x1080/111/333?text=${encodeURIComponent(title.split(' (')[0])}`;
-    const score = meta.match_percentage || Math.floor(Math.random() * 5 + 95);
-    const synopsis = meta.story_summary || movie.overview || 'A cinematic masterpiece highly recommended by Aurora.';
-    const genres = (meta.tags || ['Drama']).slice(0,3).map(g => `<span class="genre-pill">${g}</span>`).join('');
-    
+    const bg = movie.backdrop_url || movie.poster_url || placeholder(title);
+    const score = m.match_percentage || randScore();
+    const synopsis = m.story_summary || movie.overview || 'A cinematic masterpiece recommended by Aurora AI.';
+    const genres = (m.tags || ['Drama']).slice(0, 4).map(g => `<span class="gpill">${g}</span>`).join('');
+
     heroSection.style.display = 'flex';
     heroSection.innerHTML = `
-        <div class="hero__backdrop" style="background-image: url('${backdropUrl}');"></div>
+        <div class="hero__bg" style="background-image:url('${bg}')"></div>
         <div class="hero__overlay"></div>
-        <div class="hero__content">
-            <div class="hero__badge">★ ${score}% Aurora Match</div>
+        <div class="hero__inner">
+            <div class="hero__match">★ ${score}% Aurora Match</div>
             <h1 class="hero__title">${title}</h1>
             <div class="hero__meta">
-                ${meta.year ? `<div class="hero__meta-item">${meta.year}</div>` : ''}
-                ${meta.runtime ? `<div class="hero__meta-item">${meta.runtime}</div>` : ''}
-                <div class="hero__meta-item" style="color:var(--match-green)">Highly Recommended</div>
+                ${m.year ? `<span>${m.year}</span><span class="hero__meta-dot"></span>` : ''}
+                ${m.runtime ? `<span>${m.runtime}</span><span class="hero__meta-dot"></span>` : ''}
+                <span style="color:var(--match-green)">Highly Recommended</span>
             </div>
             <div class="hero__genres">${genres}</div>
-            <p class="hero__description">${synopsis}</p>
-            <div class="hero__actions">
-                <button class="btn-play" onclick="openModalById(${movie.item_id})">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Play
+            <p class="hero__desc">${synopsis}</p>
+            <div class="hero__btns">
+                <button class="hero-btn hero-btn--play" onclick="openModal(${movie.item_id})">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Play
                 </button>
-                <button class="btn-secondary" onclick="openModalById(${movie.item_id})">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg> More Info
+                <button class="hero-btn hero-btn--info" onclick="openModal(${movie.item_id})">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg> More Info
                 </button>
             </div>
         </div>
@@ -306,130 +424,254 @@ function renderHero(movie) {
 
 function appendRow(title, movies) {
     if (!movies || movies.length === 0) return;
-    
-    const section = document.createElement('section');
-    section.className = 'content-section';
-    
-    let cardsHtml = movies.map(movie => {
-        const meta = movie.rich_metadata || {};
-        const mTitle = movie.title || 'Unknown';
-        const posterUrl = movie.poster_url || `https://placehold.co/300x450/111/333?text=${encodeURIComponent(mTitle.split(' (')[0])}`;
-        const backdropUrl = movie.backdrop_url || posterUrl;
-        const score = meta.match_percentage || 80;
-        const genres = (meta.tags || []).slice(0,3).map(g => `<span>${g}</span>`).join('');
-        const synopsis = meta.story_summary || movie.overview || '';
-        const reason = movie.explanation || meta.why_recommended || 'Similar to content you liked.';
-        
+
+    const sec = document.createElement('section');
+    sec.className = 'row-section';
+
+    const cards = movies.map((movie, i) => {
+        const m = movie.rich_metadata || {};
+        const t = movie.title || 'Unknown';
+        const poster = movie.poster_url || placeholder(t);
+        const backdrop = movie.backdrop_url || poster;
+        const score = m.match_percentage || randScore();
+        const genres = (m.tags || []).slice(0, 3).map(g => `<span>${g}</span>`).join('');
+        const saved = isInMyList(movie.item_id);
+
         return `
-            <div class="movie-card-wrapper">
-                <div class="movie-card" onclick="openModalById(${movie.item_id})" tabindex="0">
-                    <img src="${posterUrl}" alt="${mTitle}" loading="lazy">
-                    <div class="movie-card__match-badge">${score}%</div>
-                </div>
-                <div class="hover-expand">
-                    <img src="${backdropUrl}" class="hover-expand__backdrop" alt="">
-                    <div class="hover-expand__body">
-                        <div class="hover-expand__title">${mTitle}</div>
-                        <div class="hover-expand__meta">
-                            <span class="hover-expand__match">${score}% Match</span>
-                            ${meta.year ? `<span>${meta.year}</span>` : ''}
-                        </div>
-                        <div class="hover-expand__genres">${genres}</div>
-                        <div class="hover-expand__ai-reason">
-                            <div class="hover-expand__ai-title">Why Aurora Picked This</div>
-                            <ul>
-                                <li>Matches your preferred genres</li>
-                                <li>High thematic similarity</li>
-                            </ul>
-                        </div>
-                        <div class="hover-expand__actions">
-                            <button class="hover-expand__btn play" onclick="openModalById(${movie.item_id})">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                            </button>
-                            <button class="hover-expand__btn">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                            </button>
-                        </div>
+        <div class="card-wrap" data-idx="${i}">
+            <div class="card-3d" data-id="${movie.item_id}" tabindex="0">
+                <img src="${poster}" alt="${t}" loading="lazy" onerror="this.src='${placeholder(t)}'">
+                <div class="card-3d__badge">${score}%</div>
+            </div>
+            <div class="card-expand">
+                <img src="${backdrop}" class="card-expand__img" alt="" loading="lazy" onerror="this.src='${placeholder(t)}'">
+                <div class="card-expand__body">
+                    <div class="card-expand__title">${t}</div>
+                    <div class="card-expand__meta">
+                        <span class="card-expand__pct">${score}% Match</span>
+                        ${m.year ? `<span>${m.year}</span>` : ''}
+                        ${m.runtime ? `<span>${m.runtime}</span>` : ''}
+                    </div>
+                    <div class="card-expand__genres">${genres}</div>
+                    <div class="card-expand__ai">
+                        <div class="card-expand__ai-label">Why Aurora Picked This</div>
+                        <ul>
+                            <li>Matches your preferred genres</li>
+                            <li>High thematic similarity</li>
+                            <li>Popular among similar viewers</li>
+                        </ul>
+                    </div>
+                    <div class="card-expand__btns">
+                        <button class="card-expand__btn card-expand__btn--play" onclick="openModal(${movie.item_id})" aria-label="Play">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                        </button>
+                        <button class="card-expand__btn" onclick="toggleSave(${movie.item_id})" aria-label="${saved ? 'Remove from list' : 'Add to list'}">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                ${saved ? '<line x1="5" y1="12" x2="19" y2="12"/>' : '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>'}
+                            </svg>
+                        </button>
                     </div>
                 </div>
             </div>
-        `;
+        </div>`;
     }).join('');
 
-    section.innerHTML = `
-        <div class="content-section__header">
-            <h2 class="content-section__title">${title}</h2>
-        </div>
-        <div class="content-row">
-            ${cardsHtml}
-        </div>
+    sec.innerHTML = `
+        <h2 class="row-section__title">${title}</h2>
+        <div class="row-scroll">${cards}</div>
     `;
-    contentRows.appendChild(section);
+
+    contentRows.appendChild(sec);
+
+    // Attach 3D tilt to newly added cards
+    sec.querySelectorAll('.card-3d').forEach(attachTilt);
 }
 
-// ── MODAL ──────────────────────────────────────────────────────────────
-function openModalById(id) {
-    const movie = globalMovies.find(m => m.item_id === id);
+// ══════════════════════════════════════════════════════════════════════
+//  3D TILT EFFECT
+// ══════════════════════════════════════════════════════════════════════
+function attachTilt(card) {
+    card.addEventListener('mousemove', (e) => {
+        const rect = card.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const cx = rect.width / 2;
+        const cy = rect.height / 2;
+        const rotX = ((y - cy) / cy) * -8;
+        const rotY = ((x - cx) / cx) * 8;
+        card.style.transform = `perspective(800px) rotateX(${rotX}deg) rotateY(${rotY}deg) scale3d(1.04,1.04,1.04)`;
+    });
+
+    card.addEventListener('mouseleave', () => {
+        card.style.transform = 'perspective(800px) rotateX(0) rotateY(0) scale3d(1,1,1)';
+    });
+
+    // Click → open modal
+    card.addEventListener('click', () => {
+        const id = parseInt(card.dataset.id);
+        if (id) openModal(id);
+    });
+
+    // Keyboard
+    card.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            const id = parseInt(card.dataset.id);
+            if (id) openModal(id);
+        }
+    });
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  DETAIL MODAL
+// ══════════════════════════════════════════════════════════════════════
+function openModal(id) {
+    const movie = globalMovies.find(m => m.item_id === id) || myList.find(m => m.item_id === id);
     if (!movie) return;
-    
-    const meta = movie.rich_metadata || {};
+
+    const m = movie.rich_metadata || {};
     const title = movie.title || 'Unknown';
-    const backdropUrl = movie.backdrop_url || movie.poster_url || '';
-    const score = meta.match_percentage || 80;
-    
+    const bg = movie.backdrop_url || movie.poster_url || '';
+    const score = m.match_percentage || randScore();
+    const synopsis = m.story_summary || movie.overview || 'No overview available.';
+    const reason = movie.explanation || m.why_recommended || 'Based on your viewing history and high thematic correlation with your preferences.';
+    const saved = isInMyList(id);
+
     modalBody.innerHTML = `
-        <div class="modal-hero" style="background-image: url('${backdropUrl}');">
-            <div style="position:absolute; bottom:40px; left:40px; z-index:2;">
-                <div style="display:inline-block; padding:4px 10px; background:var(--aurora-gradient); border-radius:12px; font-weight:700; color:white; font-size:0.85rem; margin-bottom:12px;">★ ${score}% Match</div>
-                <h2 style="font-size:3rem; font-weight:800; color:white;">${title}</h2>
+        <div class="modal-hero" style="background-image:url('${bg}')">
+            <div class="modal-hero__info">
+                <div class="modal-hero__badge">★ ${score}% Match</div>
+                <h2 class="modal-hero__title">${title}</h2>
             </div>
         </div>
-        <div class="modal-body-content">
+        <div class="modal-body-grid">
             <div>
-                <div style="display:flex; gap:16px; margin-bottom:20px; font-size:1.1rem;">
-                    <span style="color:var(--match-green); font-weight:700;">Highly Recommended</span>
-                    <span style="color:var(--text-muted);">${meta.year || ''}</span>
-                    <span style="color:var(--text-muted);">${meta.runtime || ''}</span>
+                <div style="display:flex;gap:12px;align-items:center;margin-bottom:20px;flex-wrap:wrap;">
+                    <span style="color:var(--match-green);font-weight:700;font-size:1.1rem;">${score}% Match</span>
+                    ${m.year ? `<span style="color:var(--text-muted)">${m.year}</span>` : ''}
+                    ${m.runtime ? `<span style="color:var(--text-muted)">${m.runtime}</span>` : ''}
+                    <button onclick="toggleSave(${id});this.textContent=isInMyList(${id})?'✓ In My List':'+ My List'" style="padding:6px 16px;border-radius:var(--r-pill);background:var(--glass-bg-3);border:1px solid var(--glass-border);color:var(--text-primary);font-size:0.85rem;font-weight:600;cursor:pointer;">
+                        ${saved ? '✓ In My List' : '+ My List'}
+                    </button>
                 </div>
-                <p style="font-size:1.1rem; line-height:1.6; color:var(--text-main); margin-bottom:30px;">
-                    ${meta.story_summary || movie.overview || 'No overview available.'}
-                </p>
-                <div style="background:rgba(139,92,246,0.1); border:1px solid rgba(139,92,246,0.2); padding:20px; border-radius:var(--radius-md);">
-                    <h3 style="color:var(--aurora-purple); font-size:0.9rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;">Why Aurora Recommends This</h3>
-                    <p style="color:var(--text-main); font-size:0.95rem; line-height:1.5;">${movie.explanation || meta.why_recommended || 'Based on your viewing history and high thematic correlation with your favorite genres.'}</p>
+                <div class="modal-section">
+                    <h3>Synopsis</h3>
+                    <p>${synopsis}</p>
+                </div>
+                <div class="modal-ai-box">
+                    <h3>Why Aurora Recommends This</h3>
+                    <ul style="list-style:none">
+                        <li>${reason}</li>
+                        <li>Matches your preferred genres</li>
+                        <li>Highly rated by similar viewers</li>
+                    </ul>
                 </div>
             </div>
-            <div>
-                <div style="color:var(--text-muted); margin-bottom:16px;">
-                    <span style="color:white; display:block; margin-bottom:4px;">Cast</span>
-                    ${meta.main_cast || 'Various Artists'}
-                </div>
-                <div style="color:var(--text-muted); margin-bottom:16px;">
-                    <span style="color:white; display:block; margin-bottom:4px;">Director</span>
-                    ${meta.director || 'Unknown'}
-                </div>
-                <div style="color:var(--text-muted);">
-                    <span style="color:white; display:block; margin-bottom:4px;">Genres</span>
-                    ${(meta.tags || []).join(', ')}
-                </div>
+            <div class="modal-sidebar">
+                <dl>
+                    <dt>Cast</dt><dd>${m.main_cast || 'Various Artists'}</dd>
+                    <dt>Director</dt><dd>${m.director || 'Unknown'}</dd>
+                    <dt>Genres</dt><dd>${(m.tags || []).join(', ') || 'N/A'}</dd>
+                    ${m.year ? `<dt>Year</dt><dd>${m.year}</dd>` : ''}
+                    ${m.runtime ? `<dt>Runtime</dt><dd>${m.runtime}</dd>` : ''}
+                </dl>
             </div>
         </div>
     `;
     modalOverlay.style.display = 'flex';
-    
-    // Feedback
+
+    // Send feedback
     fetch('/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: parseInt(userIdInput.value) || 32, item_id: id, label: 1.0 })
-    }).catch(()=>{});
+    }).catch(() => {});
+}
+
+function toggleSave(id) {
+    const movie = globalMovies.find(m => m.item_id === id) || myList.find(m => m.item_id === id);
+    if (movie) toggleMyList(movie);
 }
 
 closeModalBtn.addEventListener('click', () => modalOverlay.style.display = 'none');
 modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) modalOverlay.style.display = 'none'; });
+
+// ══════════════════════════════════════════════════════════════════════
+//  KEYBOARD SHORTCUTS
+// ══════════════════════════════════════════════════════════════════════
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         modalOverlay.style.display = 'none';
         closeSearch();
+        aiPanel.classList.remove('open');
     }
 });
+
+// ══════════════════════════════════════════════════════════════════════
+//  UTILITIES
+// ══════════════════════════════════════════════════════════════════════
+function getScore(m) {
+    return (m.rich_metadata || {}).match_percentage || 80;
+}
+
+function randScore() {
+    return Math.floor(Math.random() * 12 + 85);
+}
+
+function placeholder(title) {
+    const clean = encodeURIComponent((title || 'Movie').split(' (')[0].substring(0, 20));
+    return `https://placehold.co/400x600/111/333?text=${clean}`;
+}
+
+function esc(str) {
+    return (str || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+
+function showSkeletonRows(withHero = true) {
+    if (withHero) {
+        heroSection.style.display = 'flex';
+        heroSection.innerHTML = `
+            <div class="hero__overlay" style="background:var(--bg-void)"></div>
+            <div class="hero__inner">
+                <div class="skeleton" style="width:120px;height:28px;border-radius:var(--r-pill);margin-bottom:20px;"></div>
+                <div class="skeleton" style="width:400px;height:52px;margin-bottom:16px;"></div>
+                <div class="skeleton" style="width:300px;height:18px;margin-bottom:14px;"></div>
+                <div class="skeleton" style="width:500px;height:60px;margin-bottom:28px;"></div>
+                <div style="display:flex;gap:14px;">
+                    <div class="skeleton" style="width:140px;height:50px;border-radius:var(--r-md);"></div>
+                    <div class="skeleton" style="width:160px;height:50px;border-radius:var(--r-md);"></div>
+                </div>
+            </div>
+        `;
+    }
+    const skeletonCards = Array(8).fill(`
+        <div class="card-wrap">
+            <div class="skeleton" style="width:100%;aspect-ratio:2/3;"></div>
+        </div>
+    `).join('');
+    const skeletonRow = `
+        <section class="row-section" style="${withHero ? '' : 'padding-top:0;'}">
+            <div class="skeleton" style="width:200px;height:22px;margin-bottom:16px;"></div>
+            <div class="row-scroll">${skeletonCards}</div>
+        </section>
+    `;
+    contentRows.innerHTML = skeletonRow;
+}
+
+function emptyStateHTML() {
+    const cats = ['Sci-Fi','Action','Comedy','Drama','Thriller','Horror','Romance','Animation','Mystery'];
+    return `
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:0 20px;">
+            <h2 style="font-size:2.2rem;font-weight:700;color:var(--text-primary);margin-bottom:12px;">What would you like to watch?</h2>
+            <p style="color:var(--text-muted);margin-bottom:40px;max-width:500px;">Explore categories or ask Aurora AI for personalized recommendations.</p>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:600px;">
+                ${cats.map(c => `
+                    <button onclick="aiPanel.classList.add('open');chatInput.value='Recommend ${c.toLowerCase()} movies';handleSend();"
+                        style="padding:10px 22px;border-radius:var(--r-pill);background:var(--glass-bg-2);border:1px solid var(--glass-border);color:var(--text-primary);font-size:0.9rem;font-weight:500;cursor:pointer;transition:all 150ms;backdrop-filter:blur(12px);"
+                        onmouseover="this.style.background='var(--glass-bg-3)';this.style.transform='translateY(-2px)'"
+                        onmouseout="this.style.background='var(--glass-bg-2)';this.style.transform='translateY(0)'"
+                    >${c}</button>
+                `).join('')}
+            </div>
+        </div>
+    `;
+}
