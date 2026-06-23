@@ -63,6 +63,14 @@ async def add_security_headers(request: Request, call_next):
 async def login_for_access_token(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
     user = get_user(form_data.username)
     if not user:
+        # If new user is signing up using email, it must be a Gmail address
+        if "@" in form_data.username:
+            if not form_data.username.strip().lower().endswith("@gmail.com"):
+                return JSONResponse(
+                    status_code=400, 
+                    content={"detail": "Registration via email is restricted to Gmail (@gmail.com) addresses."}
+                )
+        
         # Automatically register new users dynamically
         new_uid = len(FAKE_DB) + 32
         FAKE_DB[form_data.username] = {

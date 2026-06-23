@@ -80,7 +80,10 @@ document.addEventListener('DOMContentLoaded', () => {
         fd.append('password', document.getElementById('login-password').value);
         try {
             const res = await fetch('/token', { method: 'POST', body: fd });
-            if (!res.ok) throw new Error('Failed');
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.detail || 'Invalid credentials');
+            }
             const data = await res.json();
             token = data.access_token;
             userId = data.user_id;
@@ -95,6 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(data.role === 'Administrator') adminLink.style.display = 'inline-block';
             navigateTo('home');
         } catch(err) {
+            loginError.textContent = err.message;
             loginError.style.display = 'block';
         }
     });
