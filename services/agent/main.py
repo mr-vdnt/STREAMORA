@@ -23,7 +23,7 @@ mimetypes.add_type('text/css', '.css')
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from services.agent.core import agent
-from services.security.auth import get_current_user, create_access_token, verify_password, get_user, FAKE_DB, ACCESS_TOKEN_EXPIRE_MINUTES, timedelta, save_users_db, pwd_context
+from services.security.auth import get_current_user, create_access_token, verify_password, get_user, FAKE_DB, ACCESS_TOKEN_EXPIRE_MINUTES, timedelta, save_users_db, hash_password
 from services.security.audit import log_event
 
 load_dotenv(os.path.join(os.path.dirname(__file__), '../../.env'))
@@ -86,7 +86,7 @@ async def signup_endpoint(request: Request, req: SignupRequest):
     FAKE_DB[username] = {
         "user_id": new_uid,
         "username": username,
-        "hashed_password": pwd_context.hash(req.password),
+        "hashed_password": hash_password(req.password),
         "role": "Standard"
     }
     save_users_db()

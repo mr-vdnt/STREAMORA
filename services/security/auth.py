@@ -9,6 +9,8 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 from .audit import log_event
 
+import bcrypt
+
 # Load environment variables
 load_dotenv(os.path.join(os.path.dirname(__file__), '../../.env'))
 
@@ -16,8 +18,21 @@ SECRET_KEY = os.getenv("JWT_SECRET_KEY", "fallback_unsafe_secret")
 ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "43200"))
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+
+def hash_password(password: str) -> str:
+    pwd_bytes = password.encode('utf-8')
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(pwd_bytes, salt).decode('utf-8')
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    try:
+        return bcrypt.checkpw(
+            plain_password.encode('utf-8'),
+            hashed_password.encode('utf-8')
+        )
+    except Exception:
+        return False
 
 # In-Memory Mock Database for Render Free Tier Constraint
 # In a real enterprise system, this connects to PostgreSQL.
@@ -27,13 +42,13 @@ FAKE_DB = {
     "admin": {
         "user_id": 1,
         "username": "admin",
-        "hashed_password": pwd_context.hash("adminpass"),
+        "hashed_password": hash_password("adminpass"),
         "role": "Administrator"
     },
     "user1": {
         "user_id": 32,
         "username": "user1",
-        "hashed_password": pwd_context.hash("user1pass"),
+        "hashed_password": hash_password("user1pass"),
         "role": "Standard"
     }
 }
@@ -42,9 +57,6 @@ class TokenData(BaseModel):
     username: Optional[str] = None
     role: Optional[str] = None
     user_id: Optional[int] = None
-
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
 
 def get_user(username: str):
     return FAKE_DB.get(username)
