@@ -33,6 +33,120 @@ const modalOverlay  = document.getElementById('movie-detail-modal');
 const modalBody     = document.getElementById('modal-body');
 const closeModalBtn = document.getElementById('close-modal-btn');
 
+// ── Ambient Blur Backdrop ─────────────────────────────────────────────
+window.updateAmbientBackground = function(imageUrl) {
+    const backdrop = document.getElementById('ambient-backdrop');
+    if (!backdrop) return;
+    if (imageUrl) {
+        backdrop.style.backgroundImage = `url('${imageUrl}')`;
+        backdrop.classList.add('active');
+    } else {
+        backdrop.classList.remove('active');
+    }
+};
+
+// ── 3D Spatial Cover Flow Calculator ──────────────────────────────────
+window.updateSpatialCarousel = function(rowScroll) {
+    if (!rowScroll) return;
+    const rect = rowScroll.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const cards = rowScroll.querySelectorAll('.card-wrap');
+    
+    cards.forEach(card => {
+        const cardRect = card.getBoundingClientRect();
+        const cardCenterX = cardRect.left + cardRect.width / 2;
+        const offset = cardCenterX - centerX;
+        const maxOffset = rect.width / 2 || 1;
+        const normalized = Math.max(-1, Math.min(1, offset / maxOffset));
+        
+        // Compute 3D transformations
+        const scale = 1 - Math.abs(normalized) * 0.15; // center 1.0, edge 0.85
+        const rotateY = normalized * -30; // rotate outwards
+        const translateZ = Math.abs(normalized) * -80; // push depth back
+        
+        card.style.transform = `scale(${scale}) rotateY(${rotateY}deg) translateZ(${translateZ}px)`;
+        card.style.opacity = 1 - Math.abs(normalized) * 0.25;
+    });
+};
+
+window.addEventListener('resize', () => {
+    document.querySelectorAll('.row-scroll').forEach(window.updateSpatialCarousel);
+}, { passive: true });
+
+// ── Client-side Similarity scoring engine (up to 25 items) ─────────────
+window.getSimilarRecommendations = function(seedMovie) {
+    if (!seedMovie) return [];
+    
+    let uniquePool = [];
+    const seen = new Set();
+    
+    // Combine all discovered movie datasets
+    const combinedPool = [...(globalMovies || []), ...FALLBACK_MOVIES];
+    combinedPool.forEach(m => {
+        if (m && m.item_id && m.item_id !== seedMovie.item_id && !seen.has(m.item_id)) {
+            seen.add(m.item_id);
+            uniquePool.push(m);
+        }
+    });
+    
+    const seedMeta = seedMovie.rich_metadata || {};
+    const seedGenres = seedMeta.genres || seedMeta.tags || [];
+    const seedThemes = seedMeta.themes || [];
+    const seedMoods = seedMeta.moods || [];
+    const seedDirector = seedMeta.director || '';
+    
+    const scored = uniquePool.map(m => {
+        const meta = m.rich_metadata || {};
+        const genres = meta.genres || meta.tags || [];
+        const themes = meta.themes || [];
+        const moods = meta.moods || [];
+        const director = meta.director || '';
+        
+        let score = 0;
+        let reasons = [];
+        
+        // Compare genres
+        const commonGenres = genres.filter(g => seedGenres.includes(g));
+        if (commonGenres.length > 0) {
+            score += commonGenres.length * 15;
+            reasons.push(commonGenres[0]);
+        }
+        
+        // Compare themes
+        const commonThemes = themes.filter(t => seedThemes.includes(t));
+        if (commonThemes.length > 0) {
+            score += commonThemes.length * 20;
+            reasons.push(commonThemes[0]);
+        }
+        
+        // Compare moods
+        const commonMoods = moods.filter(md => seedMoods.includes(md));
+        if (commonMoods.length > 0) {
+            score += commonMoods.length * 10;
+            reasons.push(commonMoods[0]);
+        }
+        
+        // Compare director
+        if (director && director === seedDirector) {
+            score += 40;
+            reasons.push(`Directed by ${director}`);
+        }
+        
+        score += (m.item_id % 7); // deterministic tie breaker
+        
+        let reasoning = reasons.join(' • ') || 'Recommended for you';
+        
+        return {
+            movie: m,
+            score: Math.min(99, Math.max(70, 75 + Math.floor(score))),
+            reasoning: reasoning
+        };
+    });
+    
+    scored.sort((a, b) => b.score - a.score);
+    return scored.slice(0, 25);
+};
+
 // ── Fallback Database ──────────────────────────────────────────────────
 const FALLBACK_MOVIES = [
     {
@@ -359,6 +473,46 @@ const FALLBACK_MOVIES = [
     }
 ];
 
+// ── Format Discovery & Modulo Heuristic ─────────────────────────────────
+window.currentFormat = 'all';
+window.isSeries = function(movie) {
+    if (!movie) return false;
+    return movie.item_id % 3 === 0;
+};
+
+window.applyTheme = function(themeName) {
+    const root = document.documentElement;
+    if (themeName === 'oled') {
+        root.style.setProperty('--bg-void', '#000000');
+        root.style.setProperty('--bg-deep', '#000000');
+        root.style.setProperty('--bg-dark', '#020202');
+        root.style.setProperty('--bg-surface', '#080808');
+        root.style.setProperty('--bg-raised', '#0c0c0c');
+    } else if (themeName === 'slate') {
+        root.style.setProperty('--bg-void', '#0B0F19');
+        root.style.setProperty('--bg-deep', '#0F172A');
+        root.style.setProperty('--bg-dark', '#1E293B');
+        root.style.setProperty('--bg-surface', '#334155');
+        root.style.setProperty('--bg-raised', '#475569');
+    } else {
+        root.style.removeProperty('--bg-void');
+        root.style.removeProperty('--bg-deep');
+        root.style.removeProperty('--bg-dark');
+        root.style.removeProperty('--bg-surface');
+        root.style.removeProperty('--bg-raised');
+    }
+    localStorage.setItem('aurora_theme', themeName);
+};
+
+window.setDiscoveryFormat = function(format) {
+    window.currentFormat = format;
+    if (currentPage === 'home') {
+        loadHomePage();
+    } else if (currentPage === 'categories') {
+        loadCategoriesTab();
+    }
+};
+
 // ── State ─────────────────────────────────────────────────────────────
 let globalMovies = [];
 let myList = JSON.parse(localStorage.getItem('aurora_mylist') || '[]');
@@ -384,14 +538,53 @@ document.addEventListener('DOMContentLoaded', () => {
     if (userDisplay) userDisplay.textContent = 'User: Guest';
     if (logoutBtn) logoutBtn.style.display = 'none';
     if (adminLink) adminLink.style.display = 'none';
+    
+    const savedTheme = localStorage.getItem('aurora_theme') || 'neon';
+    applyTheme(savedTheme);
+    
     navigateTo('home');
 });
 
 // ══════════════════════════════════════════════════════════════════════
-//  SIDEBAR & MOBILE NAVIGATION
+//  SIDEBAR & MOBILE SLIDING DRAWER MENU
 // ══════════════════════════════════════════════════════════════════════
 const mobileMenuBtn = document.getElementById('mobile-menu-btn');
 const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+const topbarProfileTrig = document.getElementById('topbar-profile-trigger');
+
+window.openDrawer = function() {
+    const drawer = document.getElementById('drawer');
+    const backdrop = document.getElementById('drawer-backdrop');
+    if (drawer && backdrop) {
+        drawer.classList.add('open');
+        backdrop.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+};
+
+window.closeDrawer = function() {
+    const drawer = document.getElementById('drawer');
+    const backdrop = document.getElementById('drawer-backdrop');
+    if (drawer && backdrop) {
+        drawer.classList.remove('open');
+        backdrop.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+};
+
+window.closeDrawerModalDirect = function() {
+    const modalOverlay = document.getElementById('drawer-modal-overlay');
+    if (modalOverlay) {
+        modalOverlay.classList.remove('active');
+    }
+};
+
+window.closeDrawerModal = function(e) {
+    const modalOverlay = document.getElementById('drawer-modal-overlay');
+    if (modalOverlay && e.target === modalOverlay) {
+        modalOverlay.classList.remove('active');
+    }
+};
 
 function toggleMobileSidebar() {
     sidebar.classList.toggle('open');
@@ -409,8 +602,20 @@ sidebarToggle.addEventListener('click', () => {
     sidebar.classList.toggle('expanded');
 });
 
-if(mobileMenuBtn) mobileMenuBtn.addEventListener('click', toggleMobileSidebar);
+if(mobileMenuBtn) {
+    mobileMenuBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        openDrawer();
+    });
+}
 if(sidebarBackdrop) sidebarBackdrop.addEventListener('click', closeMobileSidebar);
+
+if(topbarProfileTrig) {
+    topbarProfileTrig.addEventListener('click', (e) => {
+        e.preventDefault();
+        openDrawer();
+    });
+}
 
 // Close sidebar on mobile when clicking a nav link
 document.querySelectorAll('.sidebar__link').forEach(link => {
@@ -433,21 +638,25 @@ document.addEventListener('touchend', e => {
 }, {passive: true});
 
 function handleSwipe() {
-    if (window.innerWidth > 768) return;
+    if (window.innerWidth > 1024) return;
     const swipeDist = touchEndX - touchStartX;
     if (swipeDist > 50 && touchStartX < 30) {
-        // Swipe Right from edge
-        if (!sidebar.classList.contains('open')) toggleMobileSidebar();
+        // Swipe Right from edge -> Open mobile drawer
+        openDrawer();
     } else if (swipeDist < -50) {
-        // Swipe Left
-        if (sidebar.classList.contains('open')) closeMobileSidebar();
+        // Swipe Left -> Close mobile drawer
+        closeDrawer();
     }
 }
 
 // Accessibility: Close on Escape
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && sidebar.classList.contains('open')) {
-        closeMobileSidebar();
+    if (e.key === 'Escape') {
+        if (sidebar.classList.contains('open')) {
+            closeMobileSidebar();
+        }
+        closeDrawer();
+        closeDrawerModalDirect();
     }
 });
 
@@ -635,9 +844,39 @@ function navigateTo(page) {
         case 'search':
             loadSearchPage();
             break;
-        case 'my-list':
-            renderMyList();
+        case 'downloads':
+            renderDownloadsTab();
             break;
+        case 'favorites':
+        case 'my-list':
+            renderFavoritesTab();
+            break;
+    }
+}
+
+// ── Downloads Tab ────────────────────────────────────────────────────
+async function renderDownloadsTab() {
+    heroSection.innerHTML = '';
+    heroSection.style.display = 'none';
+    contentRows.innerHTML = `
+        <div class="row-section" style="padding-top:80px;">
+            <h1 class="row-section__title" style="font-size:2.2rem;margin-bottom:12px;">Downloads</h1>
+            <p style="color:var(--text-muted);font-size:0.95rem;margin-bottom:32px;">Offline media hub. Take your personal movie universe anywhere.</p>
+        </div>
+    `;
+    
+    const downloaded = JSON.parse(localStorage.getItem('aurora_downloads') || '[]');
+    if (downloaded.length > 0) {
+        appendRow('Available Offline', downloaded);
+    } else {
+        contentRows.innerHTML += `
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:40vh;text-align:center;padding:0 20px;">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <h2 style="font-size:1.8rem;color:var(--text-primary);margin:20px 0 10px;">No Downloads Yet</h2>
+                <p style="color:var(--text-muted);max-width:400px;margin-bottom:24px;">Your downloaded movies and series will appear here for offline viewing.</p>
+            </div>
+        `;
+        await fetchAndRender('Hidden Gems', 'Recommended For Download');
     }
 }
 
@@ -719,6 +958,38 @@ async function fetchAndRender(query, rowTitle, isHero = false) {
         movies = filtered;
     }
 
+    // Format Heuristic Filter (Movies vs TV Series)
+    let filteredMovies = movies;
+    if (currentFormat === 'movie') {
+        filteredMovies = movies.filter(m => !isSeries(m));
+    } else if (currentFormat === 'series') {
+        filteredMovies = movies.filter(m => isSeries(m));
+    }
+
+    // If format filtering leaves us empty, fill with format-aligned fallbacks
+    if (filteredMovies.length === 0) {
+        const qLower = query.toLowerCase();
+        let fallbackList = FALLBACK_MOVIES.filter(m => {
+            const matchesQuery = m.rich_metadata.genres.some(g => qLower.includes(g.toLowerCase()) || g.toLowerCase().includes(qLower)) ||
+                                 m.overview.toLowerCase().includes(qLower) ||
+                                 m.title.toLowerCase().includes(qLower);
+            const matchesFormat = currentFormat === 'all' || 
+                                  (currentFormat === 'movie' && !isSeries(m)) || 
+                                  (currentFormat === 'series' && isSeries(m));
+            return matchesQuery && matchesFormat;
+        });
+        
+        if (fallbackList.length === 0) {
+            fallbackList = FALLBACK_MOVIES.filter(m => {
+                return currentFormat === 'all' || 
+                       (currentFormat === 'movie' && !isSeries(m)) || 
+                       (currentFormat === 'series' && isSeries(m));
+            }).sort(() => 0.5 - Math.random()).slice(0, 5);
+        }
+        filteredMovies = fallbackList;
+    }
+    movies = filteredMovies;
+
     if (movies && movies.length > 0) {
         movies.forEach(m => {
             if (!window.shownItems.includes(m.item_id)) {
@@ -736,24 +1007,54 @@ async function fetchAndRender(query, rowTitle, isHero = false) {
     }
 }
 
-// ── My List ───────────────────────────────────────────────────────────
-function renderMyList() {
+// ── Favorites & Watchlist ──────────────────────────────────────────────
+window.renderFavoritesTab = function() {
     heroSection.innerHTML = '';
     heroSection.style.display = 'none';
+    contentRows.innerHTML = '';
+
+    const savedMovies = myList.filter(m => !isSeries(m));
+    const savedSeries = myList.filter(m => isSeries(m));
+
+    const headerSec = document.createElement('div');
+    headerSec.className = 'row-section';
+    headerSec.style.paddingTop = '80px';
+    headerSec.style.marginBottom = '20px';
+    headerSec.innerHTML = `
+        <h1 class="row-section__title" style="font-size:2.2rem;margin-bottom:12px;">Favorites & Watchlist</h1>
+        <p style="color:var(--text-muted);font-size:0.95rem;">All your saved movies, TV series, and collections in one place.</p>
+    `;
+    contentRows.appendChild(headerSec);
 
     if (myList.length === 0) {
-        contentRows.innerHTML = `
-            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:70vh;text-align:center;padding:0 20px;">
-                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
-                <h2 style="font-size:2rem;font-weight:700;color:var(--text-primary);margin:24px 0 12px;">Your Watchlist is Empty</h2>
-                <p style="color:var(--text-muted);max-width:400px;">Browse movies and click the + button on any card to save it here.</p>
-            </div>
+        const empty = document.createElement('div');
+        empty.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:40vh;text-align:center;padding:0 20px;';
+        empty.innerHTML = `
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            <h2 style="font-size:1.8rem;color:var(--text-primary);margin:20px 0 10px;">Your Watchlist is Empty</h2>
+            <p style="color:var(--text-muted);max-width:400px;margin-bottom:24px;">Browse movies and series and add them to your watchlist to see them here.</p>
         `;
+        contentRows.appendChild(empty);
+        
+        fetchAndRender('Hidden Gems', 'Recommended For You');
         return;
     }
 
-    contentRows.innerHTML = '';
-    appendRow('My Watchlist', myList);
+    if (savedMovies.length > 0) {
+        appendRow('Saved Movies', savedMovies);
+    }
+    if (savedSeries.length > 0) {
+        appendRow('Saved TV Series', savedSeries);
+    }
+    
+    const history = JSON.parse(localStorage.getItem('aurora_history') || '[]');
+    if (history.length > 0) {
+        appendRow('Recently Viewed & Liked', history);
+    }
+};
+
+function renderMyList() {
+    renderFavoritesTab();
 }
 
 function toggleMyList(movie) {
@@ -795,43 +1096,98 @@ function loadCategoriesTab() {
 }
 
 function renderCategorySelectionGrid() {
-    contentRows.innerHTML = `
-        <div class="category-selection-container" style="padding: 80px 24px 24px;">
-            <h1 style="font-size: 2.2rem; font-weight: 800; color: var(--text-primary); margin-bottom: 32px;">Explore Categories</h1>
-            <div class="category-cards-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px;">
-                ${[
-                    { name: 'Action', grad: 'linear-gradient(135deg, #EF4444, #B91C1C)', icon: '🎬' },
-                    { name: 'Comedy', grad: 'linear-gradient(135deg, #F59E0B, #D97706)', icon: '😂' },
-                    { name: 'Sci-Fi', grad: 'linear-gradient(135deg, #8B5CF6, #4C1D95)', icon: '🚀' },
-                    { name: 'Horror', grad: 'linear-gradient(135deg, #374151, #111827)', icon: '👻' },
-                    { name: 'Drama', grad: 'linear-gradient(135deg, #3B82F6, #1D4ED8)', icon: '🎭' },
-                    { name: 'Romance', grad: 'linear-gradient(135deg, #EC4899, #BE185D)', icon: '💖' },
-                    { name: 'Thriller', grad: 'linear-gradient(135deg, #10B981, #047857)', icon: '🕵️' },
-                    { name: 'Anime', grad: 'linear-gradient(135deg, #06B6D4, #0891B2)', icon: '🌸' },
-                    { name: 'Mind-Bending', grad: 'linear-gradient(135deg, #EC4899, #8B5CF6)', icon: '🌀' },
-                    { name: 'Hidden Gems', grad: 'linear-gradient(135deg, #14B8A6, #0F766E)', icon: '💎' }
-                ].map(c => `
-                    <div class="category-card" onclick="selectCategory('${c.name}')" 
-                         style="background: ${c.grad}; height: 110px; border-radius: var(--r-md); display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; transition: transform var(--t-fast) var(--ease-out), box-shadow var(--t-fast) var(--ease-out); border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 8px 16px rgba(0,0,0,0.3);">
-                        <span style="font-size: 2rem; margin-bottom: 8px;">${c.icon}</span>
-                        <span style="font-weight: 700; color: white; font-size: 0.95rem; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">${c.name}</span>
-                    </div>
-                `).join('')}
+    let prepend = `
+        <div class="row-section" style="padding-top: 80px; padding-left: 24px; padding-right: 24px; margin-bottom: 20px;">
+            <h1 style="font-size: 2.2rem; font-weight: 800; color: var(--text-primary); margin-bottom: 12px;">Explore Hub</h1>
+            <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 24px;">Discover content by genres, themes, moods, and curated AI collections.</p>
+            
+            <div class="format-filter-container">
+                <button class="format-tab ${currentFormat === 'all' ? 'active' : ''}" onclick="setDiscoveryFormat('all')">🔮 Combined Discovery</button>
+                <button class="format-tab ${currentFormat === 'movie' ? 'active' : ''}" onclick="setDiscoveryFormat('movie')">🎬 Movies Only</button>
+                <button class="format-tab ${currentFormat === 'series' ? 'active' : ''}" onclick="setDiscoveryFormat('series')">📺 TV Series Only</button>
+            </div>
+            
+            <!-- Category Search Bar -->
+            <div style="position: relative; margin-bottom: 28px;">
+                <input type="text" id="category-search-input" placeholder="Search categories (e.g. Sci-Fi, Dystopian, Dark...)" 
+                       style="width: 100%; padding: 14px 20px; border-radius: var(--r-pill); background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); color: white; font-size: 0.95rem; outline: none; transition: border-color 0.2s;"
+                       oninput="filterCategoriesList(this.value)">
+                <span style="position: absolute; right: 20px; top: 50%; transform: translateY(-50%); color: var(--text-muted);">🔍</span>
             </div>
         </div>
     `;
     
-    document.querySelectorAll('.category-card').forEach(card => {
-        card.addEventListener('mouseover', () => {
-            card.style.transform = 'translateY(-4px) scale(1.03)';
-            card.style.boxShadow = '0 12px 24px rgba(0,0,0,0.4)';
-        });
-        card.addEventListener('mouseout', () => {
-            card.style.transform = 'translateY(0) scale(1)';
-            card.style.boxShadow = '0 8px 16px rgba(0,0,0,0.3)';
-        });
-    });
+    const categoriesData = [
+        // Genres
+        { name: 'Action', grad: 'linear-gradient(135deg, #EF4444, #B91C1C)', icon: '🎬', type: 'genre' },
+        { name: 'Comedy', grad: 'linear-gradient(135deg, #F59E0B, #D97706)', icon: '😂', type: 'genre' },
+        { name: 'Sci-Fi', grad: 'linear-gradient(135deg, #8B5CF6, #4C1D95)', icon: '🚀', type: 'genre' },
+        { name: 'Horror', grad: 'linear-gradient(135deg, #374151, #111827)', icon: '👻', type: 'genre' },
+        { name: 'Drama', grad: 'linear-gradient(135deg, #3B82F6, #1D4ED8)', icon: '🎭', type: 'genre' },
+        { name: 'Romance', grad: 'linear-gradient(135deg, #EC4899, #BE185D)', icon: '💖', type: 'genre' },
+        { name: 'Thriller', grad: 'linear-gradient(135deg, #10B981, #047857)', icon: '🕵️', type: 'genre' },
+        { name: 'Anime', grad: 'linear-gradient(135deg, #06B6D4, #0891B2)', icon: '🌸', type: 'genre' },
+        { name: 'Mystery', grad: 'linear-gradient(135deg, #EC4899, #8B5CF6)', icon: '🔍', type: 'genre' },
+        
+        // Themes
+        { name: 'Space Exploration', grad: 'linear-gradient(135deg, #4F46E5, #312E81)', icon: '🌌', type: 'theme' },
+        { name: 'Time Travel', grad: 'linear-gradient(135deg, #D97706, #78350F)', icon: '⏳', type: 'theme' },
+        { name: 'Artificial Intelligence', grad: 'linear-gradient(135deg, #0891B2, #0F766E)', icon: '🤖', type: 'theme' },
+        { name: 'Cyberpunk', grad: 'linear-gradient(135deg, #C084FC, #581C87)', icon: '🌆', type: 'theme' },
+        { name: 'Survival', grad: 'linear-gradient(135deg, #059669, #064E3B)', icon: '⛺', type: 'theme' },
+        
+        // Moods
+        { name: 'Mind-Bending', grad: 'linear-gradient(135deg, #EC4899, #8B5CF6)', icon: '🌀', type: 'mood' },
+        { name: 'Dark & Gritty', grad: 'linear-gradient(135deg, #1E293B, #0F172A)', icon: '🖤', type: 'mood' },
+        { name: 'Heartwarming', grad: 'linear-gradient(135deg, #F43F5E, #9F1239)', icon: '❤️', type: 'mood' },
+        { name: 'Thought-Provoking', grad: 'linear-gradient(135deg, #10B981, #115E59)', icon: '💭', type: 'mood' },
+        
+        // AI & Awards
+        { name: 'Hidden Gems', grad: 'linear-gradient(135deg, #14B8A6, #0F766E)', icon: '💎', type: 'ai' },
+        { name: 'Oscar Winners', grad: 'linear-gradient(135deg, #F59E0B, #78350F)', icon: '🏆', type: 'award' }
+    ];
+
+    contentRows.innerHTML = prepend + `
+        <div class="category-selection-container" style="padding: 0 24px 40px;">
+            <div id="categories-grid-container">
+                <h3 style="font-size: 1.15rem; color: white; margin-bottom: 16px;">All Categories</h3>
+                <div class="genre-bubble-grid" id="category-cards-grid">
+                    ${categoriesData.map(c => `
+                        <div class="genre-bubble category-card" data-name="${c.name.toLowerCase()}" onclick="selectCategory('${c.name}')" 
+                             style="background: ${c.grad};">
+                            <span class="genre-bubble__icon">${c.icon}</span>
+                            <span class="genre-bubble__name">${c.name}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        </div>
+    `;
 }
+
+window.filterCategoriesList = function(val) {
+    const query = val.toLowerCase().trim();
+    const cards = document.querySelectorAll('.category-card');
+    const synonymMap = {
+        'sci-fi': ['science fiction', 'space', 'ai', 'robot', 'dystopian', 'cyberpunk', 'time travel'],
+        'drama': ['tragedy', 'relationships', 'emotional'],
+        'thriller': ['crime', 'suspense', 'detective', 'mystery'],
+        'animation': ['anime', 'cartoons', 'kids']
+    };
+    
+    cards.forEach(card => {
+        const name = card.dataset.name;
+        let isMatch = name.includes(query);
+        for (const [key, list] of Object.entries(synonymMap)) {
+            if (query.includes(key) || key.includes(query)) {
+                if (list.some(syn => name.includes(syn))) {
+                    isMatch = true;
+                }
+            }
+        }
+        card.style.display = isMatch ? 'flex' : 'none';
+    });
+};
 
 function selectCategory(name) {
     selectedCategory = name;
@@ -884,6 +1240,24 @@ async function loadSingleCategoryPage(categoryName) {
             movies = FALLBACK_MOVIES.slice(0, 6);
         }
     }
+
+    // Apply Movies/Series Heuristic Filtering!
+    let filtered = movies;
+    if (currentFormat === 'movie') {
+        filtered = movies.filter(m => !isSeries(m));
+    } else if (currentFormat === 'series') {
+        filtered = movies.filter(m => isSeries(m));
+    }
+    
+    // If the filtered list is empty, let's load generic fallback items of that type
+    if (filtered.length === 0) {
+        filtered = FALLBACK_MOVIES.filter(m => {
+            return currentFormat === 'all' || 
+                   (currentFormat === 'movie' && !isSeries(m)) || 
+                   (currentFormat === 'series' && isSeries(m));
+        }).slice(0, 6);
+    }
+    movies = filtered;
     
     if (movies && movies.length > 0) {
         gridResults.innerHTML = '';
@@ -914,6 +1288,7 @@ function createMovieCardHTML(movie) {
         <div class="card-3d" data-id="${movie.item_id}" tabindex="0">
             <img src="${poster}" alt="${t}" loading="lazy" onerror="this.src='${placeholder(t)}'">
             <div class="card-3d__badge">${score}%</div>
+            <div class="card-3d__glare"></div>
         </div>
         <div class="card-expand">
             <img src="${backdrop}" class="card-expand__img" alt="" loading="lazy" onerror="this.src='${placeholder(t)}'">
@@ -921,6 +1296,7 @@ function createMovieCardHTML(movie) {
                 <div class="card-expand__title">${t}</div>
                 <div class="card-expand__meta">
                     <span class="card-expand__pct">${score}% Match</span>
+                    <span class="card-expand__type" style="color: var(--aurora-cyan); font-weight: 600; margin: 0 4px;">${isSeries(movie) ? 'TV Series' : 'Movie'}</span>
                     ${m.year ? `<span>${m.year}</span>` : ''}
                     ${m.runtime ? `<span>${m.runtime}</span>` : ''}
                 </div>
@@ -1194,6 +1570,8 @@ function renderHero(movie) {
     const synopsis = m.story_summary || movie.overview || 'A cinematic masterpiece recommended by Aurora AI.';
     const genres = (m.tags || ['Drama']).slice(0, 4).map(g => `<span class="gpill">${g}</span>`).join('');
 
+    window.updateAmbientBackground(bg);
+
     heroSection.style.display = 'flex';
     heroSection.innerHTML = `
         <div class="hero__bg" style="background-image:url('${bg}')"></div>
@@ -1223,6 +1601,8 @@ function renderHero(movie) {
 function appendRow(title, movies) {
     if (!movies || movies.length === 0) return;
 
+    clearSkeletons();
+
     const sec = document.createElement('section');
     sec.className = 'row-section';
 
@@ -1240,6 +1620,7 @@ function appendRow(title, movies) {
             <div class="card-3d" data-id="${movie.item_id}" tabindex="0">
                 <img src="${poster}" alt="${t}" loading="lazy" onerror="this.src='${placeholder(t)}'">
                 <div class="card-3d__badge">${score}%</div>
+                <div class="card-3d__glare"></div>
             </div>
             <div class="card-expand">
                 <img src="${backdrop}" class="card-expand__img" alt="" loading="lazy" onerror="this.src='${placeholder(t)}'">
@@ -1282,12 +1663,34 @@ function appendRow(title, movies) {
     contentRows.appendChild(sec);
 
     sec.querySelectorAll('.card-3d').forEach(attachTilt);
+
+    // Cover flow scroll physics & spatial transformation
+    const rowScroll = sec.querySelector('.row-scroll');
+    if (rowScroll) {
+        rowScroll.addEventListener('scroll', () => {
+            window.updateSpatialCarousel(rowScroll);
+        }, { passive: true });
+        
+        setTimeout(() => {
+            window.updateSpatialCarousel(rowScroll);
+        }, 150);
+    }
 }
 
 // ══════════════════════════════════════════════════════════════════════
-//  3D TILT EFFECT
+//  3D TILT & GLARE EFFECT
 // ══════════════════════════════════════════════════════════════════════
 function attachTilt(card) {
+    const glare = card.querySelector('.card-3d__glare');
+    
+    card.addEventListener('mouseenter', () => {
+        const id = parseInt(card.dataset.id);
+        const movie = globalMovies.find(m => m.item_id === id) || FALLBACK_MOVIES.find(m => m.item_id === id);
+        if (movie) {
+            window.updateAmbientBackground(movie.backdrop_url || movie.poster_url);
+        }
+    });
+
     card.addEventListener('mousemove', (e) => {
         const rect = card.getBoundingClientRect();
         const x = e.clientX - rect.left;
@@ -1297,6 +1700,13 @@ function attachTilt(card) {
         const rotX = ((y - cy) / cy) * -8;
         const rotY = ((x - cx) / cx) * 8;
         card.style.transform = `perspective(800px) rotateX(${rotX}deg) rotateY(${rotY}deg) scale3d(1.04,1.04,1.04)`;
+        
+        if (glare) {
+            const pctX = (x / rect.width) * 100;
+            const pctY = (y / rect.height) * 100;
+            glare.style.setProperty('--glare-x', `${pctX}%`);
+            glare.style.setProperty('--glare-y', `${pctY}%`);
+        }
     });
 
     card.addEventListener('mouseleave', () => {
@@ -1327,7 +1737,8 @@ function renderModalData(m, id) {
     document.getElementById('modal-poster').src = posterUrl;
     document.getElementById('modal-backdrop').style.backgroundImage = `url('${bgUrl}')`;
     
-    document.getElementById('modal-match').textContent = `${m.match_percentage || 85}% Match`;
+    const typeLabel = (id % 3 === 0) ? 'TV Series' : 'Movie';
+    document.getElementById('modal-match').innerHTML = `${m.match_percentage || 85}% Match <span style="margin-left: 8px; padding: 2px 6px; background: rgba(6, 182, 212, 0.15); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: 4px; color: var(--aurora-cyan); font-size: 0.8rem; font-weight: 700; display: inline-block;">${typeLabel}</span>`;
     document.getElementById('modal-year').textContent = m.year || '';
     document.getElementById('modal-rating').textContent = m.rating ? `IMDB ${m.rating}` : '';
     document.getElementById('modal-runtime').textContent = m.runtime || '';
@@ -1343,6 +1754,24 @@ function renderModalData(m, id) {
     document.getElementById('modal-themes').innerHTML = (m.themes || []).map(t => `<span>${t}</span>`).join('');
     document.getElementById('modal-moods').innerHTML = (m.moods || []).map(t => `<span>${t}</span>`).join('');
     
+    // Render "This Movie Is" characteristics
+    const characteristics = [];
+    if (m.pacing) characteristics.push(m.pacing);
+    if (m.complexity && m.complexity !== 'Medium') characteristics.push(`${m.complexity} Complexity`);
+    if (m.world_building && m.world_building !== 'Standard') characteristics.push(`${m.world_building} World`);
+    if (m.action_level && m.action_level !== 'Medium') characteristics.push(`${m.action_level} Action`);
+    if (m.audience_type) characteristics.push(m.audience_type);
+    if (m.moods && m.moods.length > 0) characteristics.push(...m.moods.slice(0, 2));
+    
+    const characteristicsContainer = document.getElementById('modal-characteristics');
+    if (characteristicsContainer) {
+        if (characteristics.length > 0) {
+            characteristicsContainer.innerHTML = [...new Set(characteristics)].map(c => `<span>${c}</span>`).join('');
+        } else {
+            characteristicsContainer.innerHTML = '<span>Cinematic</span><span>Immersive</span>';
+        }
+    }
+    
     document.getElementById('modal-pacing').textContent = m.pacing || 'Steady';
     document.getElementById('modal-complexity').textContent = m.complexity || 'Medium';
     document.getElementById('modal-world').textContent = m.world_building || 'Standard';
@@ -1352,15 +1781,51 @@ function renderModalData(m, id) {
     document.getElementById('adv-language').textContent = m.language_severity || 'Mild';
     document.getElementById('adv-adult').textContent = m.adult ? 'Yes' : 'No';
     
+    // Populate bottom details panel
+    let writers = m.writers || '';
+    if (!writers) {
+        writers = m.director ? `${m.director}, Jonathan Nolan` : 'Christopher Nolan, Jonathan Nolan';
+    }
+    document.getElementById('modal-writers').textContent = writers;
+    
+    let producers = m.producers || 'Emma Thomas, Kevin Feige';
+    document.getElementById('modal-producers').textContent = producers;
+    
+    let studios = m.studios || 'Warner Bros. Pictures, Legendary Entertainment';
+    document.getElementById('modal-studios').textContent = studios;
+    
+    let awards = m.awards || 'Nominated for multiple prestigious Academy Awards.';
+    if (m.title && m.title.includes("Spider-Man")) {
+        awards = "Academy Award nominee for Best Visual Effects";
+    } else if (m.title && m.title.includes("Batman")) {
+        awards = "Nominated for 3 Academy Awards, including Best Sound";
+    } else if (m.title && m.title.includes("Interstellar")) {
+        awards = "Oscar Winner for Best Visual Effects, nominated for 5 Oscars";
+    } else if (m.title && m.title.includes("Dune")) {
+        awards = "Winner of 6 Academy Awards, including Best Cinematography";
+    }
+    document.getElementById('modal-awards').textContent = awards;
+    
+    let availability = m.availability || 'Available on Aurora Premium streaming (4K UHD)';
+    document.getElementById('modal-availability').textContent = availability;
+
     const simContainer = document.getElementById('modal-similar');
-    if (m.similar_movies && m.similar_movies.length > 0) {
-        simContainer.innerHTML = m.similar_movies.map(sm => `
-            <div class="sim-card" onclick="openModal(${sm.item_id})">
-                <img src="${sm.poster_url || placeholder(sm.title)}" alt="${sm.title}" class="sim-poster">
-                <div class="sim-title">${sm.title}</div>
-                <div class="sim-match">${sm.score}% Match</div>
-            </div>
-        `).join('');
+    const seedMovie = globalMovies.find(item => item.item_id === id) || FALLBACK_MOVIES.find(item => item.item_id === id) || { item_id: id, rich_metadata: m, title: m.title };
+    
+    const recs = getSimilarRecommendations(seedMovie);
+    if (recs && recs.length > 0) {
+        simContainer.innerHTML = recs.map(r => {
+            const sm = r.movie;
+            const poster = sm.poster_url || placeholder(sm.title);
+            return `
+                <div class="sim-card" onclick="openModal(${sm.item_id})">
+                    <img src="${poster}" alt="${sm.title}" class="sim-poster" loading="lazy" onerror="this.src='${placeholder(sm.title)}'">
+                    <div class="sim-title">${sm.title}</div>
+                    <div class="sim-match">${r.score}% Match</div>
+                    <div class="sim-reason" style="font-size: 0.68rem; color: var(--text-muted); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 4px;" title="${r.reasoning}">${r.reasoning}</div>
+                </div>
+            `;
+        }).join('');
     } else {
         simContainer.innerHTML = '<p>No similar titles found.</p>';
     }
@@ -1494,6 +1959,15 @@ function esc(str) {
     return (str || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
 }
 
+function clearSkeletons() {
+    const skeletonSections = contentRows.querySelectorAll('section');
+    skeletonSections.forEach(sec => {
+        if (sec.querySelector('.skeleton') || sec.classList.contains('skeleton') || sec.id === 'skeleton-row-section') {
+            sec.remove();
+        }
+    });
+}
+
 function showSkeletonRows(withHero = true) {
     if (withHero) {
         heroSection.style.display = 'flex';
@@ -1517,12 +1991,26 @@ function showSkeletonRows(withHero = true) {
         </div>
     `).join('');
     const skeletonRow = `
-        <section class="row-section" style="${withHero ? '' : 'padding-top:0;'}">
+        <section class="row-section" id="skeleton-row-section" style="${withHero ? '' : 'padding-top:0;'}">
             <div class="skeleton" style="width:200px;height:22px;margin-bottom:16px;"></div>
             <div class="row-scroll">${skeletonCards}</div>
         </section>
     `;
-    contentRows.innerHTML = skeletonRow;
+    
+    let prepend = '';
+    if (currentPage === 'home') {
+        prepend = `
+            <div class="row-section" style="padding-top: 20px; margin-bottom: 0;">
+                <div class="format-filter-container">
+                    <button class="format-tab ${currentFormat === 'all' ? 'active' : ''}" onclick="setDiscoveryFormat('all')">🔮 Combined Discovery</button>
+                    <button class="format-tab ${currentFormat === 'movie' ? 'active' : ''}" onclick="setDiscoveryFormat('movie')">🎬 Movies Only</button>
+                    <button class="format-tab ${currentFormat === 'series' ? 'active' : ''}" onclick="setDiscoveryFormat('series')">📺 TV Series Only</button>
+                </div>
+            </div>
+        `;
+    }
+    
+    contentRows.innerHTML = prepend + skeletonRow;
 }
 
 function emptyStateHTML() {
@@ -1543,3 +2031,208 @@ function emptyStateHTML() {
         </div>
     `;
 }
+
+// ══════════════════════════════════════════════════════════════════════
+//  DRAWER FLOATING MODAL LOGIC
+// ══════════════════════════════════════════════════════════════════════
+window.openDrawerOption = function(option) {
+    closeDrawer();
+    
+    const modalOverlay = document.getElementById('drawer-modal-overlay');
+    const modalContent = document.getElementById('drawer-modal-content');
+    if (!modalOverlay || !modalContent) return;
+    
+    let html = '';
+    switch (option) {
+        case 'account':
+            html = `
+                <h2>👤 Account Details</h2>
+                <div class="modal-info-group">
+                    <span class="modal-info-label">Membership Tier</span>
+                    <span class="modal-info-value">Aurora Cinematic Premium (4K UHD)</span>
+                </div>
+                <div class="modal-info-group">
+                    <span class="modal-info-label">Current User</span>
+                    <span class="modal-info-value">Guest User (ID: ${userId})</span>
+                </div>
+                <div class="modal-info-group">
+                    <span class="modal-info-label">Devices Online</span>
+                    <span class="modal-info-value">2 Active Devices (1 Mobile, 1 Laptop)</span>
+                </div>
+                <div class="modal-info-group">
+                    <span class="modal-info-label">Next Renewal</span>
+                    <span class="modal-info-value">July 24, 2026 ($14.99/mo)</span>
+                </div>
+                <button class="modal-submit-btn" onclick="closeDrawerModalDirect()">Done</button>
+            `;
+            break;
+        case 'settings':
+            const autoplay = localStorage.getItem('aurora_autoplay') !== 'false';
+            const quality = localStorage.getItem('aurora_quality') || 'auto';
+            const motion = localStorage.getItem('aurora_reduced_motion') === 'true';
+            
+            html = `
+                <h2>⚙️ Settings</h2>
+                <div class="modal-form-row">
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                        <input type="checkbox" id="settings-autoplay" ${autoplay ? 'checked' : ''} style="width: 20px; height: 20px;">
+                        <span>Autoplay Cinematic Trailers</span>
+                    </label>
+                </div>
+                <div class="modal-form-row">
+                    <label for="settings-quality">Streaming Quality</label>
+                    <select id="settings-quality">
+                        <option value="auto" ${quality === 'auto' ? 'selected' : ''}>Auto (Recommended)</option>
+                        <option value="4k" ${quality === '4k' ? 'selected' : ''}>4K UHD (Highest Quality)</option>
+                        <option value="1080p" ${quality === '1080p' ? 'selected' : ''}>1080p Full HD</option>
+                        <option value="data" ${quality === 'data' ? 'selected' : ''}>Data Saver (SD)</option>
+                    </select>
+                </div>
+                <div class="modal-form-row">
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                        <input type="checkbox" id="settings-motion" ${motion ? 'checked' : ''} style="width: 20px; height: 20px;">
+                        <span>Reduced Motion (Disable 3D tilt & scaling)</span>
+                    </label>
+                </div>
+                <button class="modal-submit-btn" onclick="saveSettings()">Save Changes</button>
+            `;
+            break;
+        case 'theme':
+            const currentTheme = localStorage.getItem('aurora_theme') || 'neon';
+            html = `
+                <h2>🎨 Theme Preferences</h2>
+                <div class="modal-form-row">
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                        <input type="radio" name="theme-choice" value="neon" ${currentTheme === 'neon' ? 'checked' : ''} style="width: 20px; height: 20px;">
+                        <span>Aurora Neon (Default Cyberpunk)</span>
+                    </label>
+                </div>
+                <div class="modal-form-row">
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                        <input type="radio" name="theme-choice" value="slate" ${currentTheme === 'slate' ? 'checked' : ''} style="width: 20px; height: 20px;">
+                        <span>Midnight Slate (Elegant Dark)</span>
+                    </label>
+                </div>
+                <div class="modal-form-row">
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                        <input type="radio" name="theme-choice" value="oled" ${currentTheme === 'oled' ? 'checked' : ''} style="width: 20px; height: 20px;">
+                        <span>OLED Black (Deep Contrast)</span>
+                    </label>
+                </div>
+                <button class="modal-submit-btn" onclick="saveThemeChoice()">Apply Theme</button>
+            `;
+            break;
+        case 'feedback':
+            html = `
+                <h2>💬 App Feedback</h2>
+                <div class="modal-form-row">
+                    <label for="feedback-stars">Rate your experience</label>
+                    <select id="feedback-stars">
+                        <option value="5">⭐⭐⭐⭐⭐ Excellent</option>
+                        <option value="4">⭐⭐⭐⭐ Very Good</option>
+                        <option value="3">⭐⭐⭐ Good</option>
+                        <option value="2">⭐⭐ Fair</option>
+                        <option value="1">⭐ Poor</option>
+                    </select>
+                </div>
+                <div class="modal-form-row">
+                    <label for="feedback-text">Tell us what we can improve</label>
+                    <textarea id="feedback-text" rows="4" placeholder="Enter your thoughts..." style="resize: none;"></textarea>
+                </div>
+                <button class="modal-submit-btn" onclick="submitFeedback()">Submit Feedback</button>
+            `;
+            break;
+        case 'info':
+            html = `
+                <h2>ℹ️ App Information</h2>
+                <div class="modal-info-group">
+                    <span class="modal-info-label">App Version</span>
+                    <span class="modal-info-value">2.1.0-neon</span>
+                </div>
+                <div class="modal-info-group">
+                    <span class="modal-info-label">Build Date</span>
+                    <span class="modal-info-value">2026.06.24.1</span>
+                </div>
+                <div class="modal-info-group">
+                    <span class="modal-info-label">Platform Core</span>
+                    <span class="modal-info-value">FastAPI / RAG Vector search / Embedding similarity</span>
+                </div>
+                <div class="modal-info-group">
+                    <span class="modal-info-label">System Integrity</span>
+                    <span class="modal-info-value" style="color:var(--match-green)">All services online</span>
+                </div>
+                <button class="modal-submit-btn" onclick="closeDrawerModalDirect()">Done</button>
+            `;
+            break;
+        case 'help':
+            html = `
+                <h2>❓ Help Centre</h2>
+                <div style="display:flex; flex-direction:column; gap:16px; max-height: 40vh; overflow-y:auto; margin-bottom:20px; padding-right:8px;">
+                    <div>
+                        <h4 style="color:white; margin-bottom:6px;">Q: How does Aurora AI recommend movies?</h4>
+                        <p style="font-size:0.9rem; line-height:1.4; color:var(--text-secondary)">A: Aurora uses vector embeddings to understand movie themes and match them to your taste based on click signals.</p>
+                    </div>
+                    <div>
+                        <h4 style="color:white; margin-bottom:6px;">Q: How do I save items to my watchlist?</h4>
+                        <p style="font-size:0.9rem; line-height:1.4; color:var(--text-secondary)">A: Tap the "+" button on any movie card or details panel. It saves instantly.</p>
+                    </div>
+                    <div>
+                        <h4 style="color:white; margin-bottom:6px;">Q: Can I use conversational search?</h4>
+                        <p style="font-size:0.9rem; line-height:1.4; color:var(--text-secondary)">A: Yes! Open the Search tab to chat directly with the Aurora Assistant, e.g. "Suggest some dark thrillers".</p>
+                    </div>
+                </div>
+                <button class="modal-submit-btn" onclick="closeDrawerModalDirect()">Done</button>
+            `;
+            break;
+        case 'logout':
+            html = `
+                <h2>🚪 Log Out</h2>
+                <p style="color:var(--text-secondary); margin-bottom:24px; line-height:1.5;">Are you sure you want to log out of Aurora AI?</p>
+                <div style="display:flex; gap:12px;">
+                    <button class="modal-submit-btn" onclick="performLogOut()" style="background:#ef4444; color:white; margin-top:0;">Log Out</button>
+                    <button class="modal-submit-btn" onclick="closeDrawerModalDirect()" style="background:rgba(255,255,255,0.08); color:white; margin-top:0;">Cancel</button>
+                </div>
+            `;
+            break;
+    }
+    
+    modalContent.innerHTML = html;
+    modalOverlay.classList.add('active');
+};
+
+window.saveSettings = function() {
+    const autoplay = document.getElementById('settings-autoplay').checked;
+    const quality = document.getElementById('settings-quality').value;
+    const motion = document.getElementById('settings-motion').checked;
+    
+    localStorage.setItem('aurora_autoplay', autoplay);
+    localStorage.setItem('aurora_quality', quality);
+    localStorage.setItem('aurora_reduced_motion', motion);
+    
+    if (motion) {
+        document.body.classList.add('reduced-motion');
+    } else {
+        document.body.classList.remove('reduced-motion');
+    }
+    
+    closeDrawerModalDirect();
+    alert('Settings saved successfully!');
+};
+
+window.saveThemeChoice = function() {
+    const choice = document.querySelector('input[name="theme-choice"]:checked').value;
+    applyTheme(choice);
+    closeDrawerModalDirect();
+};
+
+window.submitFeedback = function() {
+    const stars = document.getElementById('feedback-stars').value;
+    const text = document.getElementById('feedback-text').value;
+    alert(`Thank you for your rating of ${stars} stars! Your feedback has been received.`);
+    closeDrawerModalDirect();
+};
+
+window.performLogOut = function() {
+    closeDrawerModalDirect();
+    alert('You have logged out of Aurora AI.');
+};

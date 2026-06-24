@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
+    <div id="ambient-backdrop" class="ambient-backdrop"></div>
     <!-- ═══ Glass Sidebar ═══ -->
     <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
     <aside class="sidebar" id="sidebar">
@@ -36,6 +37,10 @@
             <a href="#" class="sidebar__link" data-page="library" onclick="navigateTo('library');return false;">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20M4 19.5V3.5A2.5 2.5 0 0 1 6.5 1H20v21H6.5a2.5 2.5 0 0 1-2.5-2.5z"/></svg>
                 <span>Library</span>
+            </a>
+            <a href="#" class="sidebar__link" data-page="downloads" onclick="navigateTo('downloads');return false;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span>Downloads</span>
             </a>
         </nav>
         <div class="sidebar__bottom">
@@ -107,10 +112,24 @@
         <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Open Navigation Menu">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>
-        <button class="topbar__ai-btn" id="ai-trigger" aria-label="Aurora AI">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-            <span>Aurora AI</span>
-        </button>
+        <div class="topbar__logo" onclick="navigateTo('home');" style="cursor: pointer;">
+            <span class="sidebar__logo-icon">✦</span>
+            <span class="topbar__logo-text">AURORA</span>
+        </div>
+        <div class="topbar__actions">
+            <button class="topbar__action-btn" id="topbar-search-trigger" aria-label="Search" onclick="navigateTo('search');">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </button>
+            <button class="topbar__action-btn" id="topbar-profile-trigger" aria-label="Open user menu">
+                <div class="sidebar__avatar" style="width:24px; height:24px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                </div>
+            </button>
+            <button class="topbar__ai-btn" id="ai-trigger" aria-label="Aurora AI">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                <span>Aurora AI</span>
+            </button>
+        </div>
     </header>
 
     <!-- ═══ Main Content ═══ -->
@@ -228,6 +247,12 @@
                             <div class="side-tags" id="modal-moods"></div>
                         </div>
 
+                        <!-- CHARACTERISTICS -->
+                        <div class="modal-side-item">
+                            <span class="side-label">This Movie Is</span>
+                            <div class="side-tags" id="modal-characteristics"></div>
+                        </div>
+
                         <!-- 14. ADVANCED DISCOVERY METADATA -->
                         <div class="modal-side-item advanced-meta">
                             <span class="side-label">Pacing</span>
@@ -253,6 +278,30 @@
                             <div class="advisory-row"><span>Language:</span> <span id="adv-language"></span></div>
                             <div class="advisory-row"><span>Adult Content:</span> <span id="adv-adult"></span></div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Bottom Details Panel -->
+                <div class="modal-bottom-details">
+                    <div class="modal-detail-group">
+                        <span class="detail-label">Writers</span>
+                        <span class="detail-value" id="modal-writers"></span>
+                    </div>
+                    <div class="modal-detail-group">
+                        <span class="detail-label">Producers</span>
+                        <span class="detail-value" id="modal-producers"></span>
+                    </div>
+                    <div class="modal-detail-group">
+                        <span class="detail-label">Production Studios</span>
+                        <span class="detail-value" id="modal-studios"></span>
+                    </div>
+                    <div class="modal-detail-group">
+                        <span class="detail-label">Awards & Accolades</span>
+                        <span class="detail-value" id="modal-awards"></span>
+                    </div>
+                    <div class="modal-detail-group">
+                        <span class="detail-label">Streaming & Availability</span>
+                        <span class="detail-value" id="modal-availability"></span>
                     </div>
                 </div>
             </div>
@@ -294,6 +343,59 @@
             <span>Search</span>
         </button>
     </nav>
+
+    <!-- ═══ Mobile Navigation Drawer ═══ -->
+    <div id="drawer-backdrop" class="drawer-backdrop" onclick="closeDrawer()"></div>
+    <aside class="drawer" id="drawer">
+        <div class="drawer__header">
+            <div class="drawer__logo">
+                <span class="sidebar__logo-icon">✦</span>
+                <span class="drawer__logo-text">AURORA</span>
+            </div>
+            <button class="drawer__close" id="drawer-close" aria-label="Close Navigation Menu" onclick="closeDrawer()">✕</button>
+        </div>
+        <nav class="drawer__nav">
+            <button class="drawer__link" onclick="openDrawerOption('account')">
+                <span class="drawer__link-icon">👤</span>
+                <span>Account</span>
+            </button>
+            <button class="drawer__link" onclick="openDrawerOption('settings')">
+                <span class="drawer__link-icon">⚙️</span>
+                <span>Settings</span>
+            </button>
+            <button class="drawer__link" onclick="openDrawerOption('theme')">
+                <span class="drawer__link-icon">🎨</span>
+                <span>Theme Preferences</span>
+            </button>
+            <button class="drawer__link" onclick="openDrawerOption('feedback')">
+                <span class="drawer__link-icon">💬</span>
+                <span>Feedback</span>
+            </button>
+            <button class="drawer__link" onclick="openDrawerOption('info')">
+                <span class="drawer__link-icon">ℹ️</span>
+                <span>App Information</span>
+            </button>
+            <button class="drawer__link" onclick="openDrawerOption('help')">
+                <span class="drawer__link-icon">❓</span>
+                <span>Help Centre</span>
+            </button>
+            <div class="drawer__sep"></div>
+            <button class="drawer__link drawer__link--logout" onclick="openDrawerOption('logout')">
+                <span class="drawer__link-icon">🚪</span>
+                <span>Log Out</span>
+            </button>
+        </nav>
+    </aside>
+
+    <!-- ═══ Drawer Option Sub-Modals ═══ -->
+    <div class="drawer-modal-overlay" id="drawer-modal-overlay" onclick="closeDrawerModal(event)">
+        <div class="drawer-modal">
+            <button class="drawer-modal__close" id="drawer-modal-close" onclick="closeDrawerModalDirect()">✕</button>
+            <div class="drawer-modal__content" id="drawer-modal-content">
+                <!-- Injected dynamically by app.js -->
+            </div>
+        </div>
+    </div>
 
     <script src="app.js?v=2"></script>
 </body>
