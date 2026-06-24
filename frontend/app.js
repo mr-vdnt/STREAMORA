@@ -37,20 +37,13 @@ const closeModalBtn = document.getElementById('close-modal-btn');
 let globalMovies = [];
 let myList = JSON.parse(localStorage.getItem('aurora_mylist') || '[]');
 let currentPage = 'home';
-let token = localStorage.getItem('aurora_token');
-let userId = localStorage.getItem('aurora_user_id') || 32;
+let token = 'guest-token';
+let userId = 32;
 
 async function authFetch(url, options = {}) {
-    if (!token) throw new Error('Unauthenticated');
     options.headers = options.headers || {};
     options.headers['Authorization'] = `Bearer ${token}`;
     const res = await fetch(url, options);
-    if (res.status === 401) {
-        document.getElementById('login-overlay').style.display = 'flex';
-        token = null;
-        localStorage.removeItem('aurora_token');
-        throw new Error('Session expired');
-    }
     return res;
 }
 
@@ -58,80 +51,14 @@ async function authFetch(url, options = {}) {
 //  INIT
 // ══════════════════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
-    const loginOverlay = document.getElementById('login-overlay');
-    const loginForm = document.getElementById('login-form');
     const logoutBtn = document.getElementById('logout-btn');
     const adminLink = document.getElementById('admin-link');
     const userDisplay = document.getElementById('current-user-display');
-    const loginError = document.getElementById('login-error');
 
-    // Auto-setup Guest Session if not logged in
-    if (!token) {
-        token = "guest-token";
-        userId = 32;
-        localStorage.setItem('aurora_token', token);
-        localStorage.setItem('aurora_user_id', userId);
-        localStorage.setItem('aurora_role', 'Standard');
-        localStorage.setItem('aurora_username', 'Guest');
-    }
-
-    if (token) {
-        if (loginOverlay) loginOverlay.style.display = 'none';
-        if (userDisplay) userDisplay.textContent = `User: ${localStorage.getItem('aurora_username') || 'Guest'}`;
-        if (logoutBtn) logoutBtn.style.display = 'inline-block';
-        if (adminLink) {
-            if (localStorage.getItem('aurora_role') === 'Administrator') {
-                adminLink.style.display = 'inline-block';
-            } else {
-                adminLink.style.display = 'none';
-            }
-        }
-        navigateTo('home');
-    }
-
-    if (loginForm) {
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const fd = new FormData();
-            fd.append('username', document.getElementById('login-username').value);
-            fd.append('password', document.getElementById('login-password').value);
-            try {
-                const res = await fetch('/token', { method: 'POST', body: fd });
-                if (!res.ok) throw new Error('Failed');
-                const data = await res.json();
-                token = data.access_token;
-                userId = data.user_id;
-                localStorage.setItem('aurora_token', token);
-                localStorage.setItem('aurora_user_id', userId);
-                localStorage.setItem('aurora_role', data.role);
-                localStorage.setItem('aurora_username', document.getElementById('login-username').value);
-                if (loginOverlay) loginOverlay.style.display = 'none';
-                if (loginError) loginError.style.display = 'none';
-                if (userDisplay) userDisplay.textContent = `User: ${document.getElementById('login-username').value}`;
-                if (logoutBtn) logoutBtn.style.display = 'inline-block';
-                if (adminLink) {
-                    if (data.role === 'Administrator') {
-                        adminLink.style.display = 'inline-block';
-                    } else {
-                        adminLink.style.display = 'none';
-                    }
-                }
-                navigateTo('home');
-            } catch(err) {
-                if (loginError) loginError.style.display = 'block';
-            }
-        });
-    }
-
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => {
-            localStorage.removeItem('aurora_token');
-            localStorage.removeItem('aurora_user_id');
-            localStorage.removeItem('aurora_role');
-            localStorage.removeItem('aurora_username');
-            window.location.reload();
-        });
-    }
+    if (userDisplay) userDisplay.textContent = 'User: Guest';
+    if (logoutBtn) logoutBtn.style.display = 'none';
+    if (adminLink) adminLink.style.display = 'none';
+    navigateTo('home');
 });
 
 // ══════════════════════════════════════════════════════════════════════
