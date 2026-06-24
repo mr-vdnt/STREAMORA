@@ -197,6 +197,7 @@
                         <div class="modal-actions">
                             <button class="btn-watch"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Watch Trailer</button>
                             <button class="btn-add-list" id="modal-add-list"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> Add to List</button>
+                            <button class="btn-add-list" id="modal-download-btn" style="background:rgba(255,255,255,0.08); border:1px solid var(--glass-border); padding: 10px 20px; border-radius: var(--r-md); color:white; cursor:pointer; display:flex; align-items:center; gap:8px;">📥 Download</button>
                         </div>
                     </div>
                 </div>
@@ -381,27 +382,35 @@
             <button class="drawer__close" id="drawer-close" aria-label="Close Navigation Menu" onclick="closeDrawer()">✕</button>
         </div>
         <nav class="drawer__nav">
-            <button class="drawer__link" onclick="openDrawerOption('account')">
-                <span class="drawer__link-icon">👤</span>
-                <span>Account</span>
+            <button class="drawer__link" onclick="navigateTo('home'); closeDrawer();">
+                <span class="drawer__link-icon">🏠</span>
+                <span>Home</span>
             </button>
-            <button class="drawer__link" onclick="openDrawerOption('settings')">
+            <button class="drawer__link" onclick="navigateTo('categories'); closeDrawer();">
+                <span class="drawer__link-icon">📂</span>
+                <span>Categories</span>
+            </button>
+            <button class="drawer__link" onclick="navigateTo('downloads'); closeDrawer();">
+                <span class="drawer__link-icon">📥</span>
+                <span>Downloads</span>
+            </button>
+            <button class="drawer__link" onclick="navigateTo('favorites'); closeDrawer();">
+                <span class="drawer__link-icon">❤️</span>
+                <span>Favorites</span>
+            </button>
+            <button class="drawer__link" onclick="navigateTo('search'); closeDrawer();">
+                <span class="drawer__link-icon">🔍</span>
+                <span>Search</span>
+            </button>
+            <button class="drawer__link" onclick="navigateTo('settings'); closeDrawer();">
                 <span class="drawer__link-icon">⚙️</span>
                 <span>Settings</span>
             </button>
-            <button class="drawer__link" onclick="openDrawerOption('theme')">
-                <span class="drawer__link-icon">🎨</span>
-                <span>Theme Preferences</span>
+            <button class="drawer__link" onclick="navigateTo('account'); closeDrawer();">
+                <span class="drawer__link-icon">👤</span>
+                <span>Account</span>
             </button>
-            <button class="drawer__link" onclick="openDrawerOption('feedback')">
-                <span class="drawer__link-icon">💬</span>
-                <span>Feedback</span>
-            </button>
-            <button class="drawer__link" onclick="openDrawerOption('info')">
-                <span class="drawer__link-icon">ℹ️</span>
-                <span>App Information</span>
-            </button>
-            <button class="drawer__link" onclick="openDrawerOption('help')">
+            <button class="drawer__link" onclick="openDrawerOption('help');">
                 <span class="drawer__link-icon">❓</span>
                 <span>Help Centre</span>
             </button>
@@ -421,6 +430,14 @@
                 <!-- Injected dynamically by app.js -->
             </div>
         </div>
+    </div>
+
+    <!-- Voice Search Overlay -->
+    <div class="voice-search-overlay" id="voice-search-overlay">
+        <div class="voice-mic-circle" id="voice-mic-btn">🎙️</div>
+        <div class="voice-status-text" id="voice-status-text">Listening...</div>
+        <div class="voice-transcript-text" id="voice-transcript-text">Try saying "Suggest some dark sci-fi thrillers"</div>
+        <button onclick="window.closeVoiceSearch()" style="background: rgba(255,255,255,0.08); border: 1px solid var(--glass-border); padding: 10px 24px; border-radius: var(--r-pill); color: white; cursor: pointer; font-weight: 600; margin-top: 15px;">Cancel</button>
     </div>
 
     <script src="app.js?v=2"></script>

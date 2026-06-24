@@ -614,6 +614,37 @@ document.addEventListener('DOMContentLoaded', () => {
             if (typeof closeDrawer === 'function') closeDrawer();
         });
     });
+
+    // Swipe-down gestures on mobile details modal
+    let touchStartY = 0;
+    let touchEndY = 0;
+    const cinematicModal = document.querySelector('.cinematic-modal');
+    if (cinematicModal) {
+        cinematicModal.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) {
+                touchStartY = e.touches[0].clientY;
+            }
+        }, { passive: true });
+
+        cinematicModal.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 1) {
+                touchEndY = e.touches[0].clientY;
+            }
+        }, { passive: true });
+
+        cinematicModal.addEventListener('touchend', () => {
+            const diffY = touchEndY - touchStartY;
+            if (cinematicModal.scrollTop <= 0 && diffY > 80) {
+                const modalOverlay = document.getElementById('movie-detail-modal');
+                if (modalOverlay) {
+                    modalOverlay.classList.remove('active');
+                    document.body.style.overflow = '';
+                }
+            }
+            touchStartY = 0;
+            touchEndY = 0;
+        }, { passive: true });
+    }
     
     navigateTo('home');
 });
@@ -1015,32 +1046,102 @@ function navigateTo(page) {
 function renderAccountTab() {
     heroSection.innerHTML = '';
     heroSection.style.display = 'none';
+    
+    const userEmail = localStorage.getItem('aurora_user_email') || 'guest@aurora.ai';
+    const userName = localStorage.getItem('aurora_user_name') || 'Guest Explorer';
+    const userAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=06B6D4&color=000&size=128&bold=true`;
+    
     contentRows.innerHTML = `
-        <div class="row-section" style="padding-top:80px; max-width:800px; margin:0 auto; padding-left: 24px; padding-right: 24px;">
+        <div class="row-section" style="padding-top:80px; max-width:800px; margin:0 auto; padding-left: 24px; padding-right: 24px; color: white;">
             <h1 class="row-section__title" style="font-size:2.2rem;margin-bottom:12px; color: white;">👤 Account</h1>
-            <p style="color:var(--text-muted);font-size:0.95rem;margin-bottom:32px;">Manage your membership, billing, and device settings.</p>
+            <p style="color:var(--text-muted);font-size:0.95rem;margin-bottom:32px;">Manage your membership, profile, and active devices.</p>
             
-            <div style="background:rgba(255,255,255,0.03); border:1px solid var(--glass-border); border-radius:var(--r-lg); padding:30px; display:flex; flex-direction:column; gap:20px; backdrop-filter: blur(20px);">
+            <!-- Premium Profile Card -->
+            <div style="background:rgba(255,255,255,0.03); border:1px solid var(--glass-border); border-radius:var(--r-lg); padding:30px; display:flex; gap:24px; align-items:center; margin-bottom:30px; backdrop-filter: blur(20px); flex-wrap: wrap;">
+                <img src="${userAvatar}" alt="User Avatar" style="width: 80px; height: 80px; border-radius: 50%; border: 3px solid var(--aurora-cyan); box-shadow: 0 0 15px rgba(6, 182, 212, 0.4);">
+                <div style="flex-grow: 1;">
+                    <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 4px; color: white;">${userName}</h2>
+                    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 8px;">${userEmail}</p>
+                    <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--aurora-cyan); background: rgba(6, 182, 212, 0.15); border: 1px solid rgba(6, 182, 212, 0.3); padding: 4px 10px; border-radius: 4px;">Premium Member</span>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    <button onclick="editProfilePrompt()" style="background: rgba(255,255,255,0.08); border: 1px solid var(--glass-border); padding: 8px 16px; border-radius: var(--r-md); color: white; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: all var(--t-fast);" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">Edit Profile</button>
+                </div>
+            </div>
+
+            <!-- Membership & Devices Section -->
+            <div style="background:rgba(255,255,255,0.02); border:1px solid var(--glass-border); border-radius:var(--r-lg); padding:30px; display:flex; flex-direction:column; gap:20px; margin-bottom:30px; backdrop-filter: blur(20px);">
+                <h3 style="font-size: 1.2rem; font-weight: 700; color: white; margin-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 10px;">Membership & Devices</h3>
                 <div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:15px; flex-wrap:wrap; gap:10px;">
                     <span style="color:var(--text-muted); font-weight:500;">Membership Tier</span>
                     <span style="color:white; font-weight:700;">Aurora Cinematic Premium (4K UHD)</span>
                 </div>
                 <div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:15px; flex-wrap:wrap; gap:10px;">
-                    <span style="color:var(--text-muted); font-weight:500;">Current User</span>
-                    <span style="color:white; font-weight:700;">Guest User (ID: ${userId})</span>
-                </div>
-                <div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:15px; flex-wrap:wrap; gap:10px;">
-                    <span style="color:var(--text-muted); font-weight:500;">Devices Online</span>
-                    <span style="color:white; font-weight:700;">2 Active Devices (1 Mobile, 1 Laptop)</span>
-                </div>
-                <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;">
                     <span style="color:var(--text-muted); font-weight:500;">Next Renewal</span>
                     <span style="color:white; font-weight:700;">July 24, 2026 ($14.99/mo)</span>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:12px;">
+                    <span style="color:var(--text-muted); font-weight:500; margin-bottom: 4px;">Active Streaming Devices</span>
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+                        <div style="background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); padding: 12px; border-radius: var(--r-md); display:flex; gap:12px; align-items:center;">
+                            <span style="font-size: 1.5rem;">📱</span>
+                            <div>
+                                <div style="font-weight:700; font-size: 0.9rem;">iPhone 15 Pro</div>
+                                <div style="font-size: 0.75rem; color: var(--aurora-cyan); font-weight:600;">Active Now (Streaming)</div>
+                            </div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); padding: 12px; border-radius: var(--r-md); display:flex; gap:12px; align-items:center;">
+                            <span style="font-size: 1.5rem;">💻</span>
+                            <div>
+                                <div style="font-weight:700; font-size: 0.9rem;">MacBook Pro</div>
+                                <div style="font-size: 0.75rem; color: var(--text-muted);">Active 2 hours ago</div>
+                            </div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); padding: 12px; border-radius: var(--r-md); display:flex; gap:12px; align-items:center; opacity: 0.6;">
+                            <span style="font-size: 1.5rem;">📺</span>
+                            <div>
+                                <div style="font-weight:700; font-size: 0.9rem;">Sony Bravia OLED</div>
+                                <div style="font-size: 0.75rem; color: var(--text-muted);">Offline</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Links -->
+            <div style="background:rgba(255,255,255,0.02); border:1px solid var(--glass-border); border-radius:var(--r-lg); padding:30px; display:flex; flex-direction:column; gap:16px; backdrop-filter: blur(20px);">
+                <h3 style="font-size: 1.2rem; font-weight: 700; color: white; margin-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 10px;">Quick Discover Links</h3>
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                    <div onclick="navigateTo('favorites')" style="background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); padding: 16px; border-radius: var(--r-md); cursor: pointer; text-align: center; transition: all var(--t-fast);" onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='var(--aurora-cyan)';" onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='var(--glass-border)';">
+                        <span style="font-size: 1.8rem; display:block; margin-bottom: 8px;">❤️</span>
+                        <span style="font-weight:600; font-size: 0.95rem;">Watchlist & Favorites</span>
+                    </div>
+                    <div onclick="navigateTo('downloads')" style="background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); padding: 16px; border-radius: var(--r-md); cursor: pointer; text-align: center; transition: all var(--t-fast);" onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='var(--aurora-cyan)';" onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='var(--glass-border)';">
+                        <span style="font-size: 1.8rem; display:block; margin-bottom: 8px;">📥</span>
+                        <span style="font-weight:600; font-size: 0.95rem;">Downloads & Offline Hub</span>
+                    </div>
+                    <div onclick="navigateTo('settings')" style="background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); padding: 16px; border-radius: var(--r-md); cursor: pointer; text-align: center; transition: all var(--t-fast);" onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='var(--aurora-cyan)';" onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='var(--glass-border)';">
+                        <span style="font-size: 1.8rem; display:block; margin-bottom: 8px;">⚙️</span>
+                        <span style="font-weight:600; font-size: 0.95rem;">Application Settings</span>
+                    </div>
                 </div>
             </div>
         </div>
     `;
 }
+
+window.editProfilePrompt = function() {
+    const currentName = localStorage.getItem('aurora_user_name') || 'Guest Explorer';
+    const currentEmail = localStorage.getItem('aurora_user_email') || 'guest@aurora.ai';
+    const newName = prompt("Enter new profile name:", currentName);
+    if (newName === null) return;
+    const newEmail = prompt("Enter new email address:", currentEmail);
+    if (newEmail === null) return;
+    
+    localStorage.setItem('aurora_user_name', newName.trim() || 'Guest Explorer');
+    localStorage.setItem('aurora_user_email', newEmail.trim() || 'guest@aurora.ai');
+    renderAccountTab();
+};
 
 function renderSettingsTab() {
     heroSection.innerHTML = '';
@@ -1050,15 +1151,22 @@ function renderSettingsTab() {
     const quality = localStorage.getItem('aurora_quality') || 'auto';
     const motion = localStorage.getItem('aurora_reduced_motion') === 'true';
     const theme = localStorage.getItem('aurora_theme') || 'neon';
+    const language = localStorage.getItem('aurora_language') || 'en';
+    
+    const notifNew = localStorage.getItem('aurora_notif_new') !== 'false';
+    const notifRec = localStorage.getItem('aurora_notif_rec') !== 'false';
+    const notifDl = localStorage.getItem('aurora_notif_dl') !== 'false';
     
     contentRows.innerHTML = `
         <div class="row-section" style="padding-top:80px; max-width:800px; margin:0 auto; padding-left: 24px; padding-right: 24px;">
             <h1 class="row-section__title" style="font-size:2.2rem;margin-bottom:12px; color: white;">⚙️ Settings</h1>
-            <p style="color:var(--text-muted);font-size:0.95rem;margin-bottom:32px;">Configure streaming quality, themes, and application behavior.</p>
+            <p style="color:var(--text-muted);font-size:0.95rem;margin-bottom:32px;">Configure streaming quality, glass themes, accessibility, and notifications.</p>
             
             <div style="background:rgba(255,255,255,0.03); border:1px solid var(--glass-border); border-radius:var(--r-lg); padding:30px; display:flex; flex-direction:column; gap:24px; backdrop-filter: blur(20px);">
+                
+                <!-- Playback & Motion -->
                 <div>
-                    <h3 style="color:white; margin-bottom:12px; font-size:1.1rem; font-weight: 700;">Playback & Motion</h3>
+                    <h3 style="color:white; margin-bottom:12px; font-size:1.1rem; font-weight: 700;">Playback & Accessibility</h3>
                     <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; margin-bottom: 12px; color:var(--text-secondary);">
                         <input type="checkbox" id="page-settings-autoplay" ${autoplay ? 'checked' : ''} style="width: 20px; height: 20px; cursor:pointer;" onchange="savePageSettings()">
                         <span>Autoplay Cinematic Trailers</span>
@@ -1071,6 +1179,21 @@ function renderSettingsTab() {
                 
                 <hr style="border:0; border-top:1px solid rgba(255,255,255,0.08); margin:0;">
                 
+                <!-- Language selection -->
+                <div>
+                    <h3 style="color:white; margin-bottom:12px; font-size:1.1rem; font-weight: 700;">Interface Language</h3>
+                    <select id="page-settings-language" onchange="savePageSettings()" style="width: 100%; max-width: 300px; padding: 10px 14px; border-radius: var(--r-md); background: rgba(0,0,0,0.4); border: 1px solid var(--glass-border); color: white; font-size: 0.95rem; outline: none; cursor: pointer;">
+                        <option value="en" ${language === 'en' ? 'selected' : ''}>English</option>
+                        <option value="es" ${language === 'es' ? 'selected' : ''}>Español (Spanish)</option>
+                        <option value="fr" ${language === 'fr' ? 'selected' : ''}>Français (French)</option>
+                        <option value="ja" ${language === 'ja' ? 'selected' : ''}>日本語 (Japanese)</option>
+                        <option value="hi" ${language === 'hi' ? 'selected' : ''}>हिन्दी (Hindi)</option>
+                    </select>
+                </div>
+                
+                <hr style="border:0; border-top:1px solid rgba(255,255,255,0.08); margin:0;">
+                
+                <!-- Streaming Quality -->
                 <div>
                     <h3 style="color:white; margin-bottom:12px; font-size:1.1rem; font-weight: 700;">Streaming Quality</h3>
                     <select id="page-settings-quality" onchange="savePageSettings()" style="width: 100%; max-width: 300px; padding: 10px 14px; border-radius: var(--r-md); background: rgba(0,0,0,0.4); border: 1px solid var(--glass-border); color: white; font-size: 0.95rem; outline: none; cursor: pointer;">
@@ -1083,6 +1206,26 @@ function renderSettingsTab() {
                 
                 <hr style="border:0; border-top:1px solid rgba(255,255,255,0.08); margin:0;">
                 
+                <!-- Notifications -->
+                <div>
+                    <h3 style="color:white; margin-bottom:12px; font-size:1.1rem; font-weight: 700;">Notification Preferences</h3>
+                    <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; margin-bottom: 12px; color:var(--text-secondary);">
+                        <input type="checkbox" id="page-settings-notif-new" ${notifNew ? 'checked' : ''} style="width: 20px; height: 20px; cursor:pointer;" onchange="savePageSettings()">
+                        <span>Notify on New Content Releases</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; margin-bottom: 12px; color:var(--text-secondary);">
+                        <input type="checkbox" id="page-settings-notif-rec" ${notifRec ? 'checked' : ''} style="width: 20px; height: 20px; cursor:pointer;" onchange="savePageSettings()">
+                        <span>Receive Weekly Personal Recommendations</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; color:var(--text-secondary);">
+                        <input type="checkbox" id="page-settings-notif-dl" ${notifDl ? 'checked' : ''} style="width: 20px; height: 20px; cursor:pointer;" onchange="savePageSettings()">
+                        <span>Notify When Offline Download Completes</span>
+                    </label>
+                </div>
+                
+                <hr style="border:0; border-top:1px solid rgba(255,255,255,0.08); margin:0;">
+                
+                <!-- Theme Preferences -->
                 <div>
                     <h3 style="color:white; margin-bottom:12px; font-size:1.1rem; font-weight: 700;">Theme Preferences</h3>
                     <div style="display:flex; flex-direction:column; gap:12px;">
@@ -1100,19 +1243,47 @@ function renderSettingsTab() {
                         </label>
                     </div>
                 </div>
+                
+                <hr style="border:0; border-top:1px solid rgba(255,255,255,0.08); margin:0;">
+                
+                <!-- Clear Cache / Diagnostics -->
+                <div>
+                    <h3 style="color:white; margin-bottom:12px; font-size:1.1rem; font-weight: 700;">Storage & Cache</h3>
+                    <button onclick="clearLocalStorageCache()" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); padding: 10px 20px; border-radius: var(--r-md); color: #F87171; cursor: pointer; font-size: 0.95rem; font-weight: 600; transition: all var(--t-fast);" onmouseover="this.style.background='rgba(239, 68, 68, 0.25)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.15)'">Clear Application Caches & Offline Data</button>
+                    <p style="color:var(--text-muted); font-size:0.8rem; margin-top:8px;">This will remove all downloaded media, clear your local favorites lists, search history, and restore settings to their factory defaults.</p>
+                </div>
+                
             </div>
         </div>
     `;
 }
 
+window.clearLocalStorageCache = function() {
+    if (confirm("Are you sure you want to clear all cache? This deletes downloads, favorites, history, and settings.")) {
+        localStorage.clear();
+        alert("Cache cleared successfully! Re-initializing...");
+        window.location.reload();
+    }
+};
+
 window.savePageSettings = function() {
     const autoplay = document.getElementById('page-settings-autoplay').checked;
     const motion = document.getElementById('page-settings-motion').checked;
     const quality = document.getElementById('page-settings-quality').value;
+    const language = document.getElementById('page-settings-language').value;
+    
+    const notifNew = document.getElementById('page-settings-notif-new').checked;
+    const notifRec = document.getElementById('page-settings-notif-rec').checked;
+    const notifDl = document.getElementById('page-settings-notif-dl').checked;
     
     localStorage.setItem('aurora_autoplay', autoplay);
     localStorage.setItem('aurora_reduced_motion', motion);
     localStorage.setItem('aurora_quality', quality);
+    localStorage.setItem('aurora_language', language);
+    
+    localStorage.setItem('aurora_notif_new', notifNew);
+    localStorage.setItem('aurora_notif_rec', notifRec);
+    localStorage.setItem('aurora_notif_dl', notifDl);
     
     if (motion) {
         document.body.classList.add('reduced-motion');
@@ -1126,28 +1297,160 @@ window.savePageTheme = function(theme) {
 };
 
 // ── Downloads Tab ────────────────────────────────────────────────────
+window.simulateDownload = function(id) {
+    const movie = globalMovies.find(m => parseInt(m.item_id) === parseInt(id)) || 
+                  FALLBACK_MOVIES.find(m => parseInt(m.item_id) === parseInt(id));
+    if (!movie) return;
+
+    let downloads = JSON.parse(localStorage.getItem('aurora_downloads') || '[]');
+    if (downloads.some(m => parseInt(m.item_id) === parseInt(id))) {
+        alert("This title is already downloaded!");
+        return;
+    }
+
+    let downloading = JSON.parse(localStorage.getItem('aurora_downloading') || '[]');
+    if (downloading.some(d => parseInt(d.movie.item_id) === parseInt(id))) {
+        alert("This title is already downloading!");
+        return;
+    }
+
+    downloading.push({ movie, progress: 0 });
+    localStorage.setItem('aurora_downloading', JSON.stringify(downloading));
+    
+    window.updateModalDownloadBtn(id);
+    if (currentPage === 'downloads') renderDownloadsTab();
+
+    const interval = setInterval(() => {
+        let currentDownloading = JSON.parse(localStorage.getItem('aurora_downloading') || '[]');
+        const itemIdx = currentDownloading.findIndex(d => parseInt(d.movie.item_id) === parseInt(id));
+        if (itemIdx === -1) {
+            clearInterval(interval);
+            return;
+        }
+
+        currentDownloading[itemIdx].progress += 25;
+        if (currentDownloading[itemIdx].progress >= 100) {
+            clearInterval(interval);
+            currentDownloading.splice(itemIdx, 1);
+            localStorage.setItem('aurora_downloading', JSON.stringify(currentDownloading));
+
+            let currentDownloaded = JSON.parse(localStorage.getItem('aurora_downloads') || '[]');
+            currentDownloaded.push(movie);
+            localStorage.setItem('aurora_downloads', JSON.stringify(currentDownloaded));
+        } else {
+            localStorage.setItem('aurora_downloading', JSON.stringify(currentDownloading));
+        }
+
+        if (currentPage === 'downloads') {
+            renderDownloadsTab();
+        }
+        window.updateModalDownloadBtn(id);
+    }, 1000);
+};
+
+window.removeDownload = function(id) {
+    let downloads = JSON.parse(localStorage.getItem('aurora_downloads') || '[]');
+    downloads = downloads.filter(m => parseInt(m.item_id) !== parseInt(id));
+    localStorage.setItem('aurora_downloads', JSON.stringify(downloads));
+    if (currentPage === 'downloads') {
+        renderDownloadsTab();
+    }
+    window.updateModalDownloadBtn(id);
+};
+
+window.updateModalDownloadBtn = function(id) {
+    const dBtn = document.getElementById('modal-download-btn');
+    if (!dBtn) return;
+    
+    const downloads = JSON.parse(localStorage.getItem('aurora_downloads') || '[]');
+    const downloading = JSON.parse(localStorage.getItem('aurora_downloading') || '[]');
+    
+    const isDownloaded = downloads.some(m => parseInt(m.item_id) === parseInt(id));
+    const downloadingItem = downloading.find(d => parseInt(d.movie.item_id) === parseInt(id));
+    
+    if (isDownloaded) {
+        dBtn.innerHTML = `🟢 Offline Ready (Remove)`;
+        dBtn.onclick = () => window.removeDownload(id);
+    } else if (downloadingItem) {
+        dBtn.innerHTML = `⏳ Downloading ${downloadingItem.progress}%`;
+        dBtn.onclick = null;
+    } else {
+        dBtn.innerHTML = `📥 Download`;
+        dBtn.onclick = () => window.simulateDownload(id);
+    }
+};
+
 async function renderDownloadsTab() {
     heroSection.innerHTML = '';
     heroSection.style.display = 'none';
+
+    const downloaded = JSON.parse(localStorage.getItem('aurora_downloads') || '[]');
+    const downloading = JSON.parse(localStorage.getItem('aurora_downloading') || '[]');
+
+    const storageUsed = (downloaded.length * 1.8 + downloading.length * 0.9).toFixed(1);
+    const storageFree = (64.0 - parseFloat(storageUsed)).toFixed(1);
+    const storageUsedPct = (parseFloat(storageUsed) / 64.0 * 100).toFixed(0);
+
     contentRows.innerHTML = `
-        <div class="row-section" style="padding-top:80px;">
+        <div class="row-section" style="padding-top:80px; padding-left: 5%; padding-right: 5%;">
             <h1 class="row-section__title" style="font-size:2.2rem;margin-bottom:12px;">Downloads</h1>
-            <p style="color:var(--text-muted);font-size:0.95rem;margin-bottom:32px;">Offline media hub. Take your personal movie universe anywhere.</p>
+            <p style="color:var(--text-muted);font-size:0.95rem;margin-bottom:24px;">Offline media hub. Take your personal movie universe anywhere.</p>
+            
+            <!-- Storage Dashboard -->
+            <div class="storage-dashboard">
+                <div style="display:flex; justify-content:space-between; font-size:0.9rem; font-weight:600; color:white;">
+                    <span>Storage Usage</span>
+                    <span>${storageUsed} GB Used &nbsp;|&nbsp; ${storageFree} GB Free (Total: 64 GB)</span>
+                </div>
+                <div class="storage-bar-outer">
+                    <div class="storage-bar-inner" style="width: ${storageUsedPct}%"></div>
+                </div>
+            </div>
         </div>
     `;
-    
-    const downloaded = JSON.parse(localStorage.getItem('aurora_downloads') || '[]');
-    if (downloaded.length > 0) {
-        appendRow('Available Offline', downloaded);
-    } else {
-        contentRows.innerHTML += `
-            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:40vh;text-align:center;padding:0 20px;">
-                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                <h2 style="font-size:1.8rem;color:var(--text-primary);margin:20px 0 10px;">No Downloads Yet</h2>
-                <p style="color:var(--text-muted);max-width:400px;margin-bottom:24px;">Your downloaded movies and series will appear here for offline viewing.</p>
+
+    // Render active downloading list
+    if (downloading.length > 0) {
+        const downloadingSec = document.createElement('div');
+        downloadingSec.className = 'row-section';
+        downloadingSec.style.paddingLeft = '5%';
+        downloadingSec.style.paddingRight = '5%';
+        downloadingSec.innerHTML = `
+            <h3 style="color:white; margin-bottom:16px; font-weight:700;">Downloading (${downloading.length})</h3>
+            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:20px;">
+                ${downloading.map(d => `
+                    <div style="background:rgba(255,255,255,0.03); border:1px solid var(--glass-border); padding:12px; border-radius:var(--r-md); display:flex; gap:12px; align-items:center;">
+                        <img src="${d.movie.poster_url}" style="width:50px; height:75px; object-fit:cover; border-radius:4px;">
+                        <div style="flex:1; display:flex; flex-direction:column; gap:6px;">
+                            <div style="color:white; font-weight:600; font-size:0.9rem;">${d.movie.title}</div>
+                            <div style="font-size:0.75rem; color:var(--aurora-cyan);">Downloading... ${d.progress}%</div>
+                            <div style="height:6px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden;">
+                                <div style="height:100%; background:var(--aurora-cyan); width:${d.progress}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
             </div>
         `;
-        await fetchAndRender('Hidden Gems', 'Recommended For Download');
+        contentRows.appendChild(downloadingSec);
+    }
+
+    if (downloaded.length > 0) {
+        appendRow('Downloaded Offline', downloaded);
+    }
+
+    if (downloaded.length === 0 && downloading.length === 0) {
+        const empty = document.createElement('div');
+        empty.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:35vh;text-align:center;padding:0 20px;';
+        empty.innerHTML = `
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <h2 style="font-size:1.8rem;color:var(--text-primary);margin:20px 0 10px;">No downloads yet</h2>
+            <p style="color:var(--text-muted);max-width:400px;margin-bottom:24px;">Your downloaded movies and series will appear here for offline viewing.</p>
+        `;
+        contentRows.appendChild(empty);
+        await fetchAndRender('Hidden Gems', 'Offline Curations (Offline Ready)');
+    } else {
+        await fetchAndRender('Trending Now', 'Offline Curations (Offline Ready)');
     }
 }
 
@@ -1160,33 +1463,62 @@ async function loadHomePage() {
 
     window.shownItems = []; 
 
-    await fetchAndRender('Top Picks For You', 'Top Picks For You', true);
+    const isMovie = window.currentFormat === 'movie';
+    const isSeriesVal = window.currentFormat === 'series';
+
+    // Hero banner and Top Picks Row
+    let topPicksQuery = 'Top Picks For You';
+    let topPicksTitle = 'Top Picks For You';
+    if (isMovie) {
+        topPicksQuery = 'Top Rated Movies';
+        topPicksTitle = 'Top Movies';
+    } else if (isSeriesVal) {
+        topPicksQuery = 'Top Rated TV Shows';
+        topPicksTitle = 'Today\'s Featured Series';
+    }
+    await fetchAndRender(topPicksQuery, topPicksTitle, true);
 
     // Continue Watching Row (if user has viewed history)
     const history = JSON.parse(localStorage.getItem('aurora_history') || '[]');
-    if (history.length > 0) {
-        appendRow('Continue Watching', history);
+    const filteredHistory = history.filter(m => {
+        return window.currentFormat === 'all' || 
+               (isMovie && !window.isSeries(m)) ||
+               (isSeriesVal && window.isSeries(m));
+    });
+    if (filteredHistory.length > 0) {
+        appendRow(isSeriesVal ? 'Continue Watching Series' : 'Continue Watching', filteredHistory);
     }
 
     // Because You Watched dynamic recommendation row
-    if (history.length > 0) {
-        const seed = history[0];
-        const recs = getSimilarRecommendations(seed).map(r => r.movie);
+    if (filteredHistory.length > 0) {
+        const seed = filteredHistory[0];
+        const recs = window.getSimilarRecommendations(seed)
+            .map(r => r.movie)
+            .filter(m => {
+                return window.currentFormat === 'all' || 
+                       (isMovie && !window.isSeries(m)) ||
+                       (isSeriesVal && window.isSeries(m));
+            });
         if (recs && recs.length > 0) {
             appendRow(`Because You Watched ${seed.title}`, recs.slice(0, 10));
         }
     }
 
-    await fetchAndRender('Trending Now', 'Trending Now', false);
-    await fetchAndRender('Mind-Bending Sci-Fi', 'Mind-Bending Sci-Fi', false);
+    let trendingQuery = 'Trending Now';
+    let trendingTitle = isMovie ? 'Trending Movies' : (isSeriesVal ? 'Trending Series' : 'Trending Now');
+    await fetchAndRender(trendingQuery, trendingTitle, false);
+
+    let scifiQuery = 'Mind-Bending Sci-Fi';
+    let scifiTitle = isMovie ? 'Sci-Fi Movies' : (isSeriesVal ? 'Sci-Fi TV Shows' : 'Mind-Bending Sci-Fi');
+    await fetchAndRender(scifiQuery, scifiTitle, false);
 
     const genres = [
-        { q: 'Action', title: 'Action Thrillers' },
-        { q: 'Comedy', title: 'Comedy Classics' },
-        { q: 'Horror', title: 'Horror & Supernatural' },
-        { q: 'Drama', title: 'Dramatic Masterpieces' },
-        { q: 'Romance', title: 'Romance & Love Stories' },
-        { q: 'Thriller', title: 'High-Stakes Thrillers' },
+        { q: 'Action', title: isMovie ? 'Action Movies' : (isSeriesVal ? 'Action Series' : 'Action Thrillers') },
+        { q: 'Comedy', title: isMovie ? 'Comedy Movies' : (isSeriesVal ? 'Comedy Series' : 'Comedy Classics') },
+        { q: 'Horror', title: isMovie ? 'Horror Movies' : (isSeriesVal ? 'Horror Series' : 'Horror & Supernatural') },
+        { q: 'Drama', title: isMovie ? 'Drama Movies' : (isSeriesVal ? 'Drama Series' : 'Dramatic Masterpieces') },
+        { q: 'Romance', title: isMovie ? 'Romance Movies' : (isSeriesVal ? 'Romance Series' : 'Romance & Love Stories') },
+        { q: 'Thriller', title: isMovie ? 'Thriller Movies' : (isSeriesVal ? 'Thriller Series' : 'High-Stakes Thrillers') },
         { q: 'Anime', title: 'Anime & Animation' },
         { q: 'Hidden Gems', title: 'Hidden Gems' }
     ];
@@ -1286,7 +1618,13 @@ async function fetchAndRender(query, rowTitle, isHero = false) {
         globalMovies = [...globalMovies, ...movies];
         
         if (isHero) {
-            renderHero(movies[0] || FALLBACK_MOVIES[0]);
+            const formatMatchedFallback = FALLBACK_MOVIES.find(m => {
+                return window.currentFormat === 'all' ||
+                       (window.currentFormat === 'movie' && !window.isSeries(m)) ||
+                       (window.currentFormat === 'series' && window.isSeries(m));
+            }) || FALLBACK_MOVIES[0];
+            const heroMovie = movies[0] || formatMatchedFallback;
+            renderHero(heroMovie);
             appendRow(rowTitle, movies.slice(1));
         } else {
             appendRow(rowTitle, movies);
@@ -1307,6 +1645,8 @@ window.renderFavoritesTab = function() {
     headerSec.className = 'row-section';
     headerSec.style.paddingTop = '80px';
     headerSec.style.marginBottom = '20px';
+    headerSec.style.paddingLeft = '5%';
+    headerSec.style.paddingRight = '5%';
     headerSec.innerHTML = `
         <h1 class="row-section__title" style="font-size:2.2rem;margin-bottom:12px; color: white;">Favorites & Watchlist</h1>
         <p style="color:var(--text-muted);font-size:0.95rem;">All your saved movies, TV series, and collections in one place.</p>
@@ -1318,9 +1658,9 @@ window.renderFavoritesTab = function() {
         empty.className = 'empty-favorites';
         empty.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:40vh;text-align:center;padding:0 20px;';
         empty.innerHTML = `
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--aurora-cyan)" stroke-width="1.5" style="margin-bottom: 20px; filter: drop-shadow(0 0 8px rgba(6,182,212,0.4));"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#E50914" stroke-width="1.5" style="margin-bottom: 20px; filter: drop-shadow(0 0 8px rgba(229,9,20,0.4)); animation: pulse-mic 1.6s infinite;"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
             <h2 style="font-size:1.8rem;color:var(--text-primary);margin:0 0 10px;">No favorites yet.</h2>
-            <p style="color:var(--text-muted);max-width:450px;margin-bottom:30px; font-size: 1rem;">Start adding movies and series to build your collection.</p>
+            <p style="color:var(--text-muted);max-width:450px;margin-bottom:30px; font-size: 1rem;">Tap the heart icon on any movie to save it.</p>
             <div style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
                 <button onclick="navigateTo('home')" style="padding:12px 24px; border-radius: var(--r-pill); background: var(--aurora-cyan); border: none; color: black; font-weight: 700; font-size: 0.95rem; cursor: pointer; transition: transform var(--t-fast);" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">Browse Movies</button>
                 <button onclick="navigateTo('categories')" style="padding:12px 24px; border-radius: var(--r-pill); background: rgba(255,255,255,0.08); border: 1px solid var(--glass-border); color: white; font-weight: 700; font-size: 0.95rem; cursor: pointer; transition: transform var(--t-fast);" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">Browse Categories</button>
@@ -1336,6 +1676,23 @@ window.renderFavoritesTab = function() {
     if (savedSeries.length > 0) {
         appendRow('Saved TV Series', savedSeries);
     }
+
+    // CURATED COLLECTIONS FROM SAVED ITEMS
+    const scifiFavs = myList.filter(m => {
+        const genres = (m.rich_metadata && (m.rich_metadata.genres || m.rich_metadata.tags || []) || []).map(g => g.toLowerCase());
+        return genres.includes('sci-fi') || genres.includes('science fiction');
+    });
+    if (scifiFavs.length > 0) {
+        appendRow('Sci-Fi Favorites Collection', scifiFavs);
+    }
+
+    const actionFavs = myList.filter(m => {
+        const genres = (m.rich_metadata && (m.rich_metadata.genres || m.rich_metadata.tags || []) || []).map(g => g.toLowerCase());
+        return genres.includes('action') || genres.includes('thriller');
+    });
+    if (actionFavs.length > 0) {
+        appendRow('Action & Thriller Collection', actionFavs);
+    }
     
     const history = JSON.parse(localStorage.getItem('aurora_history') || '[]');
     if (history.length > 0) {
@@ -1348,7 +1705,8 @@ function renderMyList() {
 }
 
 function toggleMyList(movie) {
-    const idx = myList.findIndex(m => m.item_id === movie.item_id);
+    const idNum = parseInt(movie.item_id);
+    const idx = myList.findIndex(m => parseInt(m.item_id) === idNum);
     if (idx >= 0) {
         myList.splice(idx, 1);
     } else {
@@ -1358,7 +1716,8 @@ function toggleMyList(movie) {
 }
 
 function isInMyList(id) {
-    return myList.some(m => m.item_id === id);
+    const idNum = parseInt(id);
+    return myList.some(m => parseInt(m.item_id) === idNum);
 }
 
 // ── Click History Tracking ───────────────────────────────────────────
@@ -1402,67 +1761,93 @@ function renderCategorySelectionGrid() {
     `;
     
     const categoriesData = [
-        // Movie genres (36)
-        { name: 'Action', grad: 'linear-gradient(135deg, #EF4444, #B91C1C)', icon: '🎬', type: 'movie' },
-        { name: 'Adventure', grad: 'linear-gradient(135deg, #F59E0B, #D97706)', icon: '🧭', type: 'movie' },
-        { name: 'Animation', grad: 'linear-gradient(135deg, #3B82F6, #1D4ED8)', icon: '🧸', type: 'movie' },
-        { name: 'Biography', grad: 'linear-gradient(135deg, #10B981, #047857)', icon: '📜', type: 'movie' },
-        { name: 'Comedy', grad: 'linear-gradient(135deg, #EC4899, #BE185D)', icon: '😂', type: 'movie' },
-        { name: 'Crime', grad: 'linear-gradient(135deg, #6B7280, #374151)', icon: '🕵️', type: 'movie' },
-        { name: 'Documentary', grad: 'linear-gradient(135deg, #06B6D4, #0891B2)', icon: '📹', type: 'movie' },
-        { name: 'Drama', grad: 'linear-gradient(135deg, #8B5CF6, #4C1D95)', icon: '🎭', type: 'movie' },
-        { name: 'Fantasy', grad: 'linear-gradient(135deg, #EC4899, #8B5CF6)', icon: '🦄', type: 'movie' },
-        { name: 'Family', grad: 'linear-gradient(135deg, #10B981, #115E59)', icon: '👨‍👩‍👧‍👦', type: 'movie' },
-        { name: 'History', grad: 'linear-gradient(135deg, #78350F, #451A03)', icon: '🏛️', type: 'movie' },
-        { name: 'Horror', grad: 'linear-gradient(135deg, #111827, #030712)', icon: '👻', type: 'movie' },
-        { name: 'Mystery', grad: 'linear-gradient(135deg, #4F46E5, #312E81)', icon: '🔍', type: 'movie' },
-        { name: 'Romance', grad: 'linear-gradient(135deg, #F43F5E, #9F1239)', icon: '💖', type: 'movie' },
-        { name: 'Sci-Fi', grad: 'linear-gradient(135deg, #8B5CF6, #312E81)', icon: '🚀', type: 'movie' },
-        { name: 'Sports', grad: 'linear-gradient(135deg, #10B981, #065F46)', icon: '⚽', type: 'movie' },
-        { name: 'Thriller', grad: 'linear-gradient(135deg, #991B1B, #450A0A)', icon: '🔪', type: 'movie' },
-        { name: 'War', grad: 'linear-gradient(135deg, #78350F, #3F2E2C)', icon: '🪖', type: 'movie' },
-        { name: 'Western', grad: 'linear-gradient(135deg, #B45309, #78350F)', icon: '🤠', type: 'movie' },
-        { name: 'Superhero', grad: 'linear-gradient(135deg, #0284C7, #0369A1)', icon: '🦸', type: 'movie' },
-        { name: 'Psychological', grad: 'linear-gradient(135deg, #6366F1, #4338CA)', icon: '🧠', type: 'movie' },
-        { name: 'Political', grad: 'linear-gradient(135deg, #475569, #1E293B)', icon: '🏛️', type: 'movie' },
-        { name: 'Legal', grad: 'linear-gradient(135deg, #0D9488, #0F766E)', icon: '⚖️', type: 'movie' },
-        { name: 'Spy', grad: 'linear-gradient(135deg, #1E293B, #0F172A)', icon: '🕶️', type: 'movie' },
-        { name: 'Military', grad: 'linear-gradient(135deg, #3F493D, #222920)', type: 'movie' },
-        { name: 'Cyberpunk', grad: 'linear-gradient(135deg, #D946EF, #701A75)', icon: '🌆', type: 'movie' },
-        { name: 'Steampunk', grad: 'linear-gradient(135deg, #CA8A04, #713F12)', icon: '⚙️', type: 'movie' },
-        { name: 'Post-Apocalyptic', grad: 'linear-gradient(135deg, #7C2D12, #451A03)', icon: '☣️', type: 'movie' },
-        { name: 'Time Travel', grad: 'linear-gradient(135deg, #EA580C, #7C2D12)', icon: '⏳', type: 'movie' },
-        { name: 'Space Exploration', grad: 'linear-gradient(135deg, #2563EB, #172554)', icon: '🌌', type: 'movie' },
-        { name: 'Coming of Age', grad: 'linear-gradient(135deg, #16A34A, #14532D)', icon: '🌱', type: 'movie' },
-        { name: 'Noir', grad: 'linear-gradient(135deg, #0F172A, #020617)', icon: '🕶️', type: 'movie' },
-        { name: 'Survival', grad: 'linear-gradient(135deg, #15803D, #14532D)', icon: '🏕️', type: 'movie' },
-        { name: 'Disaster', grad: 'linear-gradient(135deg, #DC2626, #7F1D1D)', icon: '🌋', type: 'movie' },
-        { name: 'Martial Arts', grad: 'linear-gradient(135deg, #B91C1C, #450A0A)', icon: '🥋', type: 'movie' },
-        { name: 'Epic', grad: 'linear-gradient(135deg, #D97706, #78350F)', icon: '⚔️', type: 'movie' },
-
-        // TV genres (16)
-        { name: 'Drama Series', grad: 'linear-gradient(135deg, #3B82F6, #1D4ED8)', icon: '📺', type: 'series' },
-        { name: 'Crime Series', grad: 'linear-gradient(135deg, #475569, #1E293B)', icon: '🚓', type: 'series' },
-        { name: 'Fantasy Series', grad: 'linear-gradient(135deg, #EC4899, #8B5CF6)', icon: '🐉', type: 'series' },
-        { name: 'Sci-Fi Series', grad: 'linear-gradient(135deg, #8B5CF6, #4C1D95)', icon: '🛸', type: 'series' },
-        { name: 'Comedy Series', grad: 'linear-gradient(135deg, #F59E0B, #D97706)', icon: '🎭', type: 'series' },
-        { name: 'Anime', grad: 'linear-gradient(135deg, #06B6D4, #0891B2)', icon: '🌸', type: 'series' },
-        { name: 'K-Drama', grad: 'linear-gradient(135deg, #EC4899, #BE185D)', icon: '🇰🇷', type: 'series' },
-        { name: 'Docuseries', grad: 'linear-gradient(135deg, #10B981, #047857)', icon: '🎤', type: 'series' },
-        { name: 'Reality TV', grad: 'linear-gradient(135deg, #EAB308, #A16207)', icon: '🌟', type: 'series' },
-        { name: 'Medical Series', grad: 'linear-gradient(135deg, #0D9488, #0F766E)', icon: '🩺', type: 'series' },
-        { name: 'Legal Series', grad: 'linear-gradient(135deg, #0284C7, #0369A1)', icon: '⚖️', type: 'series' },
-        { name: 'Political Series', grad: 'linear-gradient(135deg, #4F46E5, #312E81)', icon: '🏛️', type: 'series' },
-        { name: 'Detective Series', grad: 'linear-gradient(135deg, #1E293B, #0F172A)', icon: '🔍', type: 'series' },
-        { name: 'Mini Series', grad: 'linear-gradient(135deg, #D946EF, #701A75)', icon: '🎞️', type: 'series' },
-        { name: 'Historical Series', grad: 'linear-gradient(135deg, #CA8A04, #713F12)', icon: '🏰', type: 'series' },
-        { name: 'Animated Series', grad: 'linear-gradient(135deg, #06B6D4, #0891B2)', icon: '🎮', type: 'series' }
+        { name: 'Action', color: 'rgba(239, 68, 68, 0.5)', icon: '🎬', type: 'both' },
+        { name: 'Adventure', color: 'rgba(245, 158, 11, 0.5)', icon: '🧭', type: 'both' },
+        { name: 'Animation', color: 'rgba(59, 130, 246, 0.5)', icon: '🧸', type: 'both' },
+        { name: 'Anime', color: 'rgba(236, 72, 153, 0.5)', icon: '🌸', type: 'both' },
+        { name: 'Biography', color: 'rgba(16, 185, 129, 0.5)', icon: '📜', type: 'movie' },
+        { name: 'Comedy', color: 'rgba(236, 72, 153, 0.5)', icon: '😂', type: 'both' },
+        { name: 'Crime', color: 'rgba(107, 114, 128, 0.5)', icon: '🕵️', type: 'both' },
+        { name: 'Dark Comedy', color: 'rgba(17, 24, 39, 0.8)', icon: '💀', type: 'movie' },
+        { name: 'Disaster', color: 'rgba(220, 38, 38, 0.5)', icon: '🌋', type: 'movie' },
+        { name: 'Documentary', color: 'rgba(6, 182, 212, 0.5)', icon: '📹', type: 'both' },
+        { name: 'Drama', color: 'rgba(139, 92, 246, 0.5)', icon: '🎭', type: 'both' },
+        { name: 'Family', color: 'rgba(16, 185, 12 emerald, 0.5)', icon: '👨‍👩‍👧‍👦', type: 'both' },
+        { name: 'Fantasy', color: 'rgba(236, 72, 153, 0.5)', icon: '🐉', type: 'both' },
+        { name: 'Historical', color: 'rgba(202, 138, 4, 0.5)', icon: '🏰', type: 'both' },
+        { name: 'History', color: 'rgba(120, 53, 15, 0.5)', icon: '🏛️', type: 'movie' },
+        { name: 'Holiday', color: 'rgba(239, 68, 68, 0.5)', icon: '🎄', type: 'movie' },
+        { name: 'Horror', color: 'rgba(17, 24, 39, 0.8)', icon: '👻', type: 'both' },
+        { name: 'Independent', color: 'rgba(107, 114, 128, 0.5)', icon: '🎥', type: 'movie' },
+        { name: 'Kids', color: 'rgba(245, 158, 11, 0.5)', icon: '🎈', type: 'both' },
+        { name: 'Martial Arts', color: 'rgba(185, 28, 28, 0.5)', icon: '🥋', type: 'movie' },
+        { name: 'Medical', color: 'rgba(13, 148, 136, 0.5)', icon: '🩺', type: 'both' },
+        { name: 'Military', color: 'rgba(63, 73, 61, 0.5)', icon: '🪖', type: 'movie' },
+        { name: 'Music', color: 'rgba(139, 92, 246, 0.5)', icon: '🎵', type: 'both' },
+        { name: 'Musical', color: 'rgba(236, 72, 153, 0.5)', icon: '🎹', type: 'movie' },
+        { name: 'Mystery', color: 'rgba(79, 70, 229, 0.5)', icon: '🔍', type: 'both' },
+        { name: 'Neo-Noir', color: 'rgba(15, 23, 42, 0.8)', icon: '🕶️', type: 'movie' },
+        { name: 'Political', color: 'rgba(71, 85, 105, 0.5)', icon: '🏛️', type: 'both' },
+        { name: 'Psychological', color: 'rgba(99, 102, 241, 0.5)', icon: '🧠', type: 'both' },
+        { name: 'Reality', color: 'rgba(234, 179, 8, 0.5)', icon: '🌟', type: 'series' },
+        { name: 'Romance', color: 'rgba(244, 63, 94, 0.5)', icon: '💖', type: 'both' },
+        { name: 'Road Movie', color: 'rgba(217, 119, 6, 0.5)', icon: '🚗', type: 'movie' },
+        { name: 'Satire', color: 'rgba(236, 72, 153, 0.5)', icon: '🤡', type: 'movie' },
+        { name: 'Sci-Fi', color: 'rgba(139, 92, 246, 0.5)', icon: '🚀', type: 'both' },
+        { name: 'Short Films', color: 'rgba(6, 182, 212, 0.5)', icon: '🎞️', type: 'movie' },
+        { name: 'Sitcom', color: 'rgba(245, 158, 11, 0.5)', icon: '🛋️', type: 'series' },
+        { name: 'Slice of Life', color: 'rgba(16, 185, 129, 0.5)', icon: '🍃', type: 'series' },
+        { name: 'Sports', color: 'rgba(16, 185, 129, 0.5)', icon: '⚽', type: 'movie' },
+        { name: 'Spy', color: 'rgba(30, 41, 59, 0.5)', icon: '🕶️', type: 'both' },
+        { name: 'Superhero', color: 'rgba(2, 132, 199, 0.5)', icon: '🦸', type: 'both' },
+        { name: 'Supernatural', color: 'rgba(139, 92, 246, 0.5)', icon: '🔮', type: 'both' },
+        { name: 'Survival', color: 'rgba(21, 128, 61, 0.5)', icon: '🏕️', type: 'movie' },
+        { name: 'Suspense', color: 'rgba(153, 27, 27, 0.5)', icon: '🤫', type: 'both' },
+        { name: 'Teen', color: 'rgba(236, 72, 153, 0.5)', icon: '🎒', type: 'both' },
+        { name: 'Thriller', color: 'rgba(153, 27, 27, 0.5)', icon: '🔪', type: 'both' },
+        { name: 'Time Travel', color: 'rgba(234, 88, 12, 0.5)', icon: '⏳', type: 'both' },
+        { name: 'True Crime', color: 'rgba(107, 114, 128, 0.5)', icon: '🔎', type: 'both' },
+        { name: 'War', color: 'rgba(120, 53, 15, 0.5)', icon: '🪖', type: 'movie' },
+        { name: 'Western', color: 'rgba(180, 83, 9, 0.5)', icon: '🤠', type: 'movie' },
+        { name: 'Zombie', color: 'rgba(21, 128, 61, 0.5)', icon: '🧟', type: 'both' },
+        { name: 'Noir', color: 'rgba(2, 6, 23, 0.8)', icon: '🕶️', type: 'movie' },
+        { name: 'Cyberpunk', color: 'rgba(217, 70, 239, 0.5)', icon: '🌆', type: 'both' },
+        { name: 'Steampunk', color: 'rgba(202, 138, 4, 0.5)', icon: '⚙️', type: 'both' },
+        { name: 'Space Opera', color: 'rgba(37, 99, 235, 0.5)', icon: '🌌', type: 'both' },
+        { name: 'Coming of Age', color: 'rgba(22, 163, 74, 0.5)', icon: '🌱', type: 'movie' },
+        { name: 'Courtroom', color: 'rgba(13, 148, 136, 0.5)', icon: '⚖️', type: 'movie' },
+        { name: 'Heist', color: 'rgba(30, 41, 59, 0.5)', icon: '💰', type: 'movie' },
+        { name: 'Found Footage', color: 'rgba(55, 65, 81, 0.5)', icon: '📹', type: 'movie' },
+        { name: 'Monster', color: 'rgba(153, 27, 27, 0.5)', icon: '👹', type: 'movie' },
+        { name: 'Post-Apocalyptic', color: 'rgba(124, 45, 18, 0.5)', icon: '☣️', type: 'both' },
+        { name: 'Dystopian', color: 'rgba(30, 41, 59, 0.5)', icon: '👁️', type: 'both' },
+        { name: 'Mythology', color: 'rgba(245, 158, 11, 0.5)', icon: '🏛️', type: 'movie' },
+        { name: 'Epic', color: 'rgba(217, 119, 6, 0.5)', icon: '⚔️', type: 'both' },
+        { name: 'Classic', color: 'rgba(202, 138, 4, 0.5)', icon: '🎞️', type: 'movie' },
+        { name: 'Cult Classics', color: 'rgba(139, 92, 246, 0.5)', icon: '🍿', type: 'movie' },
+        { name: 'Experimental', color: 'rgba(6, 182, 212, 0.5)', icon: '🌀', type: 'movie' },
+        { name: 'Global Cinema', color: 'rgba(37, 99, 235, 0.5)', icon: '🌍', type: 'both' },
+        { name: 'Bollywood', color: 'rgba(245, 197, 24, 0.5)', icon: '🇮🇳', type: 'both' },
+        { name: 'Hollywood', color: 'rgba(59, 130, 246, 0.5)', icon: '🇺🇸', type: 'both' },
+        { name: 'Korean', color: 'rgba(236, 72, 153, 0.5)', icon: '🇰🇷', type: 'both' },
+        { name: 'Japanese', color: 'rgba(239, 68, 68, 0.5)', icon: '🇯🇵', type: 'both' },
+        { name: 'Chinese', color: 'rgba(239, 68, 68, 0.5)', icon: '🇨🇳', type: 'both' },
+        { name: 'Indian Regional', color: 'rgba(16, 185, 129, 0.5)', icon: '🇮🇳', type: 'both' },
+        { name: 'French', color: 'rgba(59, 130, 246, 0.5)', icon: '🇫🇷', type: 'both' },
+        { name: 'Spanish', color: 'rgba(239, 68, 68, 0.5)', icon: '🇪🇸', type: 'both' },
+        { name: 'Italian', color: 'rgba(16, 185, 129, 0.5)', icon: '🇮🇹', type: 'both' },
+        { name: 'German', color: 'rgba(245, 158, 11, 0.5)', icon: '🇩🇪', type: 'both' },
+        { name: 'Nordic', color: 'rgba(6, 182, 212, 0.5)', icon: '❄️', type: 'both' },
+        { name: 'Middle Eastern', color: 'rgba(217, 119, 6, 0.5)', icon: '🕌', type: 'both' },
+        { name: 'African Cinema', color: 'rgba(16, 185, 129, 0.5)', icon: '🌍', type: 'both' },
+        { name: 'Latin American', color: 'rgba(244, 63, 94, 0.5)', icon: '💃', type: 'both' },
+        { name: 'Australian', color: 'rgba(21, 128, 61, 0.5)', icon: '🦘', type: 'both' }
     ];
 
     const filteredCategories = categoriesData.filter(c => {
         if (currentFormat === 'all') return true;
-        if (currentFormat === 'movie' && c.type === 'movie') return true;
-        if (currentFormat === 'series' && c.type === 'series') return true;
+        if (currentFormat === 'movie' && c.type !== 'series') return true;
+        if (currentFormat === 'series' && c.type !== 'movie') return true;
         return false;
     });
 
@@ -1473,7 +1858,7 @@ function renderCategorySelectionGrid() {
                 <div class="genre-bubble-grid" id="category-cards-grid">
                     ${filteredCategories.map(c => `
                         <div class="genre-bubble category-card" data-name="${c.name.toLowerCase()}" onclick="selectCategory('${c.name}')" 
-                             style="background: ${c.grad};">
+                             style="--glow-color: ${c.color || 'rgba(6, 182, 212, 0.4)'};">
                             <span class="genre-bubble__icon">${c.icon}</span>
                             <span class="genre-bubble__name">${c.name}</span>
                         </div>
@@ -1687,6 +2072,63 @@ async function renderLibraryTab() {
 }
 
 // ── Search Tab ──────────────────────────────────────────────────────
+window.startVoiceSearch = function() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        alert("Speech recognition is not supported in this browser. Please try typing your search.");
+        return;
+    }
+
+    const overlay = document.getElementById('voice-search-overlay');
+    const statusText = document.getElementById('voice-status-text');
+    const transcriptText = document.getElementById('voice-transcript-text');
+    if (!overlay || !statusText || !transcriptText) return;
+
+    overlay.classList.add('active');
+    statusText.textContent = "Listening...";
+    transcriptText.textContent = 'Try saying "Suggest some dark sci-fi thrillers"';
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onresult = function(event) {
+        const transcript = event.results[0][0].transcript;
+        transcriptText.textContent = `"${transcript}"`;
+        statusText.textContent = "Searching...";
+        setTimeout(() => {
+            overlay.classList.remove('active');
+            window.executeSearchPageQuery(transcript);
+        }, 1000);
+    };
+
+    recognition.onerror = function(event) {
+        console.error("Speech recognition error:", event.error);
+        statusText.textContent = "Error occurred";
+        transcriptText.textContent = `Error: ${event.error}. Please try again.`;
+        setTimeout(() => {
+            overlay.classList.remove('active');
+        }, 2000);
+    };
+
+    recognition.onend = function() {
+        setTimeout(() => {
+            if (overlay.classList.contains('active') && statusText.textContent === "Listening...") {
+                overlay.classList.remove('active');
+            }
+        }, 6000);
+    };
+
+    recognition.start();
+};
+
+window.closeVoiceSearch = function() {
+    const overlay = document.getElementById('voice-search-overlay');
+    if (overlay) overlay.classList.remove('active');
+};
+
 function loadSearchPage() {
     heroSection.innerHTML = '';
     heroSection.style.display = 'none';
@@ -1702,7 +2144,7 @@ function loadSearchPage() {
                     <input type="text" id="search-page-input" placeholder="Search movies, TV series, actors, directors, genres..." 
                            style="width: 100%; padding: 18px 60px; border-radius: var(--r-pill); background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); color: white; font-size: 1.1rem; outline: none; transition: border-color var(--t-fast), box-shadow var(--t-fast);"
                            autocomplete="off">
-                    <button id="search-voice-placeholder" style="position: absolute; right: 24px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.2rem;" title="Voice Search (Not available)">🎙️</button>
+                    <button id="search-voice-placeholder" onclick="window.startVoiceSearch()" style="position: absolute; right: 24px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.2rem;" title="Voice Search">🎙️</button>
                 </div>
             </div>
             
@@ -1743,26 +2185,41 @@ window.renderSearchEmptyState = function() {
         "Mind-bending sci-fi",
         "Dark psychological dramas",
         "Action comedy thrillers",
-        "Christopher Nolan",
-        "Gothic mystery"
+        "Gothic mystery",
+        "Dystopian future"
     ];
     
-    const popularGenres = [
-        { name: "Action", icon: "🎬" },
-        { name: "Sci-Fi", icon: "🚀" },
-        { name: "Horror", icon: "👻" },
-        { name: "Comedy", icon: "😂" },
-        { name: "Drama", icon: "🎭" }
-    ];
+    const searchCategories = {
+        "Genres": ["Action", "Sci-Fi", "Horror", "Comedy", "Drama", "Thriller", "Romance", "Mystery", "Anime", "Documentary"],
+        "Actors": ["Tom Hanks", "Leonardo DiCaprio", "Scarlett Johansson", "Cillian Murphy", "Zendaya", "Robert Downey Jr.", "Brad Pitt"],
+        "Directors": ["Christopher Nolan", "Quentin Tarantino", "Denis Villeneuve", "Martin Scorsese", "Greta Gerwig", "Steven Spielberg"],
+        "Release Year": ["2026", "2025", "2024", "2023", "2022", "2020s", "2010s", "2000s"],
+        "Language": ["English", "Spanish", "Japanese", "Korean", "French", "German"],
+        "Mood & Tone": ["Mind-bending", "Dark", "Uplifting", "Suspenseful", "Atmospheric", "Emotional", "Heartwarming"]
+    };
     
     let recentHTML = '';
     if (recentSearches.length > 0) {
         recentHTML = `
             <div style="margin-top: 20px;">
-                <h3 style="color: white; font-size: 1.2rem; margin-bottom: 12px; text-align: left;">Recent Searches</h3>
-                <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-start;">
+                <h3 style="color: white; font-size: 1.1rem; margin-bottom: 12px; text-align: left; font-weight: 700;">Recent Searches</h3>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-start;">
                     ${recentSearches.map(q => `
-                        <button onclick="executeSearchPageQuery('${esc(q)}')" style="padding: 10px 18px; border-radius: var(--r-pill); background: rgba(6,182,212,0.06); border: 1px solid rgba(6,182,212,0.2); color: var(--aurora-cyan); cursor: pointer; transition: all var(--t-fast);" onmouseover="this.style.background='rgba(6,182,212,0.12)'" onmouseout="this.style.background='rgba(6,182,212,0.06)'">${q}</button>
+                        <button onclick="executeSearchPageQuery('${esc(q)}')" style="padding: 8px 16px; border-radius: var(--r-pill); background: rgba(6,182,212,0.06); border: 1px solid rgba(6,182,212,0.2); color: var(--aurora-cyan); cursor: pointer; transition: all var(--t-fast); font-size: 0.85rem;" onmouseover="this.style.background='rgba(6,182,212,0.12)'" onmouseout="this.style.background='rgba(6,182,212,0.06)'">${q}</button>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+    
+    let categoriesHTML = '';
+    for (const [title, list] of Object.entries(searchCategories)) {
+        categoriesHTML += `
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <h4 style="color: rgba(255,255,255,0.7); font-size: 0.95rem; text-align: left; margin: 0; font-weight: 700;">Search by ${title}</h4>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-start;">
+                    ${list.map(item => `
+                        <button onclick="executeSearchPageQuery('${item}')" style="padding: 8px 14px; border-radius: var(--r-pill); background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); color: rgba(255,255,255,0.85); cursor: pointer; transition: all var(--t-fast); font-size: 0.82rem;" onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.color='white';" onmouseout="this.style.background='rgba(255,255,255,0.03)'; this.style.color='rgba(255,255,255,0.85)';">${item}</button>
                     `).join('')}
                 </div>
             </div>
@@ -1770,29 +2227,24 @@ window.renderSearchEmptyState = function() {
     }
     
     container.innerHTML = `
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 32px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 32px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 30px;">
             <div>
-                <h3 style="color: white; font-size: 1.2rem; margin-bottom: 16px; text-align: left;">Suggested Searches</h3>
-                <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-start;">
+                <h3 style="color: white; font-size: 1.1rem; margin-bottom: 16px; text-align: left; font-weight: 700;">Suggested Searches</h3>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-start;">
                     ${suggestedSearches.map(q => `
-                        <button onclick="executeSearchPageQuery('${q}')" style="padding: 10px 18px; border-radius: var(--r-pill); background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); color: white; cursor: pointer; transition: all var(--t-fast);" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'">${q}</button>
+                        <button onclick="executeSearchPageQuery('${q}')" style="padding: 10px 18px; border-radius: var(--r-pill); background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); color: white; cursor: pointer; transition: all var(--t-fast); font-size: 0.85rem;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'">${q}</button>
                     `).join('')}
                 </div>
                 ${recentHTML}
             </div>
             
-            <div>
-                <h3 style="color: white; font-size: 1.2rem; margin-bottom: 16px; text-align: left;">Popular Genres</h3>
-                <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-start;">
-                    ${popularGenres.map(g => `
-                        <button onclick="executeSearchPageQuery('${g.name}')" style="padding: 10px 18px; border-radius: var(--r-pill); background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); color: white; cursor: pointer; transition: all var(--t-fast);" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'">${g.icon} ${g.name}</button>
-                    `).join('')}
-                </div>
+            <div style="display: flex; flex-direction: column; gap: 20px;">
+                ${categoriesHTML}
             </div>
         </div>
         
         <div>
-            <h3 style="color: white; font-size: 1.2rem; margin-bottom: 16px; text-align: left;">Trending Movies</h3>
+            <h3 style="color: white; font-size: 1.2rem; margin-bottom: 16px; text-align: left; font-weight: 700;">Trending Movies</h3>
             <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 20px;">
                 ${trendingMovies.map(movie => {
                     const m = movie.rich_metadata || {};
@@ -1811,7 +2263,7 @@ window.renderSearchEmptyState = function() {
         </div>
 
         <div>
-            <h3 style="color: white; font-size: 1.2rem; margin-bottom: 16px; text-align: left;">Popular TV Series</h3>
+            <h3 style="color: white; font-size: 1.2rem; margin-bottom: 16px; text-align: left; font-weight: 700;">Popular TV Series</h3>
             <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 20px;">
                 ${popularSeries.map(movie => {
                     const m = movie.rich_metadata || {};
@@ -2487,6 +2939,10 @@ function renderModalData(m, id) {
         addBtn.innerHTML = isInMyList(id) ? `✓ Added` : `+ Add to List`;
     };
 
+    if (typeof window.updateModalDownloadBtn === 'function') {
+        window.updateModalDownloadBtn(id);
+    }
+
     addToHistory({
         item_id: id,
         title: m.title || 'Unknown',
@@ -2670,14 +3126,17 @@ async function openModal(id) {
 }
 
 window.toggleFavorite = function(id) {
-    const movie = globalMovies.find(m => m.item_id === id) || FALLBACK_MOVIES.find(m => m.item_id === id) || myList.find(m => m.item_id === id);
+    const idNum = parseInt(id);
+    const movie = globalMovies.find(m => parseInt(m.item_id) === idNum) || 
+                  FALLBACK_MOVIES.find(m => parseInt(m.item_id) === idNum) || 
+                  myList.find(m => parseInt(m.item_id) === idNum);
     if (!movie) return;
     
     toggleMyList(movie);
     
-    window.updateCardHearts(id);
-    window.updateHeroSaveBtn(id);
-    window.updateModalSaveBtn(id);
+    window.updateCardHearts(idNum);
+    window.updateHeroSaveBtn(idNum);
+    window.updateModalSaveBtn(idNum);
     
     if (currentPage === 'favorites' || currentPage === 'my-list') {
         renderFavoritesTab();
