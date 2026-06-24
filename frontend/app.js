@@ -429,7 +429,7 @@ async function fetchAndRender(query, rowTitle, isHero = false) {
             }
             }
         }
-} catch (e) { /* silently skip failed row */ }
+} catch (e) { console.warn(`[Aurora] Failed to load row "${rowTitle}":`, e); }
 }
 
 // ══════════════════════════════════════════════════════════════════════
