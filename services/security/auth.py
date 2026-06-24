@@ -9,30 +9,15 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 from .audit import log_event
 
-import bcrypt
-
 # Load environment variables
 load_dotenv(os.path.join(os.path.dirname(__file__), '../../.env'))
 
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "fallback_unsafe_secret")
 ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "43200"))
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
-
-def hash_password(password: str) -> str:
-    pwd_bytes = password.encode('utf-8')
-    salt = bcrypt.gensalt()
-    return bcrypt.hashpw(pwd_bytes, salt).decode('utf-8')
-
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    try:
-        return bcrypt.checkpw(
-            plain_password.encode('utf-8'),
-            hashed_password.encode('utf-8')
-        )
-    except Exception:
-        return False
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login", auto_error=False)
 
 # In-Memory Mock Database for Render Free Tier Constraint
 # In a real enterprise system, this connects to PostgreSQL.
@@ -42,13 +27,13 @@ FAKE_DB = {
     "admin": {
         "user_id": 1,
         "username": "admin",
-        "hashed_password": hash_password("adminpass"),
+        "hashed_password": pwd_context.hash("adminpass"),
         "role": "Administrator"
     },
     "user1": {
         "user_id": 32,
         "username": "user1",
-        "hashed_password": hash_password("user1pass"),
+        "hashed_password": pwd_context.hash("user1pass"),
         "role": "Standard"
     }
 }
@@ -57,6 +42,9 @@ class TokenData(BaseModel):
     username: Optional[str] = None
     role: Optional[str] = None
     user_id: Optional[int] = None
+
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
 
 def get_user(username: str):
     return FAKE_DB.get(username)
@@ -71,53 +59,25 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-async def get_current_user(token: str = Depends(oauth2_scheme)):
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+async def get_current_user(token: Optional[str] = Depends(oauth2_scheme)):
+    if not token:
+        # Default guest access (using user1's profile context)
+        return {"user_id": 32, "username": "guest", "role": "Standard"}
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
         role: str = payload.get("role")
         user_id: int = payload.get("user_id")
         if username is None or role is None:
-            raise credentials_exception
+            return {"user_id": 32, "username": "guest", "role": "Standard"}
         token_data = TokenData(username=username, role=role, user_id=user_id)
     except JWTError:
-        raise credentials_exception
+        return {"user_id": 32, "username": "guest", "role": "Standard"}
     
     user = get_user(username=token_data.username)
     if user is None:
-        raise credentials_exception
+        return {"user_id": 32, "username": "guest", "role": "Standard"}
     return user
-
-import json
-
-USERS_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../data/users.json"))
-
-def load_users_db():
-    global FAKE_DB
-    if os.path.exists(USERS_FILE):
-        try:
-            with open(USERS_FILE, "r") as f:
-                data = json.load(f)
-                for k, v in data.items():
-                    FAKE_DB[k] = v
-        except Exception as e:
-            print("Error loading users database:", e)
-
-def save_users_db():
-    try:
-        os.makedirs(os.path.dirname(USERS_FILE), exist_ok=True)
-        with open(USERS_FILE, "w") as f:
-            json.dump(FAKE_DB, f, indent=4)
-    except Exception as e:
-        print("Error saving users database:", e)
-
-# Load database on startup
-load_users_db()
 
 async def require_admin(current_user: dict = Depends(get_current_user)):
     if current_user.get("role") != "Administrator":

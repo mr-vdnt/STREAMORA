@@ -37,13 +37,20 @@ const closeModalBtn = document.getElementById('close-modal-btn');
 let globalMovies = [];
 let myList = JSON.parse(localStorage.getItem('aurora_mylist') || '[]');
 let currentPage = 'home';
-let token = 'mock_token';
-let userId = 32;
+let token = localStorage.getItem('aurora_token');
+let userId = localStorage.getItem('aurora_user_id') || 32;
 
 async function authFetch(url, options = {}) {
+    if (!token) throw new Error('Unauthenticated');
     options.headers = options.headers || {};
-    options.headers['Authorization'] = `Bearer mock_token`;
+    options.headers['Authorization'] = `Bearer ${token}`;
     const res = await fetch(url, options);
+    if (res.status === 401) {
+        document.getElementById('login-overlay').style.display = 'flex';
+        token = null;
+        localStorage.removeItem('aurora_token');
+        throw new Error('Session expired');
+    }
     return res;
 }
 
@@ -51,9 +58,80 @@ async function authFetch(url, options = {}) {
 //  INIT
 // ══════════════════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
+    const loginOverlay = document.getElementById('login-overlay');
+    const loginForm = document.getElementById('login-form');
+    const logoutBtn = document.getElementById('logout-btn');
+    const adminLink = document.getElementById('admin-link');
     const userDisplay = document.getElementById('current-user-display');
-    if (userDisplay) userDisplay.textContent = `User: guest`;
-    navigateTo('home');
+    const loginError = document.getElementById('login-error');
+
+    // Auto-setup Guest Session if not logged in
+    if (!token) {
+        token = "guest-token";
+        userId = 32;
+        localStorage.setItem('aurora_token', token);
+        localStorage.setItem('aurora_user_id', userId);
+        localStorage.setItem('aurora_role', 'Standard');
+        localStorage.setItem('aurora_username', 'Guest');
+    }
+
+    if (token) {
+        if (loginOverlay) loginOverlay.style.display = 'none';
+        if (userDisplay) userDisplay.textContent = `User: ${localStorage.getItem('aurora_username') || 'Guest'}`;
+        if (logoutBtn) logoutBtn.style.display = 'inline-block';
+        if (adminLink) {
+            if (localStorage.getItem('aurora_role') === 'Administrator') {
+                adminLink.style.display = 'inline-block';
+            } else {
+                adminLink.style.display = 'none';
+            }
+        }
+        navigateTo('home');
+    }
+
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fd = new FormData();
+            fd.append('username', document.getElementById('login-username').value);
+            fd.append('password', document.getElementById('login-password').value);
+            try {
+                const res = await fetch('/token', { method: 'POST', body: fd });
+                if (!res.ok) throw new Error('Failed');
+                const data = await res.json();
+                token = data.access_token;
+                userId = data.user_id;
+                localStorage.setItem('aurora_token', token);
+                localStorage.setItem('aurora_user_id', userId);
+                localStorage.setItem('aurora_role', data.role);
+                localStorage.setItem('aurora_username', document.getElementById('login-username').value);
+                if (loginOverlay) loginOverlay.style.display = 'none';
+                if (loginError) loginError.style.display = 'none';
+                if (userDisplay) userDisplay.textContent = `User: ${document.getElementById('login-username').value}`;
+                if (logoutBtn) logoutBtn.style.display = 'inline-block';
+                if (adminLink) {
+                    if (data.role === 'Administrator') {
+                        adminLink.style.display = 'inline-block';
+                    } else {
+                        adminLink.style.display = 'none';
+                    }
+                }
+                navigateTo('home');
+            } catch(err) {
+                if (loginError) loginError.style.display = 'block';
+            }
+        });
+    }
+
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            localStorage.removeItem('aurora_token');
+            localStorage.removeItem('aurora_user_id');
+            localStorage.removeItem('aurora_role');
+            localStorage.removeItem('aurora_username');
+            window.location.reload();
+        });
+    }
 });
 
 // ══════════════════════════════════════════════════════════════════════
@@ -68,25 +146,18 @@ function toggleMobileSidebar() {
     document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : '';
 }
 
-function toggleMobileDrawer() {
-    const drawer = document.getElementById('mobile-drawer');
-    if (!drawer) return;
-    const isActive = drawer.classList.contains('active');
-    if (isActive) {
-        drawer.classList.remove('active');
-        sidebarBackdrop.classList.remove('active');
-        document.body.style.overflow = '';
-    } else {
-        drawer.classList.add('active');
-        sidebarBackdrop.classList.add('active');
-        document.body.style.overflow = 'hidden';
-    }
+function closeMobileSidebar() {
+    sidebar.classList.remove('open');
+    sidebarBackdrop.classList.remove('active');
+    document.body.style.overflow = '';
 }
 
-if(mobileMenuBtn) mobileMenuBtn.addEventListener('click', toggleMobileDrawer);
-if(sidebarBackdrop) sidebarBackdrop.addEventListener('click', toggleMobileDrawer);
-const mobileDrawerClose = document.getElementById('mobile-drawer-close');
-if(mobileDrawerClose) mobileDrawerClose.addEventListener('click', toggleMobileDrawer);
+sidebarToggle.addEventListener('click', () => {
+    sidebar.classList.toggle('expanded');
+});
+
+if(mobileMenuBtn) mobileMenuBtn.addEventListener('click', toggleMobileSidebar);
+if(sidebarBackdrop) sidebarBackdrop.addEventListener('click', closeMobileSidebar);
 
 // Close sidebar on mobile when clicking a nav link
 document.querySelectorAll('.sidebar__link').forEach(link => {
@@ -148,9 +219,9 @@ document.addEventListener('click', (e) => {
 // ══════════════════════════════════════════════════════════════════════
 //  SEARCH OVERLAY
 // ══════════════════════════════════════════════════════════════════════
-searchTrigger.addEventListener('click', () => {
-    searchOverlay.classList.add('open');
-    setTimeout(() => searchInput.focus(), 100);
+searchTrigger.addEventListener('click', (e) => {
+    e.preventDefault();
+    navigateTo('search');
 });
 searchClose.addEventListener('click', closeSearch);
 searchOverlay.addEventListener('click', (e) => {
@@ -287,9 +358,8 @@ function pickAc(title) {
 // ══════════════════════════════════════════════════════════════════════
 function navigateTo(page) {
     currentPage = page;
-    window.shownItems = []; // Reset exclusions on page navigate
+    window.shownItems = []; 
 
-    // Update sidebar & bottom nav active states
     document.querySelectorAll('.sidebar__link').forEach(l => {
         l.classList.toggle('active', l.dataset.page === page);
     });
@@ -303,22 +373,14 @@ function navigateTo(page) {
         case 'home':
             loadHomePage();
             break;
-        case 'movies':
         case 'categories':
-            loadCategoriesHub();
+            loadCategoriesTab();
             break;
-        case 'tv-series':
-            loadCategoryPage('Trending TV Series', [
-                'Dark Psychological Thrillers',
-                'Feel-Good Family',
-                'Historical Fiction'
-            ], 'TV Series');
+        case 'library':
+            renderLibraryTab();
             break;
-        case 'trending':
-            heroSection.innerHTML = '';
-            heroSection.style.display = 'none';
-            contentRows.innerHTML = '';
-            fetchAndRender('What is trending?', 'Trending Now');
+        case 'search':
+            loadSearchPage();
             break;
         case 'my-list':
             renderMyList();
@@ -333,57 +395,27 @@ async function loadHomePage() {
     contentRows.innerHTML = '';
     showSkeletonRows();
 
-    // Sequentially fetch dynamic semantic categories (Home shows multiple rows directly)
+    window.shownItems = []; 
+
     await fetchAndRender('Top Picks For You', 'Top Picks For You', true);
     await fetchAndRender('Trending Now', 'Trending Now', false);
     await fetchAndRender('Mind-Bending Sci-Fi', 'Mind-Bending Sci-Fi', false);
-    await fetchAndRender('Crime Masterpieces', 'Crime Masterpieces', false);
-    await fetchAndRender('Feel-Good Family', 'Feel-Good Family', false);
-    await fetchAndRender('Epic Adventures', 'Epic Adventures', false);
-    await fetchAndRender('Dark Psychological Thrillers', 'Dark Psychological Thrillers', false);
-    await fetchAndRender('Hidden Gems', 'Hidden Gems', false);
-}
 
-// ── Universal Categories Hub ──────────────────────────────────────────
-function loadCategoriesHub() {
-    heroSection.innerHTML = '';
-    heroSection.style.display = 'none';
-    
     const genres = [
-        "Action", "Adventure", "Animation", "Biography", "Comedy", "Crime", 
-        "Documentary", "Drama", "Family", "Fantasy", "History", "Horror", 
-        "Music", "Mystery", "Romance", "Science Fiction", "Sports", "Thriller", 
-        "War", "Western", "Psychological", "Cyberpunk", "Dystopian", "Time Travel", 
-        "Epic Adventures", "Martial Arts", "Spy", "Survival", "Hidden Gems"
+        { q: 'Action', title: 'Action Thrillers' },
+        { q: 'Comedy', title: 'Comedy Classics' },
+        { q: 'Horror', title: 'Horror & Supernatural' },
+        { q: 'Drama', title: 'Dramatic Masterpieces' },
+        { q: 'Romance', title: 'Romance & Love Stories' },
+        { q: 'Thriller', title: 'High-Stakes Thrillers' },
+        { q: 'Anime', title: 'Anime & Animation' },
+        { q: 'Hidden Gems', title: 'Hidden Gems' }
     ];
 
-    let gridHtml = `<div class="row-section" style="padding-top:80px;">
-        <h1 class="row-section__title" style="font-size:2.2rem;margin-bottom:32px;padding-left:40px;">Explore Categories</h1>
-        <div class="category-hub">`;
-        
-    genres.forEach(g => {
-        gridHtml += `<div class="category-pill" onclick="loadCategoryDetail('${g}')">${g}</div>`;
-    });
-    
-    gridHtml += `</div></div>`;
-    contentRows.innerHTML = gridHtml;
-}
-
-async function loadCategoryDetail(genre) {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    contentRows.innerHTML = `
-        <div class="row-section" style="padding-top:80px;">
-            <button onclick="loadCategoriesHub()" style="background:transparent;border:none;color:#a78bfa;cursor:pointer;margin-bottom:20px;font-size:1.1rem;">← Back to Categories</button>
-            <h1 class="row-section__title" style="font-size:2.2rem;margin-bottom:32px;">${genre}</h1>
-        </div>
-    `;
-    showSkeletonRows(false);
-    
-    // Reset exclusions so we don't accidentally hide movies from the previous page
-    window.shownItems = [];
-    
-    await fetchAndRender(genre, `Popular in ${genre}`);
-    await fetchAndRender(`More ${genre}`, `More ${genre}`);
+    for (const g of genres) {
+        await new Promise(resolve => setTimeout(resolve, 80));
+        await fetchAndRender(g.q, g.title, false);
+    }
 }
 
 // ── Category Page ─────────────────────────────────────────────────────
@@ -413,7 +445,6 @@ async function fetchAndRender(query, rowTitle, isHero = false) {
         const data = await resp.json();
         let movies = Array.isArray(data.response) ? data.response : (data.response && data.response.value);
         if (movies && movies.length > 0) {
-            // Track shown items to prevent duplication across rows
             movies.forEach(m => {
                 if (!window.shownItems.includes(m.item_id)) {
                     window.shownItems.push(m.item_id);
@@ -429,23 +460,8 @@ async function fetchAndRender(query, rowTitle, isHero = false) {
             }
             }
         }
-} catch (e) { console.warn(`[Aurora] Failed to load row "${rowTitle}":`, e); }
+    } catch (e) { /* silently skip failed row */ }
 }
-
-// ══════════════════════════════════════════════════════════════════════
-//  SEARCH -> MAP TO AI CHATBOT
-// ══════════════════════════════════════════════════════════════════════
-const desktopSearchTrigger = document.getElementById('search-trigger');
-const mobileSearchBtn = document.getElementById('mobile-search-btn');
-
-function openAiPanelFromSearch(e) {
-    if(e) e.preventDefault();
-    aiPanel.classList.add('open');
-    chatInput.focus();
-}
-
-if (desktopSearchTrigger) desktopSearchTrigger.addEventListener('click', openAiPanelFromSearch);
-if (mobileSearchBtn) mobileSearchBtn.addEventListener('click', openAiPanelFromSearch);
 
 // ── My List ───────────────────────────────────────────────────────────
 function renderMyList() {
@@ -456,7 +472,7 @@ function renderMyList() {
         contentRows.innerHTML = `
             <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:70vh;text-align:center;padding:0 20px;">
                 <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
-                <h2 style="font-size:2rem;font-weight:700;color:var(--text-primary);margin:24px 0 12px;">Your List is Empty</h2>
+                <h2 style="font-size:2rem;font-weight:700;color:var(--text-primary);margin:24px 0 12px;">Your Watchlist is Empty</h2>
                 <p style="color:var(--text-muted);max-width:400px;">Browse movies and click the + button on any card to save it here.</p>
             </div>
         `;
@@ -479,6 +495,374 @@ function toggleMyList(movie) {
 
 function isInMyList(id) {
     return myList.some(m => m.item_id === id);
+}
+
+// ── Click History Tracking ───────────────────────────────────────────
+function addToHistory(movie) {
+    if (!movie) return;
+    let history = JSON.parse(localStorage.getItem('aurora_history') || '[]');
+    history = history.filter(m => m.item_id !== movie.item_id);
+    history.unshift(movie);
+    if (history.length > 10) history.pop();
+    localStorage.setItem('aurora_history', JSON.stringify(history));
+}
+
+// ── Categories Tab ───────────────────────────────────────────────────
+let selectedCategory = null;
+
+function loadCategoriesTab() {
+    heroSection.innerHTML = '';
+    heroSection.style.display = 'none';
+    
+    if (selectedCategory) {
+        loadSingleCategoryPage(selectedCategory);
+    } else {
+        renderCategorySelectionGrid();
+    }
+}
+
+function renderCategorySelectionGrid() {
+    contentRows.innerHTML = `
+        <div class="category-selection-container" style="padding: 80px 24px 24px;">
+            <h1 style="font-size: 2.2rem; font-weight: 800; color: var(--text-primary); margin-bottom: 32px;">Explore Categories</h1>
+            <div class="category-cards-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px;">
+                ${[
+                    { name: 'Action', grad: 'linear-gradient(135deg, #EF4444, #B91C1C)', icon: '🎬' },
+                    { name: 'Comedy', grad: 'linear-gradient(135deg, #F59E0B, #D97706)', icon: '😂' },
+                    { name: 'Sci-Fi', grad: 'linear-gradient(135deg, #8B5CF6, #4C1D95)', icon: '🚀' },
+                    { name: 'Horror', grad: 'linear-gradient(135deg, #374151, #111827)', icon: '👻' },
+                    { name: 'Drama', grad: 'linear-gradient(135deg, #3B82F6, #1D4ED8)', icon: '🎭' },
+                    { name: 'Romance', grad: 'linear-gradient(135deg, #EC4899, #BE185D)', icon: '💖' },
+                    { name: 'Thriller', grad: 'linear-gradient(135deg, #10B981, #047857)', icon: '🕵️' },
+                    { name: 'Anime', grad: 'linear-gradient(135deg, #06B6D4, #0891B2)', icon: '🌸' },
+                    { name: 'Mind-Bending', grad: 'linear-gradient(135deg, #EC4899, #8B5CF6)', icon: '🌀' },
+                    { name: 'Hidden Gems', grad: 'linear-gradient(135deg, #14B8A6, #0F766E)', icon: '💎' }
+                ].map(c => `
+                    <div class="category-card" onclick="selectCategory('${c.name}')" 
+                         style="background: ${c.grad}; height: 110px; border-radius: var(--r-md); display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; transition: transform var(--t-fast) var(--ease-out), box-shadow var(--t-fast) var(--ease-out); border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 8px 16px rgba(0,0,0,0.3);">
+                        <span style="font-size: 2rem; margin-bottom: 8px;">${c.icon}</span>
+                        <span style="font-weight: 700; color: white; font-size: 0.95rem; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">${c.name}</span>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+    
+    document.querySelectorAll('.category-card').forEach(card => {
+        card.addEventListener('mouseover', () => {
+            card.style.transform = 'translateY(-4px) scale(1.03)';
+            card.style.boxShadow = '0 12px 24px rgba(0,0,0,0.4)';
+        });
+        card.addEventListener('mouseout', () => {
+            card.style.transform = 'translateY(0) scale(1)';
+            card.style.boxShadow = '0 8px 16px rgba(0,0,0,0.3)';
+        });
+    });
+}
+
+function selectCategory(name) {
+    selectedCategory = name;
+    loadSingleCategoryPage(name);
+}
+
+async function loadSingleCategoryPage(categoryName) {
+    contentRows.innerHTML = `
+        <div class="category-detail-header" style="padding: 80px 24px 24px; display: flex; align-items: center; gap: 16px;">
+            <button class="back-btn" onclick="selectedCategory = null; loadCategoriesTab();" 
+                    style="display: flex; align-items: center; gap: 8px; color: var(--text-primary); background: var(--glass-bg-2); border: 1px solid var(--glass-border); padding: 8px 16px; border-radius: var(--r-pill); font-size: 0.9rem; font-weight: 600; cursor: pointer;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                Back
+            </button>
+            <h1 class="category-detail-title" style="font-size: 2.2rem; font-weight: 800; color: var(--text-primary); margin: 0;">${categoryName}</h1>
+        </div>
+        <div id="category-grid-results" class="movies-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 20px; padding: 0 24px 40px;">
+        </div>
+    `;
+    
+    const gridResults = document.getElementById('category-grid-results');
+    gridResults.innerHTML = Array(12).fill(0).map(() => `
+        <div class="card-wrap skeleton" style="height: 220px; border-radius: var(--r-md); aspect-ratio: 2/3; width: 100%;"></div>
+    `).join('');
+    
+    try {
+        const resp = await authFetch('/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: categoryName, exclude_ids: [] })
+        });
+        const data = await resp.json();
+        let movies = Array.isArray(data.response) ? data.response : (data.response && data.response.value);
+        if (movies && movies.length > 0) {
+            gridResults.innerHTML = '';
+            globalMovies = [...globalMovies, ...movies];
+            movies.forEach(movie => {
+                const card = document.createElement('div');
+                card.innerHTML = createMovieCardHTML(movie);
+                const card3d = card.querySelector('.card-3d');
+                if (card3d) attachTilt(card3d);
+                gridResults.appendChild(card.firstElementChild);
+            });
+        } else {
+            gridResults.innerHTML = `<div class="no-results" style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 40px;">No titles found for ${categoryName}.</div>`;
+        }
+    } catch(e) {
+        gridResults.innerHTML = `<div class="no-results" style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 40px;">Error loading titles. Please try again.</div>`;
+    }
+}
+
+function createMovieCardHTML(movie) {
+    const m = movie.rich_metadata || {};
+    const t = movie.title || 'Unknown';
+    const poster = movie.poster_url || placeholder(t);
+    const backdrop = movie.backdrop_url || poster;
+    const score = m.match_percentage || randScore();
+    const genres = (m.tags || []).slice(0, 3).map(g => `<span>${g}</span>`).join('');
+    const saved = isInMyList(movie.item_id);
+
+    return `
+    <div class="card-wrap" onclick="openModal(${movie.item_id})" style="cursor: pointer;">
+        <div class="card-3d" data-id="${movie.item_id}" tabindex="0">
+            <img src="${poster}" alt="${t}" loading="lazy" onerror="this.src='${placeholder(t)}'">
+            <div class="card-3d__badge">${score}%</div>
+        </div>
+        <div class="card-expand">
+            <img src="${backdrop}" class="card-expand__img" alt="" loading="lazy" onerror="this.src='${placeholder(t)}'">
+            <div class="card-expand__body">
+                <div class="card-expand__title">${t}</div>
+                <div class="card-expand__meta">
+                    <span class="card-expand__pct">${score}% Match</span>
+                    ${m.year ? `<span>${m.year}</span>` : ''}
+                    ${m.runtime ? `<span>${m.runtime}</span>` : ''}
+                </div>
+                <div class="card-expand__genres">${genres}</div>
+                <div class="card-expand__ai">
+                    <div class="card-expand__ai-label">Why Aurora Picked This</div>
+                    <ul>
+                        <li>Matches your preferred genres</li>
+                        <li>High thematic similarity</li>
+                        <li>Popular among similar viewers</li>
+                    </ul>
+                </div>
+                <div class="card-expand__btns">
+                    <button class="card-expand__btn card-expand__btn--play" onclick="event.stopPropagation(); openModal(${movie.item_id})" aria-label="Play">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                    </button>
+                    <button class="card-expand__btn" onclick="event.stopPropagation(); toggleSave(${movie.item_id}); this.setAttribute('aria-label', isInMyList(${movie.item_id}) ? 'Remove from list' : 'Add to list'); this.querySelector('svg').innerHTML = isInMyList(${movie.item_id}) ? '<line x1=&quot;5&quot; y1=&quot;12&quot; x2=&quot;19&quot; y2=&quot;12&quot;/>' : '<line x1=&quot;12&quot; y1=&quot;5&quot; x2=&quot;12&quot; y2=&quot;19&quot;/><line x1=&quot;5&quot; y1=&quot;12&quot; x2=&quot;19&quot; y2=&quot;12&quot;/>';" aria-label="${saved ? 'Remove from list' : 'Add to list'}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            ${saved ? '<line x1="5" y1="12" x2="19" y2="12"/>' : '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>'}
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>`;
+}
+
+// ── Library Tab ──────────────────────────────────────────────────────
+async function renderLibraryTab() {
+    heroSection.innerHTML = '';
+    heroSection.style.display = 'none';
+    contentRows.innerHTML = `
+        <div class="row-section" style="padding-top:80px;">
+            <h1 class="row-section__title" style="font-size:2.2rem;margin-bottom:32px;">Your Library</h1>
+        </div>
+    `;
+    
+    const history = JSON.parse(localStorage.getItem('aurora_history') || '[]');
+    const watchlist = JSON.parse(localStorage.getItem('aurora_mylist') || '[]');
+    
+    if (watchlist.length > 0) {
+        appendRow('Your Watchlist', watchlist);
+    }
+    
+    if (history.length > 0) {
+        appendRow('Recently Viewed', history);
+        
+        const seedMovie = history[0];
+        await fetchAndRender(`Similar to ${seedMovie.title}`, `Because You Watched ${seedMovie.title}`);
+    } else if (watchlist.length > 0) {
+        const seedMovie = watchlist[0];
+        await fetchAndRender(`Similar to ${seedMovie.title}`, `Because You Watched ${seedMovie.title}`);
+    } else {
+        contentRows.innerHTML += `
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:40vh;text-align:center;padding:0 20px;">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20M4 19.5V3.5A2.5 2.5 0 0 1 6.5 1H20v21H6.5a2.5 2.5 0 0 1-2.5-2.5z"/></svg>
+                <h2 style="font-size:1.8rem;color:var(--text-primary);margin:20px 0 10px;">Library is Empty</h2>
+                <p style="color:var(--text-muted);max-width:400px;margin-bottom:24px;">Start browsing movies or add them to your watchlist to see personalized rows here.</p>
+            </div>
+        `;
+        await fetchAndRender('Hidden Gems', 'Recommended For You');
+    }
+}
+
+// ── Search Tab ──────────────────────────────────────────────────────
+function loadSearchPage() {
+    heroSection.innerHTML = '';
+    heroSection.style.display = 'none';
+    
+    contentRows.innerHTML = `
+        <div class="search-chatbot-container" style="padding: 80px 24px 20px; display: flex; flex-direction: column; height: calc(100vh - 150px); max-height: 700px; max-width: 800px; margin: 0 auto;">
+            <div class="search-chatbot-header" style="text-align: center; margin-bottom: 20px;">
+                <h1 style="font-size: 2rem; font-weight: 800; color: white; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                    <span class="ai-glow">✦</span> Aurora Assistant
+                </h1>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 6px;">Your conversational search. Enter movie titles, genres, moods, or themes.</p>
+            </div>
+            
+            <div id="search-chat-history" class="chat-history-container" style="flex: 1; overflow-y: auto; padding: 16px; background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); border-radius: var(--r-lg); display: flex; flex-direction: column; gap: 16px; margin-bottom: 16px; scrollbar-width: none;">
+                <div class="ai-msg ai-msg--bot" style="animation: msgIn 0.3s var(--ease-out);">
+                    Hi! I'm Aurora, your AI cinematic companion. Type a movie name, genre, or request below, and I'll find the perfect match for you.<br><br>
+                    💡 Try asking:<br>
+                    • <em>"Recommend some mind-bending sci-fi movies"</em><br>
+                    • <em>"Show me dark psychological thrillers"</em><br>
+                    • <em>"Find movies similar to Interstellar"</em>
+                </div>
+            </div>
+            
+            <div class="search-chat-input-wrapper" style="position: relative; display: flex; gap: 10px; align-items: center;">
+                <div style="position: relative; flex: 1;">
+                    <input type="text" id="search-chat-input" placeholder="Search by name, genre, or describe your mood..." 
+                           style="width: 100%; padding: 14px 20px; border-radius: var(--r-pill); background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); color: white; font-size: 0.95rem; outline: none; transition: border-color var(--t-fast);"
+                           autocomplete="off">
+                    <div id="search-autocomplete-dropdown" style="position: absolute; bottom: 100%; left: 0; right: 0; background: rgba(15,15,15,0.95); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: var(--r-md); max-height: 200px; overflow-y: auto; display: none; z-index: 10;"></div>
+                </div>
+                <button id="search-chat-send" 
+                        style="width: 48px; height: 48px; border-radius: 50%; background: var(--aurora-cyan); color: black; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform var(--t-fast);"
+                        onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                </button>
+            </div>
+        </div>
+    `;
+    
+    const historyContainer = document.getElementById('search-chat-history');
+    historyContainer.scrollTop = historyContainer.scrollHeight;
+    
+    const input = document.getElementById('search-chat-input');
+    const send = document.getElementById('search-chat-send');
+    const acDropdown = document.getElementById('search-autocomplete-dropdown');
+    
+    send.onclick = () => handleSearchSend(input, historyContainer, acDropdown);
+    input.onkeydown = (e) => {
+        if (e.key === 'Enter') handleSearchSend(input, historyContainer, acDropdown);
+    };
+    
+    let searchAcTimer;
+    input.addEventListener('input', () => {
+        const q = input.value.trim();
+        if (q.length < 2) { acDropdown.style.display = 'none'; return; }
+        clearTimeout(searchAcTimer);
+        searchAcTimer = setTimeout(async () => {
+            try {
+                const r = await authFetch(`/autocomplete?q=${encodeURIComponent(q)}`);
+                if (!r.ok) return;
+                const list = await r.json();
+                if (list.length > 0) {
+                    acDropdown.innerHTML = list.map(t =>
+                        `<div class="ac-item" style="padding: 10px 16px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.03); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'" onclick="pickSearchAc('${esc(t)}', document.getElementById('search-chat-input'), document.getElementById('search-autocomplete-dropdown'), document.getElementById('search-chat-history'))">${t}</div>`
+                    ).join('');
+                    acDropdown.style.display = 'block';
+                } else {
+                    acDropdown.style.display = 'none';
+                }
+            } catch (e) { /* ignore */ }
+        }, 200);
+    });
+}
+
+function pickSearchAc(title, input, dropdown, history) {
+    input.value = `Similar to ${title}`;
+    dropdown.style.display = 'none';
+    handleSearchSend(input, history, dropdown);
+}
+
+async function handleSearchSend(input, historyContainer, dropdown) {
+    const query = input.value.trim();
+    if (!query) return;
+    
+    input.value = '';
+    dropdown.style.display = 'none';
+    
+    addSearchMsg(query, true, historyContainer);
+    
+    const loadingId = 'bot-loading-' + Date.now();
+    addSearchMsg('<div class="skeleton" style="width: 50px; height: 16px;"></div>', false, historyContainer, loadingId);
+    
+    try {
+        const resp = await fetch('/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ user_id: userId, query, exclude_ids: [] })
+        });
+        const data = await resp.json();
+        
+        const loadingBubble = document.getElementById(loadingId);
+        if (loadingBubble) loadingBubble.remove();
+        
+        if (data.intent === 'explanation') {
+            addSearchMsg(data.response, false, historyContainer);
+            return;
+        }
+        
+        let movies = Array.isArray(data.response) ? data.response : (data.response && data.response.value);
+        if (movies && movies.length > 0) {
+            addSearchMsg(`Found ${movies.length} titles for you:`, false, historyContainer);
+            
+            const rowSection = document.createElement('div');
+            rowSection.style.margin = '10px 0';
+            rowSection.style.width = '100%';
+            
+            const scrollContainer = document.createElement('div');
+            scrollContainer.style.display = 'flex';
+            scrollContainer.style.gap = '12px';
+            scrollContainer.style.overflowX = 'auto';
+            scrollContainer.style.padding = '8px 0';
+            scrollContainer.style.scrollbarWidth = 'none';
+            
+            movies.forEach(movie => {
+                const card = document.createElement('div');
+                card.style.minWidth = '110px';
+                card.style.width = '110px';
+                card.style.flex = '0 0 auto';
+                card.style.cursor = 'pointer';
+                card.onclick = () => openModal(movie.item_id);
+                
+                const m = movie.rich_metadata || {};
+                const poster = movie.poster_url || placeholder(movie.title);
+                
+                card.innerHTML = `
+                    <div style="position: relative; border-radius: var(--r-sm); overflow: hidden; aspect-ratio: 2/3; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+                        <img src="${poster}" alt="${movie.title}" style="width: 100%; height: 100%; object-fit: cover;">
+                        <div style="position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.8); color: var(--match-green); font-size: 0.7rem; font-weight: 700; padding: 2px 4px; border-radius: 4px;">${m.match_percentage || 88}%</div>
+                    </div>
+                    <div style="font-size: 0.75rem; font-weight: 600; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 4px; text-align: center;">${movie.title}</div>
+                `;
+                scrollContainer.appendChild(card);
+            });
+            
+            rowSection.appendChild(scrollContainer);
+            historyContainer.appendChild(rowSection);
+            historyContainer.scrollTop = historyContainer.scrollHeight;
+            
+            globalMovies = [...globalMovies, ...movies];
+        } else {
+            addSearchMsg("I couldn't find anything matching that. Try typing another genre or name!", false, historyContainer);
+        }
+    } catch(err) {
+        const loadingBubble = document.getElementById(loadingId);
+        if (loadingBubble) loadingBubble.remove();
+        addSearchMsg('Connection issue. Please try again.', false, historyContainer);
+    }
+}
+
+function addSearchMsg(text, isUser, container, id) {
+    const d = document.createElement('div');
+    d.className = `ai-msg ${isUser ? 'ai-msg--user' : 'ai-msg--bot'}`;
+    if (id) d.id = id;
+    d.innerHTML = text;
+    d.style.animation = 'msgIn 0.3s var(--ease-out)';
+    container.appendChild(d);
+    container.scrollTop = container.scrollHeight;
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -589,7 +973,7 @@ function appendRow(title, movies) {
                         <button class="card-expand__btn card-expand__btn--play" onclick="event.stopPropagation(); openModal(${movie.item_id})" aria-label="Play">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                         </button>
-                        <button class="card-expand__btn" onclick="event.stopPropagation(); toggleSave(${movie.item_id})" aria-label="${saved ? 'Remove from list' : 'Add to list'}">
+                        <button class="card-expand__btn" onclick="event.stopPropagation(); toggleSave(${movie.item_id}); this.setAttribute('aria-label', isInMyList(${movie.item_id}) ? 'Remove from list' : 'Add to list'); this.querySelector('svg').innerHTML = isInMyList(${movie.item_id}) ? '<line x1=&quot;5&quot; y1=&quot;12&quot; x2=&quot;19&quot; y2=&quot;12&quot;/>' : '<line x1=&quot;12&quot; y1=&quot;5&quot; x2=&quot;12&quot; y2=&quot;19&quot;/><line x1=&quot;5&quot; y1=&quot;12&quot; x2=&quot;19&quot; y2=&quot;12&quot;/>';" aria-label="${saved ? 'Remove from list' : 'Add to list'}">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 ${saved ? '<line x1="5" y1="12" x2="19" y2="12"/>' : '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>'}
                             </svg>
@@ -607,7 +991,6 @@ function appendRow(title, movies) {
 
     contentRows.appendChild(sec);
 
-    // Attach 3D tilt to newly added cards
     sec.querySelectorAll('.card-3d').forEach(attachTilt);
 }
 
@@ -630,13 +1013,11 @@ function attachTilt(card) {
         card.style.transform = 'perspective(800px) rotateX(0) rotateY(0) scale3d(1,1,1)';
     });
 
-    // Click → open modal
     card.addEventListener('click', () => {
         const id = parseInt(card.dataset.id);
         if (id) openModal(id);
     });
 
-    // Keyboard
     card.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             const id = parseInt(card.dataset.id);
@@ -649,18 +1030,15 @@ function attachTilt(card) {
 //  DETAIL MODAL
 // ══════════════════════════════════════════════════════════════════════
 async function openModal(id) {
-    // 1. Fire Event Processor tracking
     authFetch('/events/ingest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ event_type: "click", item_id: id })
     }).catch(e => console.error("Event ingest failed:", e));
 
-    // 2. Open Modal with loading state
     modalOverlay.classList.add('active');
     document.body.style.overflow = 'hidden';
 
-    // Reset fields to loading state
     document.getElementById('modal-title').textContent = 'Loading...';
     document.getElementById('modal-poster').src = '';
     document.getElementById('modal-backdrop').style.backgroundImage = 'none';
@@ -670,13 +1048,11 @@ async function openModal(id) {
     document.getElementById('modal-similar').innerHTML = '';
 
     try {
-        // 3. Fetch massive payload
         const resp = await authFetch(`/movie/${id}`);
         const m = await resp.json();
         
         if (m.error) throw new Error(m.error);
 
-        // Populate fields
         document.getElementById('modal-title').textContent = m.title || 'Unknown';
         
         const posterUrl = m.poster_url || placeholder(m.title);
@@ -709,34 +1085,19 @@ async function openModal(id) {
         document.getElementById('adv-language').textContent = m.language_severity || 'Mild';
         document.getElementById('adv-adult').textContent = m.adult ? 'Yes' : 'No';
         
-        // Fetch Similar Movies via RAG Chatbot Endpoint dynamically
         const simContainer = document.getElementById('modal-similar');
-        simContainer.innerHTML = '<p>Loading similar content...</p>';
-        
-        try {
-            const simResp = await authFetch('/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query: "Movies strictly similar to " + m.title, exclude_ids: [] })
-            });
-            const simData = await simResp.json();
-            const similarMovies = Array.isArray(simData.response) ? simData.response : (simData.response && simData.response.value);
-            
-            if (similarMovies && similarMovies.length > 0) {
-                simContainer.innerHTML = similarMovies.slice(0, 8).map(sm => `
-                    <div class="sim-card" onclick="openModal(${sm.item_id})">
-                        <img src="${sm.poster_url || placeholder(sm.title)}" alt="${sm.title}" class="sim-poster">
-                        <div class="sim-title">${sm.title}</div>
-                    </div>
-                `).join('');
-            } else {
-                simContainer.innerHTML = '<p>No similar titles found.</p>';
-            }
-        } catch (e) {
-            simContainer.innerHTML = '<p>Failed to load similar titles.</p>';
+        if (m.similar_movies && m.similar_movies.length > 0) {
+            simContainer.innerHTML = m.similar_movies.map(sm => `
+                <div class="sim-card" onclick="openModal(${sm.item_id})">
+                    <img src="${sm.poster_url || placeholder(sm.title)}" alt="${sm.title}" class="sim-poster">
+                    <div class="sim-title">${sm.title}</div>
+                    <div class="sim-match">${sm.score}% Match</div>
+                </div>
+            `).join('');
+        } else {
+            simContainer.innerHTML = '<p>No similar titles found.</p>';
         }
 
-        // Add to list btn state
         const addBtn = document.getElementById('modal-add-list');
         const saved = isInMyList(id);
         addBtn.innerHTML = saved ? `✓ Added` : `+ Add to List`;
@@ -744,6 +1105,14 @@ async function openModal(id) {
             toggleSave(id);
             addBtn.innerHTML = isInMyList(id) ? `✓ Added` : `+ Add to List`;
         };
+
+        addToHistory({
+            item_id: id,
+            title: m.title || 'Unknown',
+            poster_url: posterUrl,
+            backdrop_url: bgUrl,
+            rich_metadata: m
+        });
 
     } catch (err) {
         document.getElementById('modal-title').textContent = 'Error loading details.';
@@ -765,7 +1134,6 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// Close button listener rewrite
 closeModalBtn.addEventListener('click', () => {
     modalOverlay.classList.remove('active');
     document.body.style.overflow = '';

@@ -17,32 +17,16 @@ if os.path.exists("data/raw/movies.csv"):
     def generate_tags(row):
         text = str(row['genres']).lower() + " " + str(row['overview']).lower()
         tags = set(row['genres'].split('|'))
-        
-        # Scifi & Fantasy
         if 'space' in text or 'alien' in text: tags.add('Space Exploration')
         if 'time travel' in text or 'time loop' in text: tags.add('Time Travel')
         if 'cyber' in text or 'hacker' in text: tags.add('Cyberpunk')
-        if 'post-apocalyptic' in text or 'dystopi' in text: tags.add('Dystopian')
-        
-        # Thriller & Psychological
         if 'psychological' in text or 'mind' in text: tags.add('Mind-Bending')
-        if 'dark' in text or 'grim' in text: tags.add('Dark Psychological Thrillers')
-        if 'suspense' in text or 'tense' in text: tags.add('Suspenseful')
-        
-        # Crime & Action
+        if 'dark' in text or 'grim' in text: tags.add('Dark')
         if 'crime' in text or 'murder' in text or 'detective' in text: tags.add('Crime Masterpieces')
-        if 'spy' in text or 'espionage' in text: tags.add('Spy')
-        if 'martial arts' in text or 'kung fu' in text: tags.add('Martial Arts')
-        if 'survival' in text or 'survive' in text: tags.add('Survival')
-        
-        # Drama & Emotion
         if 'political' in text or 'president' in text: tags.add('Political Intrigue')
         if 'history' in text or 'war' in text: tags.add('Historical Fiction')
-        if 'heart' in text or 'feel-good' in text or 'family' in text: tags.add('Feel-Good Family')
+        if 'heart' in text or 'feel-good' in text or 'family' in text: tags.add('Feel-Good')
         if 'epic' in text or 'journey' in text: tags.add('Epic Adventures')
-        if 'coming of age' in text or 'teen' in text: tags.add('Coming of Age')
-        if 'romance' in text or 'love' in text: tags.add('Romantic')
-        
         return "|".join(tags)
     movies_df['rich_tags'] = movies_df.apply(generate_tags, axis=1)
 

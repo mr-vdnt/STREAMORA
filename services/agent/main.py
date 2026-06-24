@@ -5,8 +5,6 @@ Provides the unified natural language interface for the entire platform.
 """
 import os
 import sys
-import asyncio
-import time
 from typing import Any
 from fastapi import FastAPI, Depends, Request
 from fastapi.staticfiles import StaticFiles
@@ -25,7 +23,7 @@ mimetypes.add_type('text/css', '.css')
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from services.agent.core import agent
-from services.security.auth import get_current_user, create_access_token, verify_password, get_user, FAKE_DB, ACCESS_TOKEN_EXPIRE_MINUTES, timedelta, save_users_db, hash_password
+from services.security.auth import get_current_user, create_access_token, verify_password, get_user, FAKE_DB, ACCESS_TOKEN_EXPIRE_MINUTES, timedelta
 from services.security.audit import log_event
 
 load_dotenv(os.path.join(os.path.dirname(__file__), '../../.env'))
@@ -56,45 +54,10 @@ async def add_security_headers(request: Request, call_next):
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
-    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https:"
+    response.headers["Content-Security-Policy"] = "default-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com; img-src 'self' data: https:;"
     return response
 
 # --- AUTHENTICATION ---
-class SignupRequest(BaseModel):
-    username: str
-    password: str
-
-@app.post("/signup")
-@limiter.limit("5/minute")
-async def signup_endpoint(request: Request, req: SignupRequest):
-    username = req.username.strip()
-    # If signing up with email, restrict to Gmail
-    if "@" in username:
-        if not username.lower().endswith("@gmail.com"):
-            return JSONResponse(
-                status_code=400,
-                content={"detail": "Sign up via email is restricted to Gmail (@gmail.com) addresses."}
-            )
-    
-    # Check if user already exists
-    if get_user(username):
-        return JSONResponse(
-            status_code=400,
-            content={"detail": "Username or Gmail address is already registered."}
-        )
-    
-    # Register the user
-    new_uid = len(FAKE_DB) + 32
-    FAKE_DB[username] = {
-        "user_id": new_uid,
-        "username": username,
-        "hashed_password": hash_password(req.password),
-        "role": "Standard"
-    }
-    save_users_db()
-    log_event(who=username, what="USER_SIGNED_UP", where="/signup", details=f"Assigned ID: {new_uid}")
-    return {"status": "success", "message": "User registered successfully"}
-
 @app.post("/token")
 @limiter.limit("10/minute")
 async def login_for_access_token(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
@@ -111,9 +74,6 @@ async def login_for_access_token(request: Request, form_data: OAuth2PasswordRequ
     log_event(who=user["username"], what="LOGIN_SUCCESS", where="/token", details=f"Role: {user['role']}")
     return {"access_token": access_token, "token_type": "bearer", "user_id": user["user_id"], "role": user["role"]}
 
-def get_mock_user():
-    return {"user_id": 32, "username": "user1", "role": "Standard"}
-
 # --- SECURED ENDPOINTS ---
 class ChatRequest(BaseModel):
     query: str
@@ -125,7 +85,7 @@ class ChatResponse(BaseModel):
 
 @app.post("/chat", response_model=ChatResponse)
 @limiter.limit("20/minute")
-def chat_endpoint(request: Request, req: ChatRequest, current_user: dict = Depends(get_mock_user)):
+def chat_endpoint(request: Request, req: ChatRequest, current_user: dict = Depends(get_current_user)):
     user_id = current_user["user_id"]
     result = agent.process_query(user_id, req.query, req.exclude_ids)
     return ChatResponse(
@@ -136,7 +96,7 @@ def chat_endpoint(request: Request, req: ChatRequest, current_user: dict = Depen
 import pandas as pd
 @app.get("/autocomplete")
 @limiter.limit("60/minute")
-def autocomplete(request: Request, q: str, current_user: dict = Depends(get_mock_user)):
+def autocomplete(request: Request, q: str, current_user: dict = Depends(get_current_user)):
     """Real-time autocomplete endpoint matching movie titles."""
     if len(q) < 2:
         return []
@@ -154,7 +114,7 @@ def autocomplete(request: Request, q: str, current_user: dict = Depends(get_mock
 import requests
 @app.get("/movie/{item_id}")
 @limiter.limit("30/minute")
-def get_movie_details(request: Request, item_id: int, current_user: dict = Depends(get_mock_user)):
+def get_movie_details(request: Request, item_id: int, current_user: dict = Depends(get_current_user)):
     """Aggregates all 19 fields of rich metadata and similar movies for the Cinematic Modal."""
     user_id = current_user["user_id"]
     try:
@@ -192,7 +152,7 @@ class EventRequest(BaseModel):
 
 @app.post("/events/ingest")
 @limiter.limit("60/minute")
-def proxy_events(request: Request, req: EventRequest, current_user: dict = Depends(get_mock_user)):
+def proxy_events(request: Request, req: EventRequest, current_user: dict = Depends(get_current_user)):
     """Proxy events directly to the Event Processor service on Port 8002."""
     user_id = current_user["user_id"]
     payload = {"user_id": user_id, "event_type": req.event_type, "item_id": req.item_id}
@@ -204,44 +164,6 @@ def proxy_events(request: Request, req: EventRequest, current_user: dict = Depen
 
 from services.agent.admin import admin_router
 app.include_router(admin_router)
-
-# ══════════════════════════════════════════════════════════════════════
-#  HEALTH CHECK & KEEP-ALIVE SELF-PING
-# ══════════════════════════════════════════════════════════════════════
-_start_time = time.time()
-
-@app.get("/health")
-def health_check():
-    """Lightweight health endpoint for keep-alive pings."""
-    uptime_seconds = int(time.time() - _start_time)
-    return {
-        "status": "healthy",
-        "uptime_seconds": uptime_seconds,
-        "service": "aurora-ai"
-    }
-
-async def _keep_alive_ping():
-    """Background task that pings /health every 14 minutes to prevent
-    Render free tier from spinning down the service."""
-    import urllib.request
-    render_url = os.getenv("RENDER_EXTERNAL_URL", "")
-    if not render_url:
-        print("[keep-alive] RENDER_EXTERNAL_URL not set — self-ping disabled.")
-        return
-    health_url = f"{render_url}/health"
-    print(f"[keep-alive] Started. Pinging {health_url} every 14 minutes.")
-    while True:
-        await asyncio.sleep(14 * 60)  # 14 minutes
-        try:
-            req = urllib.request.Request(health_url, method="GET")
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                print(f"[keep-alive] Pinged {health_url} -> {resp.status}")
-        except Exception as e:
-            print(f"[keep-alive] Ping failed: {e}")
-
-@app.on_event("startup")
-async def start_keep_alive():
-    asyncio.create_task(_keep_alive_ping())
 
 # Mount frontend directory at root
 frontend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../frontend'))
