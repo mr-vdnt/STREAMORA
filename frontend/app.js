@@ -477,6 +477,48 @@ const FALLBACK_MOVIES = [
 window.currentFormat = 'all';
 window.isSeries = function(movie) {
     if (!movie) return false;
+    
+    // Explicit title matches for known fallback titles
+    const titleLower = (movie.title || '').toLowerCase();
+    if (titleLower.includes('spider-man') || 
+        titleLower.includes('batman') || 
+        titleLower.includes('interstellar') || 
+        titleLower.includes('dune') || 
+        titleLower.includes('grand budapest') || 
+        titleLower.includes('no exit') || 
+        titleLower.includes('encanto') || 
+        titleLower.includes('king\'s man')) {
+        return false;
+    }
+    
+    if (titleLower.includes('stranger things') || 
+        titleLower.includes('wednesday') || 
+        titleLower.includes('breaking bad') || 
+        titleLower.includes('game of thrones') || 
+        titleLower.includes('succession') || 
+        titleLower.includes('the crown') ||
+        titleLower.includes('friends') ||
+        titleLower.includes('the office') ||
+        titleLower.includes('sherlock') ||
+        titleLower.includes('black mirror')) {
+        return true;
+    }
+    
+    // Check runtime format
+    const runtime = (movie.runtime || (movie.rich_metadata && movie.rich_metadata.runtime) || '').toLowerCase();
+    if (runtime.includes('season') || runtime.includes('seasons') || runtime.includes('episodes') || runtime.includes('episode')) {
+        return true;
+    }
+    
+    // Check genres/tags
+    const m = movie.rich_metadata || {};
+    const genres = (m.genres || m.tags || movie.genres || []).map(g => g.toLowerCase());
+    const seriesKeywords = ['tv series', 'tv show', 'series', 'mini-series', 'docuseries', 'web series', 'anime series', 'show', 'shows'];
+    if (genres.some(g => seriesKeywords.includes(g) || g.includes('series') || g.includes('show') || g.includes('tv'))) {
+        return true;
+    }
+    
+    // Fallback modulo heuristic for other items
     return movie.item_id % 3 === 0;
 };
 
@@ -764,18 +806,27 @@ aiPanelClose.addEventListener('click', () => aiPanel.classList.remove('open'));
 
 function getMovieCast(title) {
     const titleLower = (title || '').toLowerCase();
-    if (titleLower.includes('spider-man')) return 'Tom Holland, Zendaya, Benedict Cumberbatch, Jacob Batalon';
-    if (titleLower.includes('batman')) return 'Robert Pattinson, Zoë Kravitz, Paul Dano, Jeffrey Wright';
-    if (titleLower.includes('no exit')) return 'Havana Rose Liu, Danny Ramirez, David Rysdahl, Mila Harris';
-    if (titleLower.includes('encanto')) return 'Stephanie Beatriz, María Cecilia Botero, John Leguizamo, Mauro Castillo';
-    if (titleLower.includes('king\'s man')) return 'Ralph Fiennes, Gemma Arterton, Rhys Ifans, Matthew Goode';
-    if (titleLower.includes('interstellar')) return 'Matthew McConaughey, Anne Hathaway, Jessica Chastain, Bill Irwin';
-    if (titleLower.includes('stranger things')) return 'Winona Ryder, David Harbour, Millie Bobby Brown, Finn Wolfhard';
-    if (titleLower.includes('wednesday')) return 'Jenna Ortega, Gwendoline Christie, Riki Lindhome, Jamie McShane';
-    if (titleLower.includes('dune')) return 'Timothée Chalamet, Rebecca Ferguson, Oscar Isaac, Josh Brolin';
-    if (titleLower.includes('budapest')) return 'Ralph Fiennes, F. Murray Abraham, Mathieu Amalric, Adrien Brody';
-    return 'Leading Cast Members, Supporting Ensemble';
+    if (titleLower.includes('spider-man')) return ['Tom Holland', 'Zendaya', 'Benedict Cumberbatch', 'Jacob Batalon', 'Jon Favreau'];
+    if (titleLower.includes('batman')) return ['Robert Pattinson', 'Zoë Kravitz', 'Paul Dano', 'Jeffrey Wright', 'John Turturro'];
+    if (titleLower.includes('no exit')) return ['Havana Rose Liu', 'Danny Ramirez', 'David Rysdahl', 'Mila Harris', 'Dennis Haysbert'];
+    if (titleLower.includes('encanto')) return ['Stephanie Beatriz', 'María Cecilia Botero', 'John Leguizamo', 'Mauro Castillo', 'Jessica Darrow'];
+    if (titleLower.includes('king\'s man')) return ['Ralph Fiennes', 'Gemma Arterton', 'Rhys Ifans', 'Matthew Goode', 'Tom Hollander'];
+    if (titleLower.includes('interstellar')) return ['Matthew McConaughey', 'Anne Hathaway', 'Jessica Chastain', 'Bill Irwin', 'Ellen Burstyn'];
+    if (titleLower.includes('stranger things')) return ['Winona Ryder', 'David Harbour', 'Millie Bobby Brown', 'Finn Wolfhard', 'Gaten Matarazzo'];
+    if (titleLower.includes('wednesday')) return ['Jenna Ortega', 'Gwendoline Christie', 'Riki Lindhome', 'Jamie McShane', 'Hunter Doohan'];
+    if (titleLower.includes('dune')) return ['Timothée Chalamet', 'Rebecca Ferguson', 'Oscar Isaac', 'Josh Brolin', 'Stellan Skarsgård'];
+    if (titleLower.includes('budapest')) return ['Ralph Fiennes', 'F. Murray Abraham', 'Mathieu Amalric', 'Adrien Brody', 'Willem Dafoe'];
+    if (titleLower.includes('scream')) return ['Neve Campbell', 'Courteney Cox', 'David Arquette', 'Melissa Barrera', 'Jenna Ortega'];
+    if (titleLower.includes('eternals')) return ['Gemma Chan', 'Richard Madden', 'Kumail Nanjiani', 'Lia McHugh', 'Brian Tyree Henry'];
+    if (titleLower.includes('uncharted')) return ['Tom Holland', 'Mark Wahlberg', 'Sophia Ali', 'Tati Gabrielle', 'Antonio Banderas'];
+    if (titleLower.includes('red notice')) return ['Dwayne Johnson', 'Ryan Reynolds', 'Gal Gadot', 'Ritu Arya', 'Chris Diamantopoulos'];
+    if (titleLower.includes('matrix')) return ['Keanu Reeves', 'Carrie-Anne Moss', 'Yahya Abdul-Mateen II', 'Jessica Henwick', 'Jonathan Groff'];
+    if (titleLower.includes('shang-chi')) return ['Simu Liu', 'Awkwafina', 'Meng\'er Zhang', 'Fala Chen', 'Florian Munteanu'];
+    if (titleLower.includes('venom')) return ['Tom Hardy', 'Michelle Williams', 'Naomie Harris', 'Reid Scott', 'Stephen Graham'];
+    if (titleLower.includes('sing 2')) return ['Matthew McConaughey', 'Reese Witherspoon', 'Scarlett Johansson', 'Taron Egerton', 'Bobby Cannavale'];
+    return null;
 }
+
 
 function getMovieLanguages(movie) {
     const m = movie.rich_metadata || {};
@@ -1960,7 +2011,7 @@ function renderHero(movie) {
     const rating = m.rating || '8.2';
     const synopsis = m.story_summary || movie.overview || 'A cinematic masterpiece recommended by Aurora AI.';
     const genres = (m.genres || m.tags || ['Drama']).slice(0, 4).map(g => `<span class="gpill">${g}</span>`).join('');
-    const castString = getMovieCast(title);
+    const castString = getMovieCast(title) || 'Cast details unavailable';
     const languages = getMovieLanguages(movie);
     const saved = isInMyList(movie.item_id);
 
@@ -1970,32 +2021,33 @@ function renderHero(movie) {
     heroSection.innerHTML = `
         <div class="hero__bg" style="background-image:url('${bg}')"></div>
         <div class="hero__overlay"></div>
-        <div class="hero__inner" style="max-width: 1000px; width: 100%;">
-            <div class="hero__layout" style="display: flex; gap: 32px; align-items: flex-end;">
-                <!-- Left Column: Poster -->
-                <img src="${poster}" alt="${title}" class="hero__poster" style="width: 220px; aspect-ratio: 2/3; object-fit: cover; border-radius: var(--r-md); border: 1px solid var(--glass-border); box-shadow: 0 12px 36px rgba(0,0,0,0.8); flex-shrink: 0;" onclick="openModal(${movie.item_id})">
-                
-                <!-- Right Column: Details -->
-                <div class="hero__details" style="flex: 1; min-width: 0; text-align: left;">
+        <div class="hero__inner">
+            <div class="hero__layout">
+                <!-- Left Column: Details -->
+                <div class="hero__left">
                     <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 12px; justify-content: flex-start;">
                         <span class="hero__match" style="margin-bottom: 0; box-shadow: 0 4px 12px rgba(6,182,212,0.25);">★ ${score}% Aurora Match</span>
                         <span style="color: #f5c518; font-weight: 700; font-size: 0.95rem; background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: var(--r-sm); border: 1px solid rgba(255,255,255,0.1);">IMDb ${rating}</span>
                     </div>
-                    <h1 class="hero__title" style="margin-bottom: 12px; font-size: clamp(2rem, 4vw, 3.2rem); cursor: pointer; text-align: left;" onclick="openModal(${movie.item_id})">${title}</h1>
-                    <div class="hero__meta" style="margin-bottom: 14px; justify-content: flex-start;">
+                    <h1 class="hero__title" onclick="openModal(${movie.item_id})" style="cursor: pointer;">${title}</h1>
+                    <div class="hero__meta" style="justify-content: flex-start;">
                         ${m.year ? `<span>${m.year}</span><span class="hero__meta-dot"></span>` : ''}
                         ${m.runtime ? `<span>${m.runtime}</span><span class="hero__meta-dot"></span>` : ''}
                         <span>Languages: ${languages}</span>
                     </div>
-                    <div class="hero__genres" style="margin-bottom: 14px; justify-content: flex-start;">${genres}</div>
-                    <p class="hero__desc" style="margin-bottom: 16px; font-size: 0.95rem; max-width: 600px; text-align: left;">${synopsis}</p>
+                    <div class="hero__genres" style="justify-content: flex-start;">${genres}</div>
                     
-                    <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 20px; display: flex; flex-direction: column; gap: 4px; background: rgba(0,0,0,0.3); padding: 10px 14px; border-radius: var(--r-sm); max-width: 600px; border: 1px solid rgba(255,255,255,0.04); text-align: left;">
-                        <div><span style="color: white; font-weight: 600;">Director:</span> ${m.director || "Unknown Director"}</div>
-                        <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><span style="color: white; font-weight: 600;">Cast:</span> ${castString}</div>
+                    <!-- Glass Container for Synopsis -->
+                    <div class="hero__desc-container">
+                        <p class="hero__desc">${synopsis}</p>
                     </div>
                     
-                    <div class="hero__btns" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: flex-start;">
+                    <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 20px; display: flex; flex-direction: column; gap: 4px; background: rgba(0,0,0,0.3); padding: 10px 14px; border-radius: var(--r-sm); max-width: 600px; border: 1px solid rgba(255,255,255,0.04); text-align: left; width: 100%; box-sizing: border-box;">
+                        <div><span style="color: white; font-weight: 600;">Director:</span> ${m.director || "Unknown Director"}</div>
+                        <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><span style="color: white; font-weight: 600;">Cast:</span> ${Array.isArray(castString) ? castString.join(', ') : castString}</div>
+                    </div>
+                    
+                    <div class="hero__btns" style="justify-content: flex-start; width: 100%;">
                         <button class="hero-btn hero-btn--play" onclick="event.stopPropagation(); openModal(${movie.item_id})" style="cursor: pointer;">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Watch Trailer
                         </button>
@@ -2016,6 +2068,18 @@ function renderHero(movie) {
                                 : `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`
                             }
                         </button>
+                    </div>
+                </div>
+                
+                <!-- Right Column: Poster with 3D Hover & Play Overlay -->
+                <div class="hero__right">
+                    <div class="hero__poster-wrapper" onclick="openModal(${movie.item_id})">
+                        <img src="${poster}" alt="${title}">
+                        <div class="hero__play-overlay">
+                            <div class="hero__play-btn-circle">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2160,6 +2224,105 @@ function attachTilt(card) {
 // ══════════════════════════════════════════════════════════════════════
 //  DETAIL MODAL
 // ══════════════════════════════════════════════════════════════════════
+function generateAudienceMatch(movie) {
+    const segments = new Set();
+    const m = movie.rich_metadata || {};
+    
+    // Add mapping based on audience_type
+    if (m.audience_type) {
+        segments.add(`${m.audience_type} Viewers`);
+    }
+
+    // Map genres
+    const genres = m.genres || m.tags || movie.genres || [];
+    genres.forEach(g => {
+        const gLower = g.toLowerCase();
+        if (gLower.includes('sci-fi') || gLower.includes('science fiction')) {
+            segments.add('Sci-Fi Fans');
+        } else if (gLower.includes('action')) {
+            segments.add('Action Lovers');
+        } else if (gLower.includes('adventure')) {
+            segments.add('Adventure Seekers');
+        } else if (gLower.includes('thriller')) {
+            segments.add('Thriller Enthusiasts');
+        } else if (gLower.includes('drama')) {
+            segments.add('Drama Enthusiasts');
+        } else if (gLower.includes('comedy')) {
+            segments.add('Comedy Lovers');
+        } else if (gLower.includes('horror')) {
+            segments.add('Horror Buffs');
+        } else if (gLower.includes('romance')) {
+            segments.add('Romance Fans');
+        } else if (gLower.includes('mystery')) {
+            segments.add('Mystery Solvers');
+        } else if (gLower.includes('fantasy')) {
+            segments.add('Fantasy Fans');
+        } else if (gLower.includes('crime')) {
+            segments.add('Crime Buffs');
+        } else if (gLower.includes('documentary')) {
+            segments.add('Doc Lovers');
+        } else {
+            segments.add(`${g} Fans`);
+        }
+    });
+
+    // Map themes
+    const themes = m.themes || [];
+    themes.forEach(t => {
+        const tLower = t.toLowerCase();
+        if (tLower.includes('heroism') || tLower.includes('identity')) {
+            segments.add('Superhero Fanatics');
+        } else if (tLower.includes('space') || tLower.includes('multiverse') || tLower.includes('future') || tLower.includes('cyber')) {
+            segments.add('Futurism Geeks');
+        } else if (tLower.includes('survival') || tLower.includes('danger')) {
+            segments.add('Survivalists');
+        } else if (tLower.includes('family') || tLower.includes('friendship')) {
+            segments.add('Family Audience');
+        } else if (tLower.includes('crime') || tLower.includes('mystery') || tLower.includes('conspiracy')) {
+            segments.add('Mystery Buffs');
+        }
+    });
+
+    // Map moods
+    const moods = m.moods || [];
+    moods.forEach(md => {
+        const mdLower = md.toLowerCase();
+        if (mdLower.includes('exciting') || mdLower.includes('thrilling')) {
+            segments.add('Adrenaline Junkies');
+        } else if (mdLower.includes('emotional') || mdLower.includes('moving') || mdLower.includes('tear')) {
+            segments.add('Melodrama Lovers');
+        } else if (mdLower.includes('cerebral') || mdLower.includes('thought') || mdLower.includes('mind-bending')) {
+            segments.add('Deep Thinkers');
+        } else if (mdLower.includes('dark') || mdLower.includes('suspense')) {
+            segments.add('Suspense Lovers');
+        } else if (mdLower.includes('light') || mdLower.includes('feel-good')) {
+            segments.add('Feel-Good Seekers');
+        }
+    });
+
+    let result = Array.from(segments);
+
+    // Safe genre-based fallback
+    if (result.length < 3) {
+        const fallbacks = ['Cinema Buffs', 'Storytelling Enthusiasts', 'Aurora Recommendation Seekers', 'Cinematic Experience Lovers'];
+        genres.forEach(g => {
+            const tag = `${g} Fans`;
+            if (!result.includes(tag)) {
+                result.push(tag);
+            }
+        });
+        
+        for (let f of fallbacks) {
+            if (result.length >= 3) break;
+            if (!result.includes(f)) {
+                result.push(f);
+            }
+        }
+    }
+
+    return result.slice(0, 5);
+}
+
 function renderModalData(m, id) {
     document.getElementById('modal-title').textContent = m.title || 'Unknown';
     
@@ -2168,7 +2331,7 @@ function renderModalData(m, id) {
     document.getElementById('modal-poster').src = posterUrl;
     document.getElementById('modal-backdrop').style.backgroundImage = `url('${bgUrl}')`;
     
-    const typeLabel = (id % 3 === 0) ? 'TV Series' : 'Movie';
+    const typeLabel = isSeries({ item_id: id, rich_metadata: m, title: m.title }) ? 'TV Series' : 'Movie';
     document.getElementById('modal-match').innerHTML = `${m.match_percentage || 85}% Match <span style="margin-left: 8px; padding: 2px 6px; background: rgba(6, 182, 212, 0.15); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: 4px; color: var(--aurora-cyan); font-size: 0.8rem; font-weight: 700; display: inline-block;">${typeLabel}</span>`;
     document.getElementById('modal-year').textContent = m.year || '';
     document.getElementById('modal-rating').textContent = m.rating ? `IMDB ${m.rating}` : '';
@@ -2240,19 +2403,54 @@ function renderModalData(m, id) {
     let availability = m.availability || 'Available on Aurora Premium streaming (4K UHD)';
     document.getElementById('modal-availability').textContent = availability;
 
-    const simContainer = document.getElementById('modal-similar');
     const seedMovie = globalMovies.find(item => item.item_id === id) || FALLBACK_MOVIES.find(item => item.item_id === id) || { item_id: id, rich_metadata: m, title: m.title };
-    
+
+    // Render Audience Match Tags
+    const audienceMatchContainer = document.getElementById('modal-audience-match');
+    if (audienceMatchContainer) {
+        const tags = generateAudienceMatch(seedMovie);
+        audienceMatchContainer.innerHTML = tags.map(tag => `<span class="audience-tag">${tag}</span>`).join('');
+    }
+
+    // Render Cast Cards (with fallback)
+    const castContainer = document.getElementById('modal-cast');
+    if (castContainer) {
+        const castList = getMovieCast(m.title);
+        if (castList && castList.length > 0) {
+            castContainer.innerHTML = castList.map(name => {
+                const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0D8ABC&color=fff&size=128&bold=true`;
+                return `
+                    <div class="cast-card">
+                        <img src="${avatarUrl}" alt="${name}" class="cast-avatar">
+                        <span class="cast-name">${name}</span>
+                    </div>
+                `;
+            }).join('');
+        } else {
+            castContainer.innerHTML = `<div style="color: var(--text-muted); font-style: italic; font-size: 0.9rem; padding: 10px 0;">Cast information currently unavailable.</div>`;
+        }
+    }
+
+    const simContainer = document.getElementById('modal-similar');
     const recs = getSimilarRecommendations(seedMovie);
     if (recs && recs.length > 0) {
         simContainer.innerHTML = recs.map(r => {
             const sm = r.movie;
             const poster = sm.poster_url || placeholder(sm.title);
+            const meta = sm.rich_metadata || {};
+            const rating = meta.rating || '7.5';
+            const year = meta.year || '2022';
+            const genresList = (meta.genres || meta.tags || ['Drama']).slice(0, 2).join(' • ');
+
             return `
                 <div class="sim-card" onclick="openModal(${sm.item_id})">
                     <img src="${poster}" alt="${sm.title}" class="sim-poster" loading="lazy" onerror="this.src='${placeholder(sm.title)}'">
                     <div class="sim-title">${sm.title}</div>
-                    <div class="sim-match">${r.score}% Match</div>
+                    <div class="sim-meta-row">
+                        <span class="sim-match">${r.score}% Match</span>
+                        <span class="sim-rating-imdb">★ ${rating}</span>
+                    </div>
+                    <div class="sim-genres-text">${genresList} (${year})</div>
                     <div class="sim-reason" style="font-size: 0.68rem; color: var(--text-muted); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 4px;" title="${r.reasoning}">${r.reasoning}</div>
                 </div>
             `;
@@ -2483,20 +2681,7 @@ function showSkeletonRows(withHero = true) {
         </section>
     `;
     
-    let prepend = '';
-    if (currentPage === 'home') {
-        prepend = `
-            <div class="row-section" style="padding-top: 20px; margin-bottom: 0;">
-                <div class="format-filter-container">
-                    <button class="format-tab ${currentFormat === 'all' ? 'active' : ''}" onclick="setDiscoveryFormat('all')">🔮 Combined Discovery</button>
-                    <button class="format-tab ${currentFormat === 'movie' ? 'active' : ''}" onclick="setDiscoveryFormat('movie')">🎬 Movies Only</button>
-                    <button class="format-tab ${currentFormat === 'series' ? 'active' : ''}" onclick="setDiscoveryFormat('series')">📺 TV Series Only</button>
-                </div>
-            </div>
-        `;
-    }
-    
-    contentRows.innerHTML = prepend + skeletonRow;
+    contentRows.innerHTML = skeletonRow;
 }
 
 function emptyStateHTML() {
