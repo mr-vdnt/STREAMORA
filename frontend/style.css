@@ -1089,6 +1089,48 @@ a:focus-visible,button:focus-visible,input:focus-visible{
     scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.2) transparent;
 }
 .modal-overlay.active .cinematic-modal { transform: scale(1) translateY(0); }
+.modal-overlay.active .cinematic-modal.transitioning {
+    opacity: 0.15;
+    transform: scale(0.98) translateY(5px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.modal-nav-buttons {
+    position: absolute; top: 20px; left: 20px; z-index: 100;
+    display: flex; gap: 8px;
+}
+.modal-nav-btn {
+    background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 50%; width: 44px; height: 44px;
+    color: white; cursor: pointer; backdrop-filter: blur(10px);
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s ease;
+}
+.modal-nav-btn:hover:not(:disabled) { background: white; color: black; transform: scale(1.1); }
+.modal-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.modal-breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 8px 14px;
+    border-radius: var(--r-sm);
+}
+.modal-breadcrumbs span {
+    transition: color var(--t-fast);
+}
+.modal-breadcrumbs span[onclick] {
+    cursor: pointer;
+}
+.modal-breadcrumbs span[onclick]:hover {
+    color: white;
+}
 
 .cinematic-modal::-webkit-scrollbar { width: 8px; }
 .cinematic-modal::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }

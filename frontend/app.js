@@ -2324,6 +2324,10 @@ function generateAudienceMatch(movie) {
 }
 
 function renderModalData(m, id) {
+    // Cache title for history breadcrumbs
+    window.modalMovieTitleCache = window.modalMovieTitleCache || {};
+    window.modalMovieTitleCache[id] = m.title || 'Unknown';
+
     document.getElementById('modal-title').textContent = m.title || 'Unknown';
     
     const posterUrl = m.poster_url || placeholder(m.title);
@@ -2474,18 +2478,114 @@ function renderModalData(m, id) {
         backdrop_url: bgUrl,
         rich_metadata: m
     });
+
+    // Update navigation buttons and breadcrumbs
+    window.updateBreadcrumbs();
+    window.updateModalNavButtons();
+
+    // Trigger fade in animation by removing transitioning class
+    const cinematicModal = document.querySelector('.cinematic-modal');
+    if (cinematicModal) {
+        setTimeout(() => {
+            cinematicModal.classList.remove('transitioning');
+        }, 50);
+    }
 }
 
-async function openModal(id) {
-    authFetch('/events/ingest', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ event_type: "click", item_id: id })
-    }).catch(e => console.error("Event ingest failed:", e));
+// ── Modal History & Exploration Stack ──────────────────────────────────
+window.modalHistory = [];
+window.modalHistoryIndex = -1;
+window.modalMovieTitleCache = {};
+
+window.updateModalNavButtons = function() {
+    const backBtn = document.getElementById('modal-back-btn');
+    const forwardBtn = document.getElementById('modal-forward-btn');
+    if (backBtn) {
+        backBtn.disabled = window.modalHistoryIndex <= 0;
+    }
+    if (forwardBtn) {
+        forwardBtn.disabled = window.modalHistoryIndex >= window.modalHistory.length - 1;
+    }
+};
+
+window.updateBreadcrumbs = function() {
+    const breadcrumbsContainer = document.getElementById('modal-breadcrumbs');
+    if (!breadcrumbsContainer) return;
+    
+    if (!window.modalHistory || window.modalHistory.length <= 1) {
+        breadcrumbsContainer.style.display = 'none';
+        return;
+    }
+    
+    breadcrumbsContainer.style.display = 'flex';
+    
+    const trail = window.modalHistory.map((histId, idx) => {
+        const cachedTitle = window.modalMovieTitleCache[histId];
+        const item = globalMovies.find(m => m.item_id === histId) || FALLBACK_MOVIES.find(m => m.item_id === histId);
+        const title = cachedTitle || (item ? (item.title || item.rich_metadata?.title) : 'Loading...');
+        
+        const isActive = idx === window.modalHistoryIndex;
+        if (isActive) {
+            return `<span style="color: var(--aurora-cyan); font-weight: 600;">${title}</span>`;
+        } else {
+            return `<span style="cursor: pointer; text-decoration: none;" onclick="navigateModalHistory(${idx})">${title}</span>`;
+        }
+    }).join('<span style="color: rgba(255,255,255,0.2); margin: 0 4px;">&gt;</span>');
+    
+    breadcrumbsContainer.innerHTML = trail;
+};
+
+window.navigateModalHistory = function(index) {
+    if (index >= 0 && index < window.modalHistory.length) {
+        window.modalHistoryIndex = index;
+        const id = window.modalHistory[index];
+        openModalInternal(id, false);
+    }
+};
+
+window.modalHistoryBack = function() {
+    if (window.modalHistoryIndex > 0) {
+        window.navigateModalHistory(window.modalHistoryIndex - 1);
+    }
+};
+
+window.modalHistoryForward = function() {
+    if (window.modalHistoryIndex < window.modalHistory.length - 1) {
+        window.navigateModalHistory(window.modalHistoryIndex + 1);
+    }
+};
+
+async function openModalInternal(id, appendToHistory = true) {
+    if (appendToHistory) {
+        const isModalAlreadyOpen = modalOverlay.classList.contains('active');
+        if (!isModalAlreadyOpen) {
+            window.modalHistory = [id];
+            window.modalHistoryIndex = 0;
+        } else {
+            if (window.modalHistory[window.modalHistoryIndex] !== id) {
+                // Truncate forward history
+                window.modalHistory = window.modalHistory.slice(0, window.modalHistoryIndex + 1);
+                window.modalHistory.push(id);
+                window.modalHistoryIndex = window.modalHistory.length - 1;
+            }
+        }
+    }
 
     modalOverlay.classList.add('active');
     document.body.style.overflow = 'hidden';
 
+    // Update navigation controls
+    window.updateModalNavButtons();
+    window.updateBreadcrumbs();
+
+    // Trigger transition fade-out
+    const cinematicModal = document.querySelector('.cinematic-modal');
+    if (cinematicModal) {
+        cinematicModal.classList.add('transitioning');
+        cinematicModal.scrollTop = 0;
+    }
+
+    // Set loading skeletons/placeholders in modal
     document.getElementById('modal-title').textContent = 'Loading...';
     document.getElementById('modal-poster').src = '';
     document.getElementById('modal-backdrop').style.backgroundImage = 'none';
@@ -2541,6 +2641,16 @@ async function openModal(id) {
             document.getElementById('modal-synopsis').textContent = 'Could not fetch data.';
         }
     }
+}
+
+async function openModal(id) {
+    authFetch('/events/ingest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event_type: "click", item_id: id })
+    }).catch(e => console.error("Event ingest failed:", e));
+    
+    openModalInternal(id, true);
 }
 
 window.toggleFavorite = function(id) {
