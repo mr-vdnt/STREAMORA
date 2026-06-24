@@ -5,6 +5,8 @@ Provides the unified natural language interface for the entire platform.
 """
 import os
 import sys
+import asyncio
+import time
 from typing import Any
 from fastapi import FastAPI, Depends, Request
 from fastapi.staticfiles import StaticFiles
@@ -202,6 +204,44 @@ def proxy_events(request: Request, req: EventRequest, current_user: dict = Depen
 
 from services.agent.admin import admin_router
 app.include_router(admin_router)
+
+# ══════════════════════════════════════════════════════════════════════
+#  HEALTH CHECK & KEEP-ALIVE SELF-PING
+# ══════════════════════════════════════════════════════════════════════
+_start_time = time.time()
+
+@app.get("/health")
+def health_check():
+    """Lightweight health endpoint for keep-alive pings."""
+    uptime_seconds = int(time.time() - _start_time)
+    return {
+        "status": "healthy",
+        "uptime_seconds": uptime_seconds,
+        "service": "aurora-ai"
+    }
+
+async def _keep_alive_ping():
+    """Background task that pings /health every 14 minutes to prevent
+    Render free tier from spinning down the service."""
+    import urllib.request
+    render_url = os.getenv("RENDER_EXTERNAL_URL", "")
+    if not render_url:
+        print("[keep-alive] RENDER_EXTERNAL_URL not set — self-ping disabled.")
+        return
+    health_url = f"{render_url}/health"
+    print(f"[keep-alive] Started. Pinging {health_url} every 14 minutes.")
+    while True:
+        await asyncio.sleep(14 * 60)  # 14 minutes
+        try:
+            req = urllib.request.Request(health_url, method="GET")
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                print(f"[keep-alive] Pinged {health_url} -> {resp.status}")
+        except Exception as e:
+            print(f"[keep-alive] Ping failed: {e}")
+
+@app.on_event("startup")
+async def start_keep_alive():
+    asyncio.create_task(_keep_alive_ping())
 
 # Mount frontend directory at root
 frontend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../frontend'))
