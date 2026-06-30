@@ -172,36 +172,7 @@ class IntelligentExtractor(LLMProvider):
             violence_level = str(row.get('violence_level', 'Low'))
             language_severity = str(row.get('language_severity', 'Mild'))
         else:
-            overview = "An incredible cinematic journey."
-            genres = "Drama"
-            year = "2024"
-            rating = 7.5
-            director = "Unknown"
-            runtime_val = "120"
-            is_adult = False
-            poster_url = ""
-            backdrop_url = ""
-            writer = "Unknown"
-            producer = "Unknown"
-            studio = "Unknown"
-            cast = ""
-            awards = "None"
-            availability = "Available on Streamora"
-            countries = "United States"
-            languages = "English"
-            budget = "Unknown"
-            revenue = "Unknown"
-            box_office = "Unknown"
-            franchise = "None"
-            trailer_url = ""
-            themes_str = ""
-            moods_str = ""
-            pacing = "Steady"
-            complexity = "Medium"
-            world_building = "Standard"
-            action_level = "Medium"
-            violence_level = "Low"
-            language_severity = "Mild"
+            raise ValueError(f"Strict Verification Error: No verified metadata found for item_id {item_id}. Synthetic generation is strictly prohibited.")
 
         genres_list = genres.split('|') if genres else ["Drama"]
         

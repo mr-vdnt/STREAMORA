@@ -66,22 +66,22 @@ def ingest_catalog(csv_path="data/raw/movies.csv", rebuild_all=True):
     valid_artwork_count = 0
     invalid_artwork_count = 0
     
+    valid_indices = []
     for idx, row in df.iterrows():
         poster = str(row['poster_url'])
         backdrop = str(row['backdrop_url'])
         
         # Verify poster and backdrop point to correct official TMDB image host
         if not tmdb_url_pattern.match(poster) or not tmdb_url_pattern.match(backdrop):
-            # Invalid path - fallback to tmdb random hashes or mark as blank to trigger browser error card
-            if "placehold.co" in poster or "placehold.co" in backdrop:
-                random_hash = "".join(np.random.choice(list("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"), size=27))
-                df.at[idx, 'poster_url'] = f"https://image.tmdb.org/t/p/w500/{random_hash}.jpg"
-                df.at[idx, 'backdrop_url'] = f"https://image.tmdb.org/t/p/w1280/{random_hash}_backdrop.jpg"
             invalid_artwork_count += 1
         else:
+            valid_indices.append(idx)
             valid_artwork_count += 1
             
-    print(f"[OK] Artwork validation done: {valid_artwork_count} verified TMDb links, {invalid_artwork_count} placeholders replaced.")
+    df = df.loc[valid_indices].reset_index(drop=True)
+    df['item_id'] = range(1, len(df) + 1)
+            
+    print(f"[OK] Artwork validation done: {valid_artwork_count} verified TMDb links, {invalid_artwork_count} invalid items dropped.")
 
     # ─────────────────────────────────────────────────────────────────────────
     # STAGE 3: FAISS Vector Index Update

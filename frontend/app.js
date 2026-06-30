@@ -51,22 +51,13 @@ window.imageLoaded = function(img) {
 
 window.imageLoadError = function(img, title) {
     img.style.display = 'none';
-    const container = img.closest('.img-container');
-    if (container) {
-        const placeholder = container.querySelector('.img-placeholder');
-        if (placeholder) {
-            placeholder.innerHTML = `
-                <div class="artwork-unavailable">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="28" height="28">
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                        <circle cx="8.5" cy="8.5" r="1.5"/>
-                        <polyline points="21 15 16 10 5 21"/>
-                    </svg>
-                    <span class="unavailable-text">Artwork Unavailable</span>
-                    <span class="unavailable-title">${title}</span>
-                </div>
-            `;
-            placeholder.style.opacity = '1';
+    const card = img.closest('.card-wrap, .movie-card, .search-result-card');
+    if (card) {
+        card.style.display = 'none';
+    } else {
+        const container = img.closest('.img-container');
+        if (container) {
+            container.style.display = 'none';
         }
     }
 };
