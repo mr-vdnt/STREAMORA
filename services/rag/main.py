@@ -90,7 +90,8 @@ def explain_recommendation(request: ExplainRequest):
     explanation = llm_provider.generate_explanation(
         user_context=user_context,
         movie_title=title,
-        graph_path=graph_path
+        graph_path=graph_path,
+        item_id=request.item_id
     )
     
     # 5. Generate Rich Metadata

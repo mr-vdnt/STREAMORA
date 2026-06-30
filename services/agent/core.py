@@ -112,8 +112,23 @@ class OrchestratorAgent:
                 elif search_term == "anime":
                     search_term = "animation"
                 
+                core_genre_map = {
+                    "horror": "Horror",
+                    "comedy": "Comedy",
+                    "action": "Action",
+                    "sci-fi": "Sci-Fi",
+                    "science fiction": "Sci-Fi",
+                    "romance": "Romance",
+                    "animation": "Animation",
+                    "anime": "Animation",
+                    "documentary": "Documentary",
+                    "family": "Family"
+                }
+                
                 if search_term == "hidden gems":
                     matched = movies_df[(movies_df['rating'] > 7.5)]
+                elif search_term in core_genre_map:
+                    matched = movies_df[movies_df['genres'].str.contains(core_genre_map[search_term], case=False, na=False)]
                 else:
                     matched = movies_df[movies_df['rich_tags'].str.lower().str.contains(search_term, na=False) | movies_df['genres'].str.lower().str.contains(search_term, na=False) | movies_df['overview'].str.lower().str.contains(search_term, na=False)]
                 
@@ -152,6 +167,13 @@ class OrchestratorAgent:
                             row = movies_df[movies_df['item_id'] == item['item_id']]
                             if not row.empty:
                                 r = row.iloc[0]
+                                
+                                # Enforce strict category integrity constraint to prevent leaks
+                                if search_term in core_genre_map:
+                                    g_target = core_genre_map[search_term]
+                                    if g_target.lower() not in str(r.get('genres', '')).lower():
+                                        continue
+                                        
                                 response_data.append({
                                     "item_id": int(r['item_id']),
                                     "title": r['title'],

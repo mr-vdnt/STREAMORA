@@ -13,7 +13,7 @@ from abc import ABC, abstractmethod
 
 class LLMProvider(ABC):
     @abstractmethod
-    def generate_explanation(self, user_context: str, movie_title: str, graph_path: list[str]) -> str:
+    def generate_explanation(self, user_context: str, movie_title: str, graph_path: list[str], item_id: int = None) -> str:
         pass
 
 class IntelligentExtractor(LLMProvider):
@@ -82,6 +82,47 @@ class IntelligentExtractor(LLMProvider):
             found_moods.append(random.choice(["Intense", "Captivating", "Stylized"]))
         return list(set(found_moods))[:4]
 
+    def validate_entities(self, explanation: str, item_id: int):
+        """
+        Performs strict entity validation to ensure the explanation does not contain
+        contradictory director, cast, or genre metadata.
+        """
+        if self.movies_df.empty:
+            return
+            
+        matches = self.movies_df[self.movies_df['item_id'] == item_id]
+        if matches.empty:
+            return
+            
+        row = matches.iloc[0]
+        correct_director = str(row.get('director', ''))
+        correct_cast = [c.strip() for c in str(row.get('cast', '')).split(',') if c.strip()]
+        
+        # Check directors of other titles to ensure they did not leak
+        other_directors = set(self.movies_df['director'].dropna().unique())
+        other_directors.discard(correct_director)
+        other_directors.discard('Unknown')
+        other_directors.discard('Unknown Director')
+        
+        for other_dir in other_directors:
+            if len(other_dir) > 5 and other_dir in explanation:
+                raise ValueError(
+                    f"Entity Validation Contradiction: Explanation for '{row.get('title')}' "
+                    f"incorrectly references director '{other_dir}' instead of '{correct_director}'."
+                )
+                
+        # Check cast of other titles to ensure they did not leak
+        for idx, r in self.movies_df.iterrows():
+            if r['item_id'] == item_id:
+                continue
+            other_cast = [c.strip() for c in str(r.get('cast', '')).split(',') if c.strip()]
+            for actor in other_cast:
+                if actor not in correct_cast and len(actor) > 5 and actor in explanation:
+                    raise ValueError(
+                        f"Entity Validation Contradiction: Explanation for '{row.get('title')}' "
+                        f"incorrectly references cast member '{actor}'."
+                    )
+
     def generate_rich_metadata(self, item_id: int, title: str, explanation: str, score: float = 0.0) -> dict:
         """Deterministically extracts rich metadata directly from real TMDB overviews & genres."""
         row = None
@@ -94,28 +135,78 @@ class IntelligentExtractor(LLMProvider):
             overview = str(row.get('overview', ''))
             genres = str(row.get('genres', ''))
             year = str(row.get('release_date', ''))[:4]
-            if not year.isdigit(): year = random.randint(1990, 2024)
-            rating = round(float(row.get('vote_average', random.uniform(6.0, 9.5))), 1)
+            if not year.isdigit(): 
+                # fallback parsing for "Title (Year)" format
+                title_str = str(row.get('title', ''))
+                if '(' in title_str and ')' in title_str:
+                    year = title_str.split('(')[-1].split(')')[0]
+            if not year.isdigit(): year = "2024"
+            rating = round(float(row.get('rating', random.uniform(6.0, 9.5))), 1)
             director = str(row.get('director', 'Unknown Director'))
-            runtime_val = row.get('runtime', random.randint(90, 180))
+            runtime_val = row.get('runtime', "120")
             is_adult = bool(row.get('is_adult', False))
             poster_url = str(row.get('poster_url', ''))
             backdrop_url = str(row.get('backdrop_url', ''))
+            
+            # Read new metadata fields directly from row
+            writer = str(row.get('writer', 'Unknown Writer'))
+            producer = str(row.get('producer', 'Unknown Producer'))
+            studio = str(row.get('studio', 'Unknown Studio'))
+            cast = str(row.get('cast', ''))
+            awards = str(row.get('awards', 'None'))
+            availability = str(row.get('availability', 'Available on Streamora'))
+            countries = str(row.get('countries', 'United States'))
+            languages = str(row.get('languages', 'English'))
+            budget = str(row.get('budget', 'Unknown'))
+            revenue = str(row.get('revenue', 'Unknown'))
+            box_office = str(row.get('box_office', 'Unknown'))
+            franchise = str(row.get('franchise', 'None'))
+            trailer_url = str(row.get('trailer_url', ''))
+            
+            themes_str = str(row.get('themes', ''))
+            moods_str = str(row.get('moods', ''))
+            pacing = str(row.get('pacing', 'Steady'))
+            complexity = str(row.get('complexity', 'Medium'))
+            world_building = str(row.get('world_building', 'Standard'))
+            action_level = str(row.get('action_level', 'Medium'))
+            violence_level = str(row.get('violence_level', 'Low'))
+            language_severity = str(row.get('language_severity', 'Mild'))
         else:
             overview = "An incredible cinematic journey."
             genres = "Drama"
-            year = random.randint(1990, 2024)
-            rating = round(random.uniform(6.0, 9.5), 1)
+            year = "2024"
+            rating = 7.5
             director = "Unknown"
-            runtime_val = random.randint(90, 180)
+            runtime_val = "120"
             is_adult = False
             poster_url = ""
             backdrop_url = ""
-
-        themes = self._extract_themes_from_text(overview, genres)
-        moods = self._extract_mood_from_text(overview, genres)
+            writer = "Unknown"
+            producer = "Unknown"
+            studio = "Unknown"
+            cast = ""
+            awards = "None"
+            availability = "Available on Streamora"
+            countries = "United States"
+            languages = "English"
+            budget = "Unknown"
+            revenue = "Unknown"
+            box_office = "Unknown"
+            franchise = "None"
+            trailer_url = ""
+            themes_str = ""
+            moods_str = ""
+            pacing = "Steady"
+            complexity = "Medium"
+            world_building = "Standard"
+            action_level = "Medium"
+            violence_level = "Low"
+            language_severity = "Mild"
 
         genres_list = genres.split('|') if genres else ["Drama"]
+        
+        themes = [t.strip() for t in themes_str.split('|') if t.strip()] if themes_str else self._extract_themes_from_text(overview, genres)
+        moods = [m.strip() for m in moods_str.split('|') if m.strip()] if moods_str else self._extract_mood_from_text(overview, genres)
 
         # Content Advisory
         is_family = not is_adult and ("Family" in genres_list or "Animation" in genres_list)
@@ -127,15 +218,6 @@ class IntelligentExtractor(LLMProvider):
             match_percentage = int(max(70, 99 - (score * 10)))
         else:
             match_percentage = int(99 - (random.random() * 20))
-
-        # Advanced Discovery Metadata
-        pacing = random.choice(["Slow Burn", "Steady", "Fast-Paced"])
-        complexity = random.choice(["Low", "Medium", "High"])
-        world_building = random.choice(["Standard", "Rich", "Exceptional"])
-        
-        if "Action" in genres_list: action_level = "High"
-        elif "Drama" in genres_list: action_level = "Low"
-        else: action_level = "Medium"
 
         return {
             "title": title,
@@ -157,25 +239,65 @@ class IntelligentExtractor(LLMProvider):
             "poster_url": poster_url,
             "backdrop_url": backdrop_url,
             "adult": is_adult,
-            "violence_level": "High" if "Action" in genres_list else "Low",
-            "language_severity": "Strong" if is_adult else "Mild"
+            "violence_level": violence_level,
+            "language_severity": language_severity,
+            "writer": writer,
+            "producer": producer,
+            "studio": studio,
+            "cast": [c.strip() for c in cast.split(",")] if cast else [],
+            "awards": awards,
+            "availability": availability,
+            "countries": countries,
+            "languages": languages,
+            "budget": budget,
+            "revenue": revenue,
+            "box_office": box_office,
+            "franchise": franchise,
+            "trailer_url": trailer_url
         }
 
-    def generate_explanation(self, user_context: str, movie_title: str, graph_path: list[str]) -> str:
+    def generate_explanation(self, user_context: str, movie_title: str, graph_path: list[str], item_id: int = None) -> str:
         """Generates dynamic explanations using Knowledge Graph paths and User Context."""
+        director = "Unknown Director"
+        cast_names = []
+        if item_id is not None and not self.movies_df.empty:
+            matches = self.movies_df[self.movies_df['item_id'] == item_id]
+            if not matches.empty:
+                row = matches.iloc[0]
+                director = row.get('director', 'Unknown Director')
+                cast = row.get('cast', '')
+                if cast and isinstance(cast, str):
+                    cast_names = [c.strip() for c in cast.split(',')][:3]
+                    
+        cast_str = f" starring {', '.join(cast_names)}" if cast_names else ""
+        
         if not graph_path:
-            return (
-                f"Recommended because '{movie_title}' aligns perfectly with your "
-                f"preference for {user_context}."
+            explanation = (
+                f"Recommended because '{movie_title}'{cast_str}, directed by {director}, "
+                f"aligns perfectly with your preference for {user_context}."
             )
         else:
             connection = str(graph_path[-1] if len(graph_path) > 0 else "similar themes")
             connection_clean = connection.replace("Movie:", "").replace("_", " ")
-            return (
-                f"Recommended because it shares the same emotional storytelling, engaging themes, "
-                f"and powerful visuals found in {connection_clean}. It strongly resonates with your "
-                f"interest in {user_context}."
+            explanation = (
+                f"Recommended because '{movie_title}'{cast_str}, directed by {director}, "
+                f"shares the same emotional storytelling, engaging themes, and powerful visuals "
+                f"found in {connection_clean}. It strongly resonates with your interest in {user_context}."
             )
+            
+        # Strict Entity Validation check
+        if item_id is not None:
+            try:
+                self.validate_entities(explanation, item_id)
+            except ValueError as e:
+                print(f"[RAG Validation Warning] {e} Sanitizing explanation to resolve contradiction.")
+                # Fall back to a simplified validated template
+                explanation = (
+                    f"Recommended because '{movie_title}' directed by {director} "
+                    f"perfectly aligns with your preference for {user_context}."
+                )
+            
+        return explanation
 
 # Singleton instance
 llm_provider = IntelligentExtractor()

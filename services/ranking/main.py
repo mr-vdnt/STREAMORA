@@ -114,6 +114,10 @@ def get_similar_items(request: SimilarRequest):
         if cid == request.item_id or cid in request.exclude_ids:
             continue # Skip the seed movie itself or excluded items
             
+        # Confidence Threshold: exclude matches with inner product < 0.40 (low similarity)
+        if float(r_score) < 0.40:
+            continue
+            
         title = ""
         if movies_df is not None:
             row = movies_df[movies_df['item_id'] == cid]

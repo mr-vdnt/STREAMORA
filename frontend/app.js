@@ -3644,33 +3644,20 @@ function renderModalData(m, id) {
     document.getElementById('adv-language').textContent = m.language_severity || 'Mild';
     document.getElementById('adv-adult').textContent = m.adult ? 'Yes' : 'No';
     
-    // Populate bottom details panel
-    let writers = m.writers || '';
-    if (!writers) {
-        writers = m.director ? `${m.director}, Jonathan Nolan` : 'Christopher Nolan, Jonathan Nolan';
-    }
-    document.getElementById('modal-writers').textContent = writers;
+    // Populate metadata grid and bottom details panel
+    document.getElementById('modal-director').textContent = m.director || 'Unknown';
+    document.getElementById('modal-writers').textContent = m.writer || m.writers || 'Unknown';
+    document.getElementById('modal-producers').textContent = m.producer || m.producers || 'Unknown';
+    document.getElementById('modal-studios').textContent = m.studio || m.studios || 'Unknown';
+    document.getElementById('modal-countries').textContent = m.countries || 'Unknown';
+    document.getElementById('modal-languages').textContent = m.languages || 'English';
+    document.getElementById('modal-budget').textContent = m.budget || 'Unknown';
+    document.getElementById('modal-revenue').textContent = m.revenue || 'Unknown';
+    document.getElementById('modal-boxoffice').textContent = m.box_office || 'Unknown';
+    document.getElementById('modal-franchise').textContent = m.franchise || 'None';
     
-    let producers = m.producers || 'Emma Thomas, Kevin Feige';
-    document.getElementById('modal-producers').textContent = producers;
-    
-    let studios = m.studios || 'Warner Bros. Pictures, Legendary Entertainment';
-    document.getElementById('modal-studios').textContent = studios;
-    
-    let awards = m.awards || 'Nominated for multiple prestigious Academy Awards.';
-    if (m.title && m.title.includes("Spider-Man")) {
-        awards = "Academy Award nominee for Best Visual Effects";
-    } else if (m.title && m.title.includes("Batman")) {
-        awards = "Nominated for 3 Academy Awards, including Best Sound";
-    } else if (m.title && m.title.includes("Interstellar")) {
-        awards = "Oscar Winner for Best Visual Effects, nominated for 5 Oscars";
-    } else if (m.title && m.title.includes("Dune")) {
-        awards = "Winner of 6 Academy Awards, including Best Cinematography";
-    }
-    document.getElementById('modal-awards').textContent = awards;
-    
-    let availability = m.availability || 'Available on Streamora Premium streaming (4K UHD)';
-    document.getElementById('modal-availability').textContent = availability;
+    document.getElementById('modal-awards').textContent = m.awards || 'None';
+    document.getElementById('modal-availability').textContent = m.availability || 'Available on Streamora';
 
     const seedMovie = globalMovies.find(item => item.item_id === id) || FALLBACK_MOVIES.find(item => item.item_id === id) || { item_id: id, rich_metadata: m, title: m.title };
 
@@ -3681,10 +3668,10 @@ function renderModalData(m, id) {
         audienceMatchContainer.innerHTML = tags.map(tag => `<span class="audience-tag">${tag}</span>`).join('');
     }
 
-    // Render Cast Cards (with fallback)
+    // Render Cast Cards (from DB or fallback)
     const castContainer = document.getElementById('modal-cast');
     if (castContainer) {
-        const castList = getMovieCast(m.title);
+        const castList = (m.cast && m.cast.length > 0) ? m.cast : getMovieCast(m.title);
         if (castList && castList.length > 0) {
             castContainer.innerHTML = castList.map(name => {
                 const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0D8ABC&color=fff&size=128&bold=true`;
@@ -3698,6 +3685,42 @@ function renderModalData(m, id) {
         } else {
             castContainer.innerHTML = `<div style="color: var(--text-muted); font-style: italic; font-size: 0.9rem; padding: 10px 0;">Cast information currently unavailable.</div>`;
         }
+    }
+
+    // Render responsive YouTube trailer
+    const trailerWrapper = document.getElementById('modal-trailer-wrapper');
+    if (trailerWrapper) {
+        if (m.trailer_url) {
+            trailerWrapper.innerHTML = `
+                <iframe src="${m.trailer_url}" 
+                        title="${m.title || 'Movie'} Official Trailer" 
+                        frameborder="0" 
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                        allowfullscreen>
+                </iframe>
+            `;
+        } else {
+            trailerWrapper.innerHTML = `
+                <div class="modal-trailer-placeholder">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                    <div style="margin-top: 10px; color: var(--text-muted); font-size: 0.9rem;">Trailer unavailable</div>
+                </div>
+            `;
+        }
+    }
+
+    // Bind "Watch Trailer" button click
+    const btnWatch = document.querySelector('.btn-watch');
+    if (btnWatch) {
+        // remove old listeners
+        const newBtnWatch = btnWatch.cloneNode(true);
+        btnWatch.parentNode.replaceChild(newBtnWatch, btnWatch);
+        newBtnWatch.addEventListener('click', () => {
+            const trailerSection = document.getElementById('modal-trailer-wrapper');
+            if (trailerSection) {
+                trailerSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
     }
 
     const simContainer = document.getElementById('modal-similar');

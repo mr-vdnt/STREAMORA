@@ -185,139 +185,171 @@
 
             <!-- Scrollable Information Body -->
             <div class="modal-body">
-                <div class="modal-grid">
-                    
-                    <!-- Left Column: Synopsis, Explanations, Cast -->
-                    <div class="modal-col-main">
-                        <!-- BREADCRUMBS -->
-                        <div class="modal-breadcrumbs" id="modal-breadcrumbs"></div>
+                <!-- BREADCRUMBS -->
+                <div class="modal-breadcrumbs" id="modal-breadcrumbs"></div>
 
-                        <!-- 2. SHORT SYNOPSIS -->
-                        <div class="modal-synopsis-container">
-                            <p class="modal-synopsis" id="modal-synopsis"></p>
-                        </div>
-                        
-                        <!-- 6. WHY STREAMORA RECOMMENDED THIS -->
-                        <div class="streamora-reason-box">
-                            <h3><span class="ai-glow">✦</span> Why Streamora Recommended This</h3>
-                            <p id="modal-why"></p>
-                        </div>
+                <!-- 1. SYNOPSIS -->
+                <div class="modal-synopsis-container">
+                    <p class="modal-synopsis" id="modal-synopsis"></p>
+                </div>
 
-                        <!-- 7. AUDIENCE MATCH -->
-                        <div class="modal-section">
-                            <h3>Audience Match</h3>
-                            <div class="modal-audience-match" id="modal-audience-match"></div>
-                        </div>
-
-                        <!-- 9. CAST HIGHLIGHTS (Mocked horizontally) -->
-                        <div class="modal-section">
-                            <h3>Cast</h3>
-                            <div class="modal-cast-row" id="modal-cast">
-                                <!-- Cast cards injected here -->
-                            </div>
-                        </div>
-
-                        <!-- 15. TRAILER SECTION -->
-                        <div class="modal-section">
-                            <h3>Trailer</h3>
-                            <div class="modal-trailer-placeholder">
-                                <svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                            </div>
-                        </div>
-
-                        <!-- 17. SIMILAR MOVIES -->
-                        <div class="modal-section">
-                            <h3>Because You Viewed This</h3>
-                            <div class="modal-similar-container" id="modal-similar-container">
-                                <button class="carousel-arrow carousel-arrow--left" onclick="scrollSimilarCarousel(-1); event.stopPropagation();" aria-label="Scroll recommendations left" style="display: none;">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                                </button>
-                                <div class="modal-similar-row" id="modal-similar">
-                                    <!-- Similar movie cards injected here -->
-                                </div>
-                                <button class="carousel-arrow carousel-arrow--right" onclick="scrollSimilarCarousel(1); event.stopPropagation();" aria-label="Scroll recommendations right">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                                </button>
-                            </div>
-                        </div>
+                <!-- 2. METADATA GRID -->
+                <div class="modal-metadata-grid">
+                    <div class="meta-grid-item">
+                        <span class="meta-grid-label">Director</span>
+                        <span class="meta-grid-value" id="modal-director"></span>
                     </div>
+                    <div class="meta-grid-item">
+                        <span class="meta-grid-label">Writers</span>
+                        <span class="meta-grid-value" id="modal-writers"></span>
+                    </div>
+                    <div class="meta-grid-item">
+                        <span class="meta-grid-label">Producers</span>
+                        <span class="meta-grid-value" id="modal-producers"></span>
+                    </div>
+                    <div class="meta-grid-item">
+                        <span class="meta-grid-label">Production Studios</span>
+                        <span class="meta-grid-value" id="modal-studios"></span>
+                    </div>
+                    <div class="meta-grid-item">
+                        <span class="meta-grid-label">Country of Origin</span>
+                        <span class="meta-grid-value" id="modal-countries"></span>
+                    </div>
+                    <div class="meta-grid-item">
+                        <span class="meta-grid-label">Languages</span>
+                        <span class="meta-grid-value" id="modal-languages"></span>
+                    </div>
+                    <div class="meta-grid-item">
+                        <span class="meta-grid-label">Budget</span>
+                        <span class="meta-grid-value" id="modal-budget"></span>
+                    </div>
+                    <div class="meta-grid-item">
+                        <span class="meta-grid-label">Revenue</span>
+                        <span class="meta-grid-value" id="modal-revenue"></span>
+                    </div>
+                    <div class="meta-grid-item">
+                        <span class="meta-grid-label">Box Office</span>
+                        <span class="meta-grid-value" id="modal-boxoffice"></span>
+                    </div>
+                    <div class="meta-grid-item">
+                        <span class="meta-grid-label">Franchise</span>
+                        <span class="meta-grid-value" id="modal-franchise"></span>
+                    </div>
+                </div>
 
-                    <!-- Right Column: Details, Themes, Metadata -->
-                    <div class="modal-col-side">
-                        <!-- 10. DIRECTOR -->
-                        <div class="modal-side-item">
-                            <span class="side-label">Director</span>
-                            <span class="side-value" id="modal-director"></span>
-                        </div>
+                <!-- 3. RECOMMENDATION EXPLANATION -->
+                <div class="streamora-reason-box">
+                    <h3><span class="ai-glow">✦</span> Why Streamora Recommended This</h3>
+                    <p id="modal-why"></p>
+                </div>
 
-                        <!-- 4. KEY THEMES -->
-                        <div class="modal-side-item">
-                            <span class="side-label">Key Themes</span>
-                            <div class="side-tags" id="modal-themes"></div>
-                        </div>
+                <!-- 4. TAGS / AUDIENCE / MOODS GRID -->
+                <div class="modal-tags-section">
+                    <div class="tags-group">
+                        <span class="group-label">Audience Match</span>
+                        <div class="modal-audience-match" id="modal-audience-match"></div>
+                    </div>
+                    <div class="tags-group">
+                        <span class="group-label">Key Themes</span>
+                        <div class="side-tags" id="modal-themes"></div>
+                    </div>
+                    <div class="tags-group">
+                        <span class="group-label">Mood & Tone</span>
+                        <div class="side-tags" id="modal-moods"></div>
+                    </div>
+                    <div class="tags-group">
+                        <span class="group-label">Characteristics</span>
+                        <div class="side-tags" id="modal-characteristics"></div>
+                    </div>
+                </div>
 
-                        <!-- 5. MOOD & TONE -->
-                        <div class="modal-side-item">
-                            <span class="side-label">Mood & Tone</span>
-                            <div class="side-tags" id="modal-moods"></div>
-                        </div>
+                <!-- 5. ADVANCED DISCOVERY SPECS -->
+                <div class="modal-specs-row">
+                    <div class="spec-card">
+                        <span class="spec-label">Pacing</span>
+                        <span class="spec-value" id="modal-pacing"></span>
+                    </div>
+                    <div class="spec-card">
+                        <span class="spec-label">Complexity</span>
+                        <span class="spec-value" id="modal-complexity"></span>
+                    </div>
+                    <div class="spec-card">
+                        <span class="spec-label">World Building</span>
+                        <span class="spec-value" id="modal-world"></span>
+                    </div>
+                    <div class="spec-card">
+                        <span class="spec-label">Action Level</span>
+                        <span class="spec-value" id="modal-action"></span>
+                    </div>
+                </div>
 
-                        <!-- CHARACTERISTICS -->
-                        <div class="modal-side-item">
-                            <span class="side-label">This Movie Is</span>
-                            <div class="side-tags" id="modal-characteristics"></div>
-                        </div>
+                <!-- 6. CAST HIGHLIGHTS -->
+                <div class="modal-section">
+                    <h3>Cast</h3>
+                    <div class="modal-cast-row" id="modal-cast">
+                        <!-- Cast cards injected here -->
+                    </div>
+                </div>
 
-                        <!-- 14. ADVANCED DISCOVERY METADATA -->
-                        <div class="modal-side-item advanced-meta">
-                            <span class="side-label">Pacing</span>
-                            <span class="side-value highlight" id="modal-pacing"></span>
+                <!-- 7. ADVISORY & RATINGS -->
+                <div class="modal-section">
+                    <h3>Content Advisory</h3>
+                    <div class="modal-advisory-grid">
+                        <div class="advisory-card">
+                            <span class="adv-label">Violence</span>
+                            <span class="adv-value" id="adv-violence"></span>
                         </div>
-                        <div class="modal-side-item advanced-meta">
-                            <span class="side-label">Complexity</span>
-                            <span class="side-value highlight" id="modal-complexity"></span>
+                        <div class="advisory-card">
+                            <span class="adv-label">Language</span>
+                            <span class="adv-value" id="adv-language"></span>
                         </div>
-                        <div class="modal-side-item advanced-meta">
-                            <span class="side-label">World Building</span>
-                            <span class="side-value highlight" id="modal-world"></span>
-                        </div>
-                        <div class="modal-side-item advanced-meta">
-                            <span class="side-label">Action Level</span>
-                            <span class="side-value highlight" id="modal-action"></span>
-                        </div>
-
-                        <!-- 8. CONTENT ADVISORY (Full) -->
-                        <div class="modal-side-item advisory-box">
-                            <span class="side-label">Content Advisory</span>
-                            <div class="advisory-row"><span>Violence:</span> <span id="adv-violence"></span></div>
-                            <div class="advisory-row"><span>Language:</span> <span id="adv-language"></span></div>
-                            <div class="advisory-row"><span>Adult Content:</span> <span id="adv-adult"></span></div>
+                        <div class="advisory-card">
+                            <span class="adv-label">Adult Content</span>
+                            <span class="adv-value" id="adv-adult"></span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Bottom Details Panel -->
-                <div class="modal-bottom-details">
-                    <div class="modal-detail-group">
-                        <span class="detail-label">Writers</span>
-                        <span class="detail-value" id="modal-writers"></span>
+                <!-- 8. OFFICIAL TRAILER -->
+                <div class="modal-section">
+                    <h3>Official Trailer</h3>
+                    <div class="modal-trailer-wrapper" id="modal-trailer-wrapper">
+                        <!-- Responsive iframe placeholder or actual trailer -->
                     </div>
-                    <div class="modal-detail-group">
-                        <span class="detail-label">Producers</span>
-                        <span class="detail-value" id="modal-producers"></span>
+                </div>
+
+                <!-- 9. BECAUSE YOU WATCHED (RECOMMENDATIONS) -->
+                <div class="modal-section">
+                    <h3>Because You Viewed This</h3>
+                    <div class="modal-similar-container" id="modal-similar-container">
+                        <button class="carousel-arrow carousel-arrow--left" onclick="scrollSimilarCarousel(-1); event.stopPropagation();" aria-label="Scroll recommendations left" style="display: none;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                        </button>
+                        <div class="modal-similar-row" id="modal-similar">
+                            <!-- Similar movie cards injected here -->
+                        </div>
+                        <button class="carousel-arrow carousel-arrow--right" onclick="scrollSimilarCarousel(1); event.stopPropagation();" aria-label="Scroll recommendations right">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                        </button>
                     </div>
-                    <div class="modal-detail-group">
-                        <span class="detail-label">Production Studios</span>
-                        <span class="detail-value" id="modal-studios"></span>
+                </div>
+
+                <!-- 10. AWARDS & STREAMING -->
+                <div class="modal-footer-details">
+                    <div class="footer-detail-group">
+                        <span class="footer-detail-label">Awards & Accolades</span>
+                        <p class="footer-detail-value" id="modal-awards"></p>
                     </div>
-                    <div class="modal-detail-group">
-                        <span class="detail-label">Awards & Accolades</span>
-                        <span class="detail-value" id="modal-awards"></span>
+                    <div class="footer-detail-group">
+                        <span class="footer-detail-label">Streaming & Availability</span>
+                        <p class="footer-detail-value" id="modal-availability"></p>
                     </div>
-                    <div class="modal-detail-group">
-                        <span class="detail-label">Streaming & Availability</span>
-                        <span class="detail-value" id="modal-availability"></span>
-                    </div>
+                </div>
+
+                <!-- 11. MODAL FOOTER BRANDING -->
+                <div class="modal-footer-brand">
+                    <span class="brand-text">STREAMORA AI</span>
+                    <span class="brand-sub">Premium Cinematic Discovery Platform</span>
                 </div>
             </div>
         </div>
