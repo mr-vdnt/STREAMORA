@@ -7,6 +7,30 @@ import json
 import re
 from sentence_transformers import SentenceTransformer
 
+# Patterns that indicate synthetic/generated content
+_SYNTHETIC_TITLE_RE = re.compile(r'\s+\d{2,}$')            # "Title 406", "Whiplash 10"
+_SYNTHETIC_OVERVIEW_RE = re.compile(                         # Generated overview template
+    r'An extraordinary .+ production|A gripping .+ story that|'
+    r'This .+ masterpiece explores|In this .+ tale'
+)
+
+
+def _is_synthetic(row) -> bool:
+    """Returns True if a row looks like generated/synthetic content."""
+    tmdb_id = int(row.get('tmdb_id', 0))
+    # A TMDB ID of 0 or negative means it was never assigned (fabricated)
+    if tmdb_id <= 0:
+        return True
+    title = str(row.get('title', ''))
+    if _SYNTHETIC_TITLE_RE.search(title):
+        return True
+    overview = str(row.get('overview', ''))
+    if _SYNTHETIC_OVERVIEW_RE.search(overview):
+        return True
+    return False
+
+
+
 def ingest_catalog(csv_path="data/raw/movies.csv", rebuild_all=True):
     print("======================================================================")
     print(" STREAMORA AI - Automated Production Ingestion Pipeline ")
@@ -18,6 +42,20 @@ def ingest_catalog(csv_path="data/raw/movies.csv", rebuild_all=True):
         
     df = pd.read_csv(csv_path)
     print(f"[OK] Ingested {len(df)} titles from {csv_path}.")
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # PRE-STAGE: Synthetic Content Guard
+    # ─────────────────────────────────────────────────────────────────────────
+    print("\n[Pre-Stage] Synthetic Content Guard...")
+    synthetic_mask = df.apply(_is_synthetic, axis=1)
+    synthetic_count = synthetic_mask.sum()
+    if synthetic_count > 0:
+        print(f"[WARN] Detected {synthetic_count} synthetic/generated entries. Dropping them.")
+        for _, bad_row in df[synthetic_mask].iterrows():
+            print(f"       Dropped: '{bad_row['title']}' (tmdb_id={bad_row['tmdb_id']})")
+        df = df[~synthetic_mask].reset_index(drop=True)
+    else:
+        print(f"[OK] No synthetic content detected. All {len(df)} entries appear real.")
 
     # ─────────────────────────────────────────────────────────────────────────
     # STAGE 1: Metadata Validation & Normalization
@@ -39,7 +77,7 @@ def ingest_catalog(csv_path="data/raw/movies.csv", rebuild_all=True):
     df['rating'] = pd.to_numeric(df.get('rating', 7.5), errors='coerce').fillna(7.5).astype(float)
     df['popularity'] = pd.to_numeric(df.get('popularity', 100.0), errors='coerce').fillna(100.0).astype(float)
     
-    # Text normalization
+    # Text normalization — titles kept as-is (no (Year) suffix appended)
     df['title'] = df['title'].astype(str).str.strip()
     df['original_title'] = df.get('original_title', df['title']).astype(str).str.strip()
     df['genres'] = df['genres'].astype(str).str.strip()
@@ -47,13 +85,10 @@ def ingest_catalog(csv_path="data/raw/movies.csv", rebuild_all=True):
     df['cast'] = df['cast'].astype(str).str.strip()
     df['language'] = df['language'].astype(str).str.strip()
     
-    # Enforce formatting rules
-    for idx, row in df.iterrows():
-        title = row['title']
-        # Enforce "Title (Year)" syntax
-        if not re.search(r'\(\d{4}\)$', title):
-            year_val = row.get('year', 2024)
-            df.at[idx, 'title'] = f"{title} ({int(year_val)})"
+    # Ensure content_type column exists (default: "movie" for backward compatibility)
+    if 'content_type' not in df.columns:
+        df['content_type'] = 'movie'
+    df['content_type'] = df['content_type'].astype(str).str.strip()
 
     print(f"[OK] Schema validation complete. Total validated items: {len(df)}")
 

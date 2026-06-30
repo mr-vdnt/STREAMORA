@@ -253,8 +253,8 @@ const FALLBACK_MOVIES = [
     {
         item_id: 3,
         title: "No Exit",
-        poster_url: "https://placehold.co/400x600/111/333?text=No+Exit",
-        backdrop_url: "https://placehold.co/800x450/111/333?text=No+Exit",
+        poster_url: "https://image.tmdb.org/t/p/w500/vDHsLnOWKlPGmWs0kGfuhNF4w5l.jpg",
+        backdrop_url: "https://image.tmdb.org/t/p/w1280/vDHsLnOWKlPGmWs0kGfuhNF4w5l.jpg",
         overview: "During a blizzard and stranded at a highway rest stop in the mountains, a college student discovers a kidnapped child hidden in a car belonging to one of the people inside.",
         rich_metadata: {
             title: "No Exit",
@@ -349,8 +349,8 @@ const FALLBACK_MOVIES = [
     {
         item_id: 10,
         title: "Interstellar",
-        poster_url: "https://placehold.co/400x600/111/333?text=Interstellar",
-        backdrop_url: "https://placehold.co/800x450/111/333?text=Interstellar",
+        poster_url: "https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg",
+        backdrop_url: "https://image.tmdb.org/t/p/w1280/xJHokMbljvjEVAle2OvwIeEXpN.jpg",
         overview: "The adventures of a group of explorers who make use of a newly discovered wormhole to surpass the limitations on human space travel and conquer the vast distances involved in an interstellar voyage.",
         rich_metadata: {
             title: "Interstellar",
@@ -381,8 +381,8 @@ const FALLBACK_MOVIES = [
     {
         item_id: 11,
         title: "Stranger Things",
-        poster_url: "https://placehold.co/400x600/111/333?text=Stranger+Things",
-        backdrop_url: "https://placehold.co/800x450/111/333?text=Stranger+Things",
+        poster_url: "https://image.tmdb.org/t/p/w500/49WJfeN0moxb9IPfGn8AIqMGskD.jpg",
+        backdrop_url: "https://image.tmdb.org/t/p/w1280/rcA17r9GKqd8OHsSHLDOwlziR5N.jpg",
         overview: "When a young boy vanishes, a small town uncovers a mystery involving secret experiments, terrifying supernatural forces and one strange little girl.",
         rich_metadata: {
             title: "Stranger Things",
@@ -414,8 +414,8 @@ const FALLBACK_MOVIES = [
     {
         item_id: 12,
         title: "Wednesday",
-        poster_url: "https://placehold.co/400x600/111/333?text=Wednesday",
-        backdrop_url: "https://placehold.co/800x450/111/333?text=Wednesday",
+        poster_url: "https://image.tmdb.org/t/p/w500/9PFonBhy4cQy7Jz20NpMygczOkv.jpg",
+        backdrop_url: "https://image.tmdb.org/t/p/w1280/iHSwvRVsRyxpX7FE7GbviaDvgGZ.jpg",
         overview: "A sleuthing, supernaturally infused mystery charting Wednesday Addams' years as a student at Nevermore Academy.",
         rich_metadata: {
             title: "Wednesday",
@@ -447,8 +447,8 @@ const FALLBACK_MOVIES = [
     {
         item_id: 13,
         title: "Dune",
-        poster_url: "https://placehold.co/400x600/111/333?text=Dune",
-        backdrop_url: "https://placehold.co/800x450/111/333?text=Dune",
+        poster_url: "https://image.tmdb.org/t/p/w500/d5NXSklXo0qyIYkgV94XAgMIckC.jpg",
+        backdrop_url: "https://image.tmdb.org/t/p/w1280/jYEW5xZkZk2WTrdbMGAPFuBqbDc.jpg",
         overview: "Paul Atreides, a brilliant and gifted young man born into a great destiny beyond his understanding, must travel to the most dangerous planet in the universe to ensure the future of his family and his people.",
         rich_metadata: {
             title: "Dune",
@@ -479,8 +479,8 @@ const FALLBACK_MOVIES = [
     {
         item_id: 14,
         title: "The Grand Budapest Hotel",
-        poster_url: "https://placehold.co/400x600/111/333?text=Budapest+Hotel",
-        backdrop_url: "https://placehold.co/800x450/111/333?text=Budapest+Hotel",
+        poster_url: "https://image.tmdb.org/t/p/w500/eWd26co59HRmzZoxbWYvJ7wjTBm.jpg",
+        backdrop_url: "https://image.tmdb.org/t/p/w1280/58QT4cPJ2u2TqWZkterDq9q4yT5.jpg",
         overview: "The writer relates his adventures at a renowned European resort hotel between the first and second World Wars with a concierge who is wrongly framed for murder.",
         rich_metadata: {
             title: "The Grand Budapest Hotel",
@@ -511,8 +511,8 @@ const FALLBACK_MOVIES = [
     {
         item_id: 20,
         title: "Breaking Bad",
-        poster_url: "https://placehold.co/400x600/111/333?text=Breaking+Bad",
-        backdrop_url: "https://placehold.co/800x450/111/333?text=Breaking+Bad",
+        poster_url: "https://image.tmdb.org/t/p/w500/ggFHVNu6YYI5L9pCfOacjizRGt.jpg",
+        backdrop_url: "https://image.tmdb.org/t/p/w1280/tsRy63Mu5cu8etL1X7ZLyf7UP1M.jpg",
         overview: "A high school chemistry teacher diagnosed with inoperable lung cancer turns to manufacturing and selling methamphetamine with a former student.",
         rich_metadata: {
             title: "Breaking Bad",
@@ -544,8 +544,8 @@ const FALLBACK_MOVIES = [
     {
         item_id: 21,
         title: "Game of Thrones",
-        poster_url: "https://placehold.co/400x600/111/333?text=Game+of+Thrones",
-        backdrop_url: "https://placehold.co/800x450/111/333?text=Game+of+Thrones",
+        poster_url: "https://image.tmdb.org/t/p/w500/u3bB5t7wQk576Gmg23sGF75agbE.jpg",
+        backdrop_url: "https://image.tmdb.org/t/p/w1280/2OMB0ynKlyIenMJWI2Dy9IWT4c.jpg",
         overview: "Nine noble families fight for control over the lands of Westeros, while an ancient enemy returns after being dormant for thousands of years.",
         rich_metadata: {
             title: "Game of Thrones",
@@ -577,8 +577,8 @@ const FALLBACK_MOVIES = [
     {
         item_id: 22,
         title: "Succession",
-        poster_url: "https://placehold.co/400x600/111/333?text=Succession",
-        backdrop_url: "https://placehold.co/800x450/111/333?text=Succession",
+        poster_url: "https://image.tmdb.org/t/p/w500/e2X8MdMmLMBUB4G1YAjHMFhP5zy.jpg",
+        backdrop_url: "https://image.tmdb.org/t/p/w1280/3VNbPATrczBDxbLn3A4YdJpjEK.jpg",
         overview: "The Roy family is known for controlling the biggest media and entertainment company in the world. However, their world changes when their father steps down.",
         rich_metadata: {
             title: "Succession",
@@ -610,8 +610,8 @@ const FALLBACK_MOVIES = [
     {
         item_id: 23,
         title: "The Crown",
-        poster_url: "https://placehold.co/400x600/111/333?text=The+Crown",
-        backdrop_url: "https://placehold.co/800x450/111/333?text=The+Crown",
+        poster_url: "https://image.tmdb.org/t/p/w500/8E2nCaTM9aHkKjHPYDiHPq9JzLF.jpg",
+        backdrop_url: "https://image.tmdb.org/t/p/w1280/9cJETuLMc6R0bTWRA5i7ctY9bxk.jpg",
         overview: "Follows the political rivalries and romance of Queen Elizabeth II's reign and the events that shaped the second half of the twentieth century.",
         rich_metadata: {
             title: "The Crown",
@@ -643,8 +643,8 @@ const FALLBACK_MOVIES = [
     {
         item_id: 24,
         title: "Friends",
-        poster_url: "https://placehold.co/400x600/111/333?text=Friends",
-        backdrop_url: "https://placehold.co/800x450/111/333?text=Friends",
+        poster_url: "https://image.tmdb.org/t/p/w500/f496cm9enuEsZkSPzCwnTESEK5s.jpg",
+        backdrop_url: "https://image.tmdb.org/t/p/w1280/l0qVZIpXtIo7km9KLbQTxFEKpnc.jpg",
         overview: "Follows the personal and professional lives of six twenty to thirty-something-year-old friends living in Manhattan.",
         rich_metadata: {
             title: "Friends",
@@ -676,8 +676,8 @@ const FALLBACK_MOVIES = [
     {
         item_id: 25,
         title: "The Office",
-        poster_url: "https://placehold.co/400x600/111/333?text=The+Office",
-        backdrop_url: "https://placehold.co/800x450/111/333?text=The+Office",
+        poster_url: "https://image.tmdb.org/t/p/w500/qWnJzyZhyy74gjpSjIXWmuk0ifX.jpg",
+        backdrop_url: "https://image.tmdb.org/t/p/w1280/4j0PNHkMr5ax3IA8tjtxcmPU3QT.jpg",
         overview: "A mockumentary on a group of typical office workers, where the workday consists of ego clashes, inappropriate behavior, and tedium.",
         rich_metadata: {
             title: "The Office",
@@ -709,8 +709,8 @@ const FALLBACK_MOVIES = [
     {
         item_id: 26,
         title: "Sherlock",
-        poster_url: "https://placehold.co/400x600/111/333?text=Sherlock",
-        backdrop_url: "https://placehold.co/800x450/111/333?text=Sherlock",
+        poster_url: "https://image.tmdb.org/t/p/w500/7WTsnHkbA0FaG6R9twfFde0I9hn.jpg",
+        backdrop_url: "https://image.tmdb.org/t/p/w1280/oNuQqRjTdJhxT9GDGJf6e12ohls.jpg",
         overview: "A modern update finds the famous sleuth and his doctor partner solving crime in 21st century London.",
         rich_metadata: {
             title: "Sherlock",
@@ -742,8 +742,8 @@ const FALLBACK_MOVIES = [
     {
         item_id: 27,
         title: "Black Mirror",
-        poster_url: "https://placehold.co/400x600/111/333?text=Black+Mirror",
-        backdrop_url: "https://placehold.co/800x450/111/333?text=Black+Mirror",
+        poster_url: "https://image.tmdb.org/t/p/w500/7PRddO7z7mcPi21nZTCMGShAyy1.jpg",
+        backdrop_url: "https://image.tmdb.org/t/p/w1280/4pP8BWFD8wRFaejrqfO0bpQZgaX.jpg",
         overview: "An anthology series exploring a twisted, high-tech multiverse where humanity's greatest innovations and darkest instincts collide.",
         rich_metadata: {
             title: "Black Mirror",
@@ -775,8 +775,8 @@ const FALLBACK_MOVIES = [
     {
         item_id: 28,
         title: "Better Call Saul",
-        poster_url: "https://placehold.co/400x600/111/333?text=Better+Call+Saul",
-        backdrop_url: "https://placehold.co/800x450/111/333?text=Better+Call+Saul",
+        poster_url: "https://image.tmdb.org/t/p/w500/fC2HDm5t0kR9dtbuXZCXTeegEGq.jpg",
+        backdrop_url: "https://image.tmdb.org/t/p/w1280/vWTmiSMuqIJAJoVEJM17yNFNOcn.jpg",
         overview: "The trials and tribulations of criminal lawyer Jimmy McGill in the years leading up to his fateful run-in with Walter White and Jesse Pinkman.",
         rich_metadata: {
             title: "Better Call Saul",
@@ -808,8 +808,8 @@ const FALLBACK_MOVIES = [
     {
         item_id: 29,
         title: "The Last of Us",
-        poster_url: "https://placehold.co/400x600/111/333?text=The+Last+of+Us",
-        backdrop_url: "https://placehold.co/800x450/111/333?text=The+Last+of+Us",
+        poster_url: "https://image.tmdb.org/t/p/w500/uKvVjHNqB5VmOrdxqAt2F7J78ED.jpg",
+        backdrop_url: "https://image.tmdb.org/t/p/w1280/lFiCNvBXUwlNfGjRkG05V3l3EQX.jpg",
         overview: "Twenty years after modern civilization has been destroyed, Joel, a hardened survivor, is hired to smuggle Ellie, a 14-year-old girl, out of an oppressive quarantine zone.",
         rich_metadata: {
             title: "The Last of Us",
@@ -841,8 +841,8 @@ const FALLBACK_MOVIES = [
     {
         item_id: 30,
         title: "The Mandalorian",
-        poster_url: "https://placehold.co/400x600/111/333?text=The+Mandalorian",
-        backdrop_url: "https://placehold.co/800x450/111/333?text=The+Mandalorian",
+        poster_url: "https://image.tmdb.org/t/p/w500/sWgBv7LV2PRoQgkxwlibdGXKz1S.jpg",
+        backdrop_url: "https://image.tmdb.org/t/p/w1280/9rT3l5n0bC3hd0CfzB9MxbIlHPB.jpg",
         overview: "The travels of a lone bounty hunter in the outer reaches of the galaxy, far from the authority of the New Republic.",
         rich_metadata: {
             title: "The Mandalorian",
@@ -874,8 +874,8 @@ const FALLBACK_MOVIES = [
     {
         item_id: 31,
         title: "Rick and Morty",
-        poster_url: "https://placehold.co/400x600/111/333?text=Rick+and+Morty",
-        backdrop_url: "https://placehold.co/800x450/111/333?text=Rick+and+Morty",
+        poster_url: "https://image.tmdb.org/t/p/w500/gdIrmf2DdY5mgN6ycVP0XlzKzbE.jpg",
+        backdrop_url: "https://image.tmdb.org/t/p/w1280/9oclGnOBgQ68WBQlJDy2jIJBwGF.jpg",
         overview: "An animated series that follows the exploits of a super scientist and his inherently timid grandson.",
         rich_metadata: {
             title: "Rick and Morty",
@@ -907,8 +907,8 @@ const FALLBACK_MOVIES = [
     {
         item_id: 32,
         title: "The Boys",
-        poster_url: "https://placehold.co/400x600/111/333?text=The+Boys",
-        backdrop_url: "https://placehold.co/800x450/111/333?text=The+Boys",
+        poster_url: "https://image.tmdb.org/t/p/w500/stTEycfG9928HYGEiL6SFhi3xc0.jpg",
+        backdrop_url: "https://image.tmdb.org/t/p/w1280/mY7SeH4HFFxW1hiI6cWuwCRKptN.jpg",
         overview: "A fun and irreverent take on what happens when superheroes—who are as popular as celebrities—abuse their superpowers.",
         rich_metadata: {
             title: "The Boys",
@@ -940,8 +940,8 @@ const FALLBACK_MOVIES = [
     {
         item_id: 33,
         title: "The Sopranos",
-        poster_url: "https://placehold.co/400x600/111/333?text=The+Sopranos",
-        backdrop_url: "https://placehold.co/800x450/111/333?text=The+Sopranos",
+        poster_url: "https://image.tmdb.org/t/p/w500/rTc7ZXZRouPNNje52SApEEpgzRR.jpg",
+        backdrop_url: "https://image.tmdb.org/t/p/w1280/3O6xEHREW8PmhHnBl7HA4XZJGE7.jpg",
         overview: "New Jersey mob boss Tony Soprano deals with personal and professional issues in his home and business life that affect his mental state.",
         rich_metadata: {
             title: "The Sopranos",
@@ -973,8 +973,8 @@ const FALLBACK_MOVIES = [
     {
         item_id: 34,
         title: "The Wire",
-        poster_url: "https://placehold.co/400x600/111/333?text=The+Wire",
-        backdrop_url: "https://placehold.co/800x450/111/333?text=The+Wire",
+        poster_url: "https://image.tmdb.org/t/p/w500/4vZ3FeGmkVYos4yqTDU2MQw1hNQ.jpg",
+        backdrop_url: "https://image.tmdb.org/t/p/w1280/tRV2ChMuJQZ0hOXX4GqwK0MRJRP.jpg",
         overview: "This series looks at the Baltimore drug scene through the eyes of both law enforcement and drug dealers.",
         rich_metadata: {
             title: "The Wire",
@@ -3743,11 +3743,30 @@ function renderModalData(m, id) {
     document.getElementById('modal-studios').textContent = m.studio || m.studios || 'Unknown';
     document.getElementById('modal-countries').textContent = m.countries || 'Unknown';
     document.getElementById('modal-languages').textContent = m.languages || 'English';
-    document.getElementById('modal-budget').textContent = m.budget || 'Unknown';
-    document.getElementById('modal-revenue').textContent = m.revenue || 'Unknown';
-    document.getElementById('modal-boxoffice').textContent = m.box_office || 'Unknown';
-    document.getElementById('modal-franchise').textContent = m.franchise || 'None';
-    
+
+    // Content-type adaptive metadata: show movie fields for movies, series fields for TV/anime/docs
+    const isTVContent = ['series', 'anime', 'documentary'].includes((m.content_type || '').toLowerCase());
+    document.querySelectorAll('.modal-movie-only').forEach(el => el.style.display = isTVContent ? 'none' : '');
+    document.querySelectorAll('.modal-series-only').forEach(el => el.style.display = isTVContent ? '' : 'none');
+
+    if (isTVContent) {
+        // Series-specific fields
+        const networkEl = document.getElementById('modal-network');
+        const seasonsEl = document.getElementById('modal-seasons');
+        const episodesEl = document.getElementById('modal-episodes');
+        const statusEl = document.getElementById('modal-series-status');
+        if (networkEl) networkEl.textContent = m.network || 'Unknown';
+        if (seasonsEl) seasonsEl.textContent = m.seasons ? `${m.seasons} Season${m.seasons !== 1 ? 's' : ''}` : 'Unknown';
+        if (episodesEl) episodesEl.textContent = m.episodes ? `${m.episodes} Episodes` : 'Unknown';
+        if (statusEl) statusEl.textContent = m.series_status || 'Unknown';
+    } else {
+        // Movie-specific fields
+        document.getElementById('modal-budget').textContent = m.budget || 'Undisclosed';
+        document.getElementById('modal-revenue').textContent = m.revenue || 'Undisclosed';
+        document.getElementById('modal-boxoffice').textContent = m.box_office || 'Undisclosed';
+        document.getElementById('modal-franchise').textContent = m.franchise || 'Standalone';
+    }
+
     document.getElementById('modal-awards').textContent = m.awards || 'None';
     document.getElementById('modal-availability').textContent = m.availability || 'Available on Streamora';
 

@@ -171,6 +171,29 @@ class IntelligentExtractor(LLMProvider):
             action_level = str(row.get('action_level', 'Medium'))
             violence_level = str(row.get('violence_level', 'Low'))
             language_severity = str(row.get('language_severity', 'Mild'))
+            
+            # Content type & series-specific metadata
+            content_type = str(row.get('content_type', 'movie')).lower()
+            network = str(row.get('network', '')) if row.get('network') else None
+            seasons = row.get('seasons', None)
+            if pd.notna(seasons) if seasons is not None else False:
+                try:
+                    seasons = int(seasons)
+                except (ValueError, TypeError):
+                    seasons = None
+            else:
+                seasons = None
+            episodes = row.get('episodes', None)
+            if pd.notna(episodes) if episodes is not None else False:
+                try:
+                    episodes = int(episodes)
+                except (ValueError, TypeError):
+                    episodes = None
+            else:
+                episodes = None
+            first_air_date = str(row.get('first_air_date', '')) if row.get('first_air_date') else None
+            last_air_date = str(row.get('last_air_date', '')) if row.get('last_air_date') else None
+            series_status = str(row.get('status', '')) if row.get('status') else None
         else:
             raise ValueError(f"Strict Verification Error: No verified metadata found for item_id {item_id}. Synthetic generation is strictly prohibited.")
 
@@ -224,7 +247,17 @@ class IntelligentExtractor(LLMProvider):
             "revenue": revenue,
             "box_office": box_office,
             "franchise": franchise,
-            "trailer_url": trailer_url
+            "trailer_url": trailer_url,
+            # Content-type schema fields
+            "content_type": content_type,
+            "network": network,
+            "seasons": seasons,
+            "episodes": episodes,
+            "first_air_date": first_air_date,
+            "last_air_date": last_air_date,
+            "series_status": series_status,
+            # Tags for filtering
+            "tags": genres_list,
         }
 
     def generate_explanation(self, user_context: str, movie_title: str, graph_path: list[str], item_id: int = None) -> str:
