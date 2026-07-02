@@ -1302,6 +1302,26 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // Bind Topbar Search input
+    const topbarSearchInput = document.getElementById('topbar-search-input');
+    if (topbarSearchInput) {
+        topbarSearchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const query = topbarSearchInput.value.trim();
+                if (query) {
+                    navigateTo('search');
+                    setTimeout(() => {
+                        const searchPageInput = document.getElementById('search-page-input');
+                        if (searchPageInput) {
+                            searchPageInput.value = query;
+                        }
+                        executeSearchPageQuery(query);
+                    }, 50);
+                }
+            }
+        });
+    }
+
     // Swipe-down gestures on mobile details modal
     let touchStartY = 0;
     let touchEndY = 0;
@@ -3164,6 +3184,9 @@ window.executeSearchPageQuery = async function(query) {
     
     const input = document.getElementById('search-page-input');
     if (input) input.value = query;
+    
+    const topbarInput = document.getElementById('topbar-search-input');
+    if (topbarInput) topbarInput.value = query;
     
     const container = document.getElementById('search-page-content');
     if (!container) return;

@@ -100,6 +100,12 @@
             <span class="sidebar__logo-icon">✦</span>
             <span class="topbar__logo-text">STREAMORA</span>
         </div>
+        <div class="topbar__search-wrapper" style="position: relative; flex: 1; max-width: 480px; margin: 0 40px; display: flex; align-items: center;">
+            <span style="position: absolute; left: 16px; color: var(--text-muted); font-size: 0.95rem; pointer-events: none;">🔍</span>
+            <input type="text" id="topbar-search-input" placeholder="Search movies, TV series, actors, directors, genres..." 
+                   style="width: 100%; padding: 10px 16px 10px 42px; border-radius: var(--r-pill); background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); color: white; font-size: 0.9rem; outline: none; transition: all var(--t-fast);"
+                   autocomplete="off">
+        </div>
         <div class="topbar__actions">
             <button class="topbar__action-btn" id="topbar-search-trigger" aria-label="Search" onclick="navigateTo('search');">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
