@@ -1473,13 +1473,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             const res = await authFetch('/me');
             if (res.ok) {
+                const userData = await res.json();
+                userProfile = userData;
+                userId = userData.id;
+                isGuest = false;
                 await syncWatchlistFromBackend();
                 hideAuthScreen();
                 initApp();
             } else {
+                // Token is invalid
+                localStorage.removeItem('streamora_jwt');
+                localStorage.removeItem('streamora_profile');
+                token = null;
                 showAuthScreen();
             }
         } catch(e) {
+            localStorage.removeItem('streamora_jwt');
+            localStorage.removeItem('streamora_profile');
+            token = null;
             showAuthScreen();
         }
     } else {
@@ -5242,3 +5253,18 @@ function closePortalCard() {
         if (portal.parentNode) portal.parentNode.removeChild(portal);
     }, 300);
 }
+
+
+hoverPortal.addEventListener('click', (e) => {
+    // Let buttons handle themselves
+    if (e.target.closest('.card-expand__btn')) return;
+    
+    // Otherwise open modal for the source card
+    if (activeSourceCard) {
+        const id = activeSourceCard.dataset.id || activeSourceCard.getAttribute('onclick')?.match(/\d+/)?.[0];
+        if (id) {
+            openModal(id);
+            closePortalCard();
+        }
+    }
+});

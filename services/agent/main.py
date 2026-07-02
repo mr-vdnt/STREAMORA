@@ -77,6 +77,8 @@ def register_user(request: Request, req: RegisterRequest):
 
 @app.get("/me")
 def get_me(current_user: dict = Depends(get_optional_user)):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
     user_data = dict(current_user)
     user_data.pop("hashed_password", None)
     return user_data
