@@ -1271,20 +1271,196 @@ window.lastAIIsHome = false;
 let globalMovies = [];
 let myList = JSON.parse(localStorage.getItem('streamora_mylist') || '[]');
 let currentPage = 'home';
-let token = 'guest-token';
-let userId = 32;
+let token = localStorage.getItem('streamora_jwt') || null;
+let userProfile = JSON.parse(localStorage.getItem('streamora_profile')) || null;
+let userId = userProfile ? userProfile.id : null;
+let isGuest = false;
+let isAuthModeLogin = true;
 
 async function authFetch(url, options = {}) {
     options.headers = options.headers || {};
-    options.headers['Authorization'] = `Bearer ${token}`;
+    if (token) {
+        options.headers['Authorization'] = `Bearer ${token}`;
+    }
     const res = await fetch(url, options);
     return res;
 }
 
 // ══════════════════════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════════════════════
+//  AUTH LOGIC
+// ══════════════════════════════════════════════════════════════════════
+window.toggleAuthMode = function() {
+    isAuthModeLogin = !isAuthModeLogin;
+    const title = document.getElementById('auth-subtitle');
+    const submitBtn = document.getElementById('auth-submit-btn');
+    const toggleText = document.getElementById('auth-toggle-text');
+    const toggleLink = document.getElementById('auth-toggle-link');
+    const signupFields = document.querySelectorAll('.signup-only');
+    const errorEl = document.getElementById('auth-error');
+    
+    errorEl.style.display = 'none';
+    
+    if (isAuthModeLogin) {
+        title.textContent = 'Sign in to your account';
+        submitBtn.textContent = 'Sign In';
+        toggleText.textContent = 'Don\'t have an account?';
+        toggleLink.textContent = 'Sign Up';
+        signupFields.forEach(f => f.style.display = 'none');
+    } else {
+        title.textContent = 'Create your account';
+        submitBtn.textContent = 'Sign Up';
+        toggleText.textContent = 'Already have an account?';
+        toggleLink.textContent = 'Sign In';
+        signupFields.forEach(f => f.style.display = 'block');
+    }
+}
+
+window.submitAuth = async function() {
+    const errorEl = document.getElementById('auth-error');
+    errorEl.style.display = 'none';
+    
+    const username = document.getElementById('auth-username').value;
+    const password = document.getElementById('auth-password').value;
+    const btn = document.getElementById('auth-submit-btn');
+    const originalText = btn.textContent;
+    btn.textContent = 'Processing...';
+    btn.disabled = true;
+    
+    try {
+        if (!isAuthModeLogin) {
+            const email = document.getElementById('auth-email').value;
+            const displayName = document.getElementById('auth-display-name').value || username;
+            
+            const regRes = await fetch('http://127.0.0.1:8004/register', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username, email, password, display_name: displayName})
+            });
+            
+            if (!regRes.ok) {
+                const data = await regRes.json();
+                throw new Error(data.detail || 'Registration failed');
+            }
+        }
+        
+        // Login (always done, either explicitly or after signup)
+        const formData = new FormData();
+        formData.append('username', username);
+        formData.append('password', password);
+        
+        const res = await fetch('http://127.0.0.1:8004/token', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.detail || 'Login failed');
+        }
+        
+        const data = await res.json();
+        token = data.access_token;
+        userProfile = {
+            id: data.user_id,
+            username: username,
+            role: data.role,
+            display_name: data.display_name,
+            email: data.email
+        };
+        userId = data.user_id;
+        isGuest = false;
+        
+        localStorage.setItem('streamora_jwt', token);
+        localStorage.setItem('streamora_profile', JSON.stringify(userProfile));
+        
+        // Sync watchlist from backend
+        await syncWatchlistFromBackend();
+        
+        hideAuthScreen();
+        initApp();
+        
+    } catch (e) {
+        errorEl.textContent = e.message;
+        errorEl.style.display = 'block';
+    } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
+    }
+}
+
+window.continueAsGuest = function() {
+    isGuest = true;
+    token = null;
+    userId = null;
+    userProfile = null;
+    hideAuthScreen();
+    initApp();
+}
+
+function hideAuthScreen() {
+    const screen = document.getElementById('auth-screen');
+    if (screen) {
+        screen.style.opacity = '0';
+        setTimeout(() => {
+            screen.style.display = 'none';
+        }, 500);
+    }
+}
+
+function showAuthScreen() {
+    const screen = document.getElementById('auth-screen');
+    if (screen) {
+        screen.style.display = 'flex';
+        // Trigger reflow
+        void screen.offsetWidth;
+        screen.style.opacity = '1';
+    }
+}
+
+async function syncWatchlistFromBackend() {
+    if (isGuest || !token) return;
+    try {
+        const res = await authFetch('http://127.0.0.1:8004/me/watchlist');
+        if (res.ok) {
+            const backendList = await res.json();
+            // Merge with local list if local items exist that aren't in backend
+            const merged = [...backendList];
+            myList.forEach(localItem => {
+                if (!merged.find(i => i.item_id === localItem.item_id)) {
+                    merged.push(localItem);
+                }
+            });
+            myList = merged;
+            localStorage.setItem('streamora_mylist', JSON.stringify(myList));
+            
+            // Sync merged list back to backend
+            await authFetch('http://127.0.0.1:8004/me/watchlist', {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(myList)
+            });
+        }
+    } catch (e) {
+        console.error('Watchlist sync error', e);
+    }
+}
+
+async function syncWatchlistToBackend() {
+    if (isGuest || !token) return;
+    try {
+        await authFetch('http://127.0.0.1:8004/me/watchlist', {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(myList)
+        });
+    } catch(e) {}
+}
+
 //  INIT
 // ══════════════════════════════════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     const savedTheme = localStorage.getItem('streamora_theme') || 'neon';
     applyTheme(savedTheme);
     
@@ -1292,6 +1468,26 @@ document.addEventListener('DOMContentLoaded', () => {
     window.currentFormat = savedFormat;
     window.updateFormatTabs();
     
+    // Auth Check
+    if (token) {
+        try {
+            const res = await authFetch('http://127.0.0.1:8004/me');
+            if (res.ok) {
+                await syncWatchlistFromBackend();
+                hideAuthScreen();
+                initApp();
+            } else {
+                showAuthScreen();
+            }
+        } catch(e) {
+            showAuthScreen();
+        }
+    } else {
+        showAuthScreen();
+    }
+});
+
+function initApp() {
     // Bind all logo click events for robust Home navigation
     document.querySelectorAll('.sidebar__logo, .topbar__logo, .drawer__logo, .site-footer__brand').forEach(logo => {
         logo.style.cursor = 'pointer';
@@ -4541,7 +4737,13 @@ window.submitFeedback = function() {
 
 window.performLogOut = function() {
     closeDrawerModalDirect();
-    alert('You have logged out of Streamora AI.');
+    token = null;
+    userId = null;
+    userProfile = null;
+    isGuest = false;
+    localStorage.removeItem('streamora_jwt');
+    localStorage.removeItem('streamora_profile');
+    showAuthScreen();
 };
 
 // ══════════════════════════════════════════════════════════════════════

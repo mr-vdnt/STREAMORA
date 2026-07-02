@@ -8,7 +8,7 @@ from jose import JWTError, jwt
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from .audit import log_event
-
+from .user_data import get_user_by_username, get_user_by_id
 # Load environment variables
 load_dotenv(os.path.join(os.path.dirname(__file__), '../../.env'))
 
@@ -28,24 +28,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login", auto_error=False)
 
-# In-Memory Mock Database for Render Free Tier Constraint
-# In a real enterprise system, this connects to PostgreSQL.
-# We hash the passwords here manually for demonstration of the secure store.
-# Passwords: admin -> "adminpass", user1 -> "user1pass"
-FAKE_DB = {
-    "admin": {
-        "user_id": 1,
-        "username": "admin",
-        "hashed_password": hash_password("adminpass"),
-        "role": "Administrator"
-    },
-    "user1": {
-        "user_id": 32,
-        "username": "user1",
-        "hashed_password": hash_password("user1pass"),
-        "role": "Standard"
-    }
-}
+# We have migrated to a SQLite-backed user store in user_data.py
 
 class TokenData(BaseModel):
     username: Optional[str] = None
@@ -53,7 +36,7 @@ class TokenData(BaseModel):
     user_id: Optional[int] = None
 
 def get_user(username: str):
-    return FAKE_DB.get(username)
+    return get_user_by_username(username)
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
@@ -65,8 +48,41 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-async def get_current_user():
-    return {"user_id": 32, "username": "guest", "role": "Standard"}
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    if not token:
+        raise credentials_exception
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    
+    user = get_user_by_username(username)
+    if user is None:
+        raise credentials_exception
+    return user
 
-async def require_admin():
-    return {"user_id": 1, "username": "admin", "role": "Administrator"}
+async def get_optional_user(token: str = Depends(oauth2_scheme)):
+    """Returns the user if token is valid, otherwise returns None (for guest browsing)."""
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            return None
+        return get_user_by_username(username)
+    except JWTError:
+        return None
+
+async def require_admin(current_user: dict = Depends(get_current_user)):
+    if current_user.get("role") != "Administrator":
+        raise HTTPException(status_code=403, detail="Administrator access required")
+    return current_user

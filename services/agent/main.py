@@ -23,7 +23,8 @@ mimetypes.add_type('text/css', '.css')
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from services.agent.core import agent
-from services.security.auth import get_current_user, create_access_token, verify_password, get_user, FAKE_DB, ACCESS_TOKEN_EXPIRE_MINUTES, timedelta
+from services.security.auth import get_current_user, create_access_token, verify_password, get_user, ACCESS_TOKEN_EXPIRE_MINUTES, timedelta, get_optional_user, hash_password
+from services.security.user_data import init_db, create_user, get_watchlist, save_watchlist, get_history, save_history, update_user_profile
 from services.security.audit import log_event
 
 load_dotenv(os.path.join(os.path.dirname(__file__), '../../.env'))
@@ -58,6 +59,46 @@ async def add_security_headers(request: Request, call_next):
     return response
 
 # --- AUTHENTICATION ---
+class RegisterRequest(BaseModel):
+    username: str
+    email: str
+    password: str
+    display_name: str
+
+@app.post("/register")
+@limiter.limit("5/minute")
+def register_user(request: Request, req: RegisterRequest):
+    if len(req.password) < 6:
+        return JSONResponse(status_code=400, content={"detail": "Password must be at least 6 characters"})
+    user_id = create_user(req.username, req.email, hash_password(req.password), req.display_name)
+    if not user_id:
+        return JSONResponse(status_code=400, content={"detail": "Username or email already exists"})
+    return {"status": "success", "user_id": user_id}
+
+@app.get("/me")
+def get_me(current_user: dict = Depends(get_optional_user)):
+    user_data = dict(current_user)
+    user_data.pop("hashed_password", None)
+    return user_data
+
+@app.get("/me/watchlist")
+def get_my_watchlist(current_user: dict = Depends(get_optional_user)):
+    return get_watchlist(current_user["id"])
+
+@app.put("/me/watchlist")
+def update_my_watchlist(items: list, current_user: dict = Depends(get_optional_user)):
+    save_watchlist(current_user["id"], items)
+    return {"status": "success"}
+
+@app.get("/me/history")
+def get_my_history(current_user: dict = Depends(get_optional_user)):
+    return get_history(current_user["id"])
+
+@app.put("/me/history")
+def update_my_history(items: list, current_user: dict = Depends(get_optional_user)):
+    save_history(current_user["id"], items)
+    return {"status": "success"}
+
 @app.post("/token")
 @limiter.limit("10/minute")
 async def login_for_access_token(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
@@ -68,11 +109,18 @@ async def login_for_access_token(request: Request, form_data: OAuth2PasswordRequ
     
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user["username"], "role": user["role"], "user_id": user["user_id"]},
+        data={"sub": user["username"], "role": user["role"], "user_id": user["id"]},
         expires_delta=access_token_expires
     )
     log_event(who=user["username"], what="LOGIN_SUCCESS", where="/token", details=f"Role: {user['role']}")
-    return {"access_token": access_token, "token_type": "bearer", "user_id": user["user_id"], "role": user["role"]}
+    return {
+        "access_token": access_token, 
+        "token_type": "bearer", 
+        "user_id": user["id"], 
+        "role": user["role"],
+        "display_name": user["display_name"],
+        "email": user["email"]
+    }
 
 # --- SECURED ENDPOINTS ---
 class ChatRequest(BaseModel):
@@ -85,8 +133,8 @@ class ChatResponse(BaseModel):
 
 @app.post("/chat", response_model=ChatResponse)
 @limiter.limit("20/minute")
-def chat_endpoint(request: Request, req: ChatRequest, current_user: dict = Depends(get_current_user)):
-    user_id = current_user["user_id"]
+def chat_endpoint(request: Request, req: ChatRequest, current_user: dict = Depends(get_optional_user)):
+    user_id = current_user["id"] if current_user else 32
     result = agent.process_query(user_id, req.query, req.exclude_ids)
     return ChatResponse(
         intent=result["intent"],
@@ -96,7 +144,7 @@ def chat_endpoint(request: Request, req: ChatRequest, current_user: dict = Depen
 import pandas as pd
 @app.get("/autocomplete")
 @limiter.limit("60/minute")
-def autocomplete(request: Request, q: str, current_user: dict = Depends(get_current_user)):
+def autocomplete(request: Request, q: str, current_user: dict = Depends(get_optional_user)):
     """Real-time autocomplete endpoint matching movie titles."""
     if len(q) < 2:
         return []
@@ -123,9 +171,9 @@ def autocomplete(request: Request, q: str, current_user: dict = Depends(get_curr
 import requests
 @app.get("/movie/{item_id}")
 @limiter.limit("30/minute")
-def get_movie_details(request: Request, item_id: int, current_user: dict = Depends(get_current_user)):
+def get_movie_details(request: Request, item_id: int, current_user: dict = Depends(get_optional_user)):
     """Aggregates all 19 fields of rich metadata and similar movies for the Cinematic Modal."""
-    user_id = current_user["user_id"]
+    user_id = current_user["id"] if current_user else 32
     try:
         rag_resp = requests.post("http://127.0.0.1:8003/explain", json={"user_id": user_id, "item_id": item_id}, timeout=10)
         metadata = {}
@@ -161,7 +209,7 @@ class SearchRequest(BaseModel):
 
 @app.post("/search")
 @limiter.limit("30/minute")
-def search_endpoint(request: Request, req: SearchRequest, current_user: dict = Depends(get_current_user)):
+def search_endpoint(request: Request, req: SearchRequest, current_user: dict = Depends(get_optional_user)):
     """Semantic query search utilizing SentenceTransformer + FAISS."""
     try:
         resp = requests.post("http://127.0.0.1:8001/search", json={"query": req.query, "top_k": req.top_k}, timeout=10)
@@ -206,7 +254,7 @@ class EventRequest(BaseModel):
 @limiter.limit("60/minute")
 def proxy_events(request: Request, req: EventRequest, current_user: dict = Depends(get_current_user)):
     """Proxy events directly to the Event Processor service on Port 8002."""
-    user_id = current_user["user_id"]
+    user_id = current_user["id"] if current_user else 32
     payload = {"user_id": user_id, "event_type": req.event_type, "item_id": req.item_id}
     try:
         resp = requests.post("http://127.0.0.1:8002/events/ingest", json=payload, timeout=5)
@@ -269,6 +317,10 @@ async def heartbeat_loop():
 
 @app.on_event("startup")
 async def startup_event():
+    init_db()
+    admin = get_user("admin")
+    if not admin:
+        create_user("admin", "admin@streamora.ai", hash_password("adminpass"), "Administrator")
     asyncio.create_task(heartbeat_loop())
 
 @app.get("/ping")
