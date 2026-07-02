@@ -81,6 +81,17 @@ def get_me(current_user: dict = Depends(get_optional_user)):
     user_data.pop("hashed_password", None)
     return user_data
 
+class UpdateProfileRequest(BaseModel):
+    display_name: str
+    email: str
+
+@app.put("/me")
+def update_me(req: UpdateProfileRequest, current_user: dict = Depends(get_optional_user)):
+    success = update_user_profile(current_user["id"], req.display_name, req.email)
+    if not success:
+        return JSONResponse(status_code=400, content={"detail": "Failed to update profile or email already exists"})
+    return {"status": "success"}
+
 @app.get("/me/watchlist")
 def get_my_watchlist(current_user: dict = Depends(get_optional_user)):
     return get_watchlist(current_user["id"])

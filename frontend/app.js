@@ -2009,8 +2009,9 @@ function renderAccountTab() {
     heroSection.innerHTML = '';
     heroSection.style.display = 'none';
     
-    const userEmail = localStorage.getItem('streamora_user_email') || 'guest@streamora.ai';
-    const userName = localStorage.getItem('streamora_user_name') || 'Guest Explorer';
+    const userEmail = userProfile ? userProfile.email : 'guest@streamora.ai';
+    const userName = userProfile ? userProfile.display_name : 'Guest Explorer';
+    const userRole = userProfile ? userProfile.role : 'Guest';
     const userAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=06B6D4&color=000&size=128&bold=true`;
     
     contentRows.innerHTML = `
@@ -2024,7 +2025,7 @@ function renderAccountTab() {
                 <div style="flex-grow: 1;">
                     <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 4px; color: white;">${userName}</h2>
                     <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 8px;">${userEmail}</p>
-                    <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--streamora-cyan); background: rgba(6, 182, 212, 0.15); border: 1px solid rgba(6, 182, 212, 0.3); padding: 4px 10px; border-radius: 4px;">Premium Member</span>
+                    <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--streamora-cyan); background: rgba(6, 182, 212, 0.15); border: 1px solid rgba(6, 182, 212, 0.3); padding: 4px 10px; border-radius: 4px;">${userRole}</span>
                 </div>
                 <div style="display:flex; flex-direction:column; gap:8px;">
                     <button onclick="editProfilePrompt()" style="background: rgba(255,255,255,0.08); border: 1px solid var(--glass-border); padding: 8px 16px; border-radius: var(--r-md); color: white; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: all var(--t-fast);" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">Edit Profile</button>
@@ -2092,17 +2093,46 @@ function renderAccountTab() {
     `;
 }
 
-window.editProfilePrompt = function() {
-    const currentName = localStorage.getItem('streamora_user_name') || 'Guest Explorer';
-    const currentEmail = localStorage.getItem('streamora_user_email') || 'guest@streamora.ai';
+window.editProfilePrompt = async function() {
+    if (isGuest || !token) {
+        alert("You must be signed in to edit your profile.");
+        return;
+    }
+    const currentName = userProfile ? userProfile.display_name : '';
+    const currentEmail = userProfile ? userProfile.email : '';
     const newName = prompt("Enter new profile name:", currentName);
     if (newName === null) return;
     const newEmail = prompt("Enter new email address:", currentEmail);
     if (newEmail === null) return;
     
-    localStorage.setItem('streamora_user_name', newName.trim() || 'Guest Explorer');
-    localStorage.setItem('streamora_user_email', newEmail.trim() || 'guest@streamora.ai');
-    renderAccountTab();
+    const updatedName = newName.trim();
+    const updatedEmail = newEmail.trim();
+    
+    if (!updatedName || !updatedEmail) {
+        alert("Name and email cannot be empty.");
+        return;
+    }
+    
+    try {
+        const res = await authFetch('/me', {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({display_name: updatedName, email: updatedEmail})
+        });
+        
+        if (res.ok) {
+            userProfile.display_name = updatedName;
+            userProfile.email = updatedEmail;
+            localStorage.setItem('streamora_profile', JSON.stringify(userProfile));
+            renderAccountTab();
+            alert("Profile updated successfully!");
+        } else {
+            const data = await res.json();
+            alert("Failed to update profile: " + (data.detail || "Unknown error"));
+        }
+    } catch(e) {
+        alert("Error updating profile: " + e.message);
+    }
 };
 
 function renderSettingsTab() {
