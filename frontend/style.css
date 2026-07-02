@@ -521,12 +521,14 @@ a:focus-visible,button:focus-visible,input:focus-visible{
   border-radius:var(--r-md);overflow:hidden;
   position:relative;cursor:pointer;
   transform-style:preserve-3d;
-  transition:transform var(--t-base) var(--ease-out),box-shadow var(--t-base);
+  transition: transform 250ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 250ms ease;
   will-change:transform;
   box-shadow:0 8px 24px rgba(0,0,0,0.4);
 }
 .card-3d:hover{
   box-shadow:0 20px 50px rgba(0,0,0,0.6),0 0 40px rgba(139,92,246,0.08);
+
+  transform: translateY(-4px);
 }
 .card-3d img{width:100%;height:100%;object-fit:cover}
 
@@ -550,7 +552,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{
 }
 
 /* ── Hover Expansion Panel ───────────────────────────────────────── */
-.card-expand{
+.card-expand{display:none;
   position:absolute;
   top:50%;left:50%;
   width:340px;
@@ -565,28 +567,11 @@ a:focus-visible,button:focus-visible,input:focus-visible{
   overflow:hidden;
   transition:all var(--t-base) var(--ease-out);
 }
-.card-wrap:hover .card-expand{
-  transition-delay:350ms;
-  opacity:1;visibility:visible;pointer-events:auto;
-  transform:translate(-50%,-50%) scale(1);
-}
-.card-wrap:first-child .card-expand {
-  left: 0;
-  transform: translate(0, -50%) scale(0.92);
-  transform-origin: left center;
-}
-.card-wrap:first-child:hover .card-expand {
-  transform: translate(0, -50%) scale(1);
-}
-.card-wrap:last-child .card-expand {
-  left: auto;
-  right: 0;
-  transform: translate(0, -50%) scale(0.92);
-  transform-origin: right center;
-}
-.card-wrap:last-child:hover .card-expand {
-  transform: translate(0, -50%) scale(1);
-}
+
+
+
+
+
 .card-expand__img{width:100%;height:150px;object-fit:cover}
 .card-expand__body{padding:18px}
 .card-expand__title{font-size:1.05rem;font-weight:700;color:var(--text-primary);margin-bottom:6px}
@@ -2436,9 +2421,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{
   transform: translate(0, -50%) scale(0.92) !important;
   transform-origin: left center !important;
 }
-.card-wrap:hover .card-expand.expand-left-edge {
-  transform: translate(0, -50%) scale(1) !important;
-}
+
 
 .card-expand.expand-right-edge {
   left: auto !important;
@@ -2446,9 +2429,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{
   transform: translate(0, -50%) scale(0.92) !important;
   transform-origin: right center !important;
 }
-.card-wrap:hover .card-expand.expand-right-edge {
-  transform: translate(0, -50%) scale(1) !important;
-}
+
 
 .card-expand.expand-center {
   left: 50% !important;
@@ -2456,9 +2437,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{
   transform: translate(-50%, -50%) scale(0.92) !important;
   transform-origin: center center !important;
 }
-.card-wrap:hover .card-expand.expand-center {
-  transform: translate(-50%, -50%) scale(1) !important;
-}
+
 
 /* 3. Storage dashboard and downloading simulator styles */
 .storage-dashboard {
@@ -3240,3 +3219,56 @@ a:focus-visible,button:focus-visible,input:focus-visible{
 .auth-guest-btn:hover {
     color: white;
 }
+
+
+/* ── HOVER PORTAL ARCHITECTURE ─────────────────────────────────────── */
+#hover-portal {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 90; /* Below sidebar (200), header (100) */
+}
+.portal-card {
+    position: absolute;
+    pointer-events: auto;
+    width: 340px;
+    background: rgba(13,13,13,0.95);
+    backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--r-lg);
+    box-shadow: 0 24px 64px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.04);
+    overflow: hidden;
+    transform: scale(0.92);
+    opacity: 0;
+    transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1), opacity 300ms ease;
+    will-change: transform, opacity;
+    display: flex;
+    flex-direction: column;
+}
+.portal-card.active {
+    transform: scale(1.15);
+    opacity: 1;
+}
+.portal-card.exit {
+    transform: scale(0.92);
+    opacity: 0;
+}
+/* Re-use interior styles for portal */
+.portal-card .card-expand__img { width:100%; height:150px; object-fit:cover; }
+.portal-card .card-expand__body { padding:18px; }
+.portal-card .card-expand__title { font-size:1.05rem; font-weight:700; color:white; margin-bottom:6px; }
+.portal-card .card-expand__meta { display:flex; align-items:center; gap:8px; font-size:0.85rem; color:var(--text-muted); margin-bottom:12px; }
+.portal-card .card-expand__pct { color:var(--match-green); font-weight:700; }
+.portal-card .card-expand__genres { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; font-size:0.78rem; color:var(--text-muted); }
+.portal-card .card-expand__genres span:not(:last-child)::after { content:"•"; margin-left:6px; }
+.portal-card .card-expand__ai { background:rgba(139,92,246,0.08); border:1px solid rgba(139,92,246,0.18); border-radius:var(--r-md); padding:12px; margin-bottom:16px; }
+.portal-card .card-expand__ai-label { font-size:0.7rem; text-transform:uppercase; letter-spacing:1px; color:var(--streamora-purple); font-weight:700; margin-bottom:8px; }
+.portal-card .card-expand__ai ul { list-style:none; padding:0; margin:0; }
+.portal-card .card-expand__ai li { font-size:0.8rem; color:var(--text-secondary); padding:2px 0; display:flex; align-items:center; gap:6px; }
+.portal-card .card-expand__btns { display:flex; gap:8px; }
+.portal-card .card-expand__btn { width:38px; height:38px; border-radius:50%; border:2px solid rgba(255,255,255,0.35); background:rgba(20,20,20,0.5); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; }
+.portal-card .card-expand__btn:hover { border-color:#fff; background:#fff; color:#000; }
+.portal-card .card-expand__btn--play { background:#fff; color:#000; border-color:#fff; }

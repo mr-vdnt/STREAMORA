@@ -5048,35 +5048,6 @@ window.updateCarouselArrows = function() {
 };
 
 // Edge-Awareness Hover Scaling: Determine transform-origin dynamically on hover / focus
-const updateTransformOrigin = (e) => {
-    const card = e.target.closest('.sim-card');
-    if (!card) return;
-    
-    const container = document.getElementById('modal-similar');
-    if (!container) return;
-    
-    const containerRect = container.getBoundingClientRect();
-    const cardRect = card.getBoundingClientRect();
-    
-    const leftDist = cardRect.left - containerRect.left;
-    const rightDist = containerRect.right - cardRect.right;
-    
-    // Threshold to switch transform-origins (in pixels)
-    const edgeThreshold = 40;
-    
-    if (leftDist < edgeThreshold) {
-        card.style.transformOrigin = 'left center';
-    } else if (rightDist < edgeThreshold) {
-        card.style.transformOrigin = 'right center';
-    } else {
-        card.style.transformOrigin = 'center center';
-    }
-};
-
-// Capture-phase listeners to support dynamic recommendations loading
-document.addEventListener('mouseenter', updateTransformOrigin, true);
-document.addEventListener('focusin', updateTransformOrigin, true);
-
 // Accessibility Keyboard Navigation: Arrow Keys to traverse, Enter/Space to select
 document.addEventListener('keydown', (e) => {
     const card = e.target.closest('.sim-card');
@@ -5145,3 +5116,129 @@ window.closeTrailerLightbox = function() {
         }, 300);
     }
 };
+
+
+// ══════════════════════════════════════════════════════════════════════
+//  HOVER PORTAL ARCHITECTURE (Netflix/Apple TV Style)
+// ══════════════════════════════════════════════════════════════════════
+let hoverPortal = document.getElementById('hover-portal');
+if (!hoverPortal) {
+    hoverPortal = document.createElement('div');
+    hoverPortal.id = 'hover-portal';
+    document.body.appendChild(hoverPortal);
+}
+
+let hoverTimer = null;
+let activePortalCard = null;
+let activeSourceCard = null;
+
+// Clean up portal on scroll to prevent detached floating cards
+window.addEventListener('scroll', () => {
+    if (activePortalCard) {
+        closePortalCard();
+    }
+}, {passive: true});
+document.addEventListener('scroll', (e) => {
+    if (e.target.classList && e.target.classList.contains('row-scroll')) {
+        if (activePortalCard) closePortalCard();
+    }
+}, true);
+
+document.addEventListener('mouseenter', (e) => {
+    const cardWrap = e.target.closest('.card-wrap');
+    if (!cardWrap) return;
+    
+    // Clear any existing timer
+    if (hoverTimer) clearTimeout(hoverTimer);
+    
+    hoverTimer = setTimeout(() => {
+        openPortalCard(cardWrap);
+    }, 100); // 100ms delay as requested
+}, true);
+
+document.addEventListener('mouseleave', (e) => {
+    const cardWrap = e.target.closest('.card-wrap');
+    const portalCard = e.target.closest('.portal-card');
+    
+    if (cardWrap) {
+        if (hoverTimer) clearTimeout(hoverTimer);
+        // If we leave the cardWrap but don't enter the portalCard (handled by timeout), we close
+        setTimeout(() => {
+            if (activePortalCard && !activePortalCard.matches(':hover')) {
+                closePortalCard();
+            }
+        }, 50);
+    }
+    
+    if (portalCard) {
+        closePortalCard();
+    }
+}, true);
+
+function openPortalCard(cardWrap) {
+    if (activePortalCard) closePortalCard();
+    activeSourceCard = cardWrap;
+    
+    const expandData = cardWrap.querySelector('.card-expand');
+    if (!expandData) return;
+    
+    const rect = cardWrap.getBoundingClientRect();
+    const scrollY = window.scrollY;
+    
+    const portal = document.createElement('div');
+    portal.className = 'portal-card';
+    portal.innerHTML = expandData.innerHTML;
+    
+    // Calculate Edge Awareness
+    const viewportWidth = window.innerWidth;
+    const sidebarWidth = 80; // approximate collapsed sidebar
+    
+    const cardCenter = rect.left + (rect.width / 2);
+    const portalWidth = 340;
+    
+    let leftPos = rect.left + (rect.width / 2) - (portalWidth / 2);
+    let transformOrigin = 'center center';
+    
+    // Check left bound
+    if (leftPos < sidebarWidth + 20) {
+        leftPos = rect.left;
+        transformOrigin = 'left center';
+    } 
+    // Check right bound
+    else if (leftPos + portalWidth > viewportWidth - 20) {
+        leftPos = rect.right - portalWidth;
+        transformOrigin = 'right center';
+    }
+    
+    portal.style.left = `${leftPos}px`;
+    // Vertically align middle of portal to middle of card
+    const portalHeightEst = 400; // rough estimate
+    portal.style.top = `${rect.top + scrollY + (rect.height / 2) - (portalHeightEst / 2)}px`;
+    portal.style.transformOrigin = transformOrigin;
+    
+    hoverPortal.appendChild(portal);
+    
+    // Adjust top precisely after rendering
+    const actualHeight = portal.offsetHeight;
+    portal.style.top = `${rect.top + scrollY + (rect.height / 2) - (actualHeight / 2)}px`;
+    
+    // Trigger animation next frame
+    requestAnimationFrame(() => {
+        portal.classList.add('active');
+    });
+    
+    activePortalCard = portal;
+}
+
+function closePortalCard() {
+    if (!activePortalCard) return;
+    const portal = activePortalCard;
+    activePortalCard = null;
+    activeSourceCard = null;
+    
+    portal.classList.remove('active');
+    portal.classList.add('exit');
+    setTimeout(() => {
+        if (portal.parentNode) portal.parentNode.removeChild(portal);
+    }, 300);
+}
