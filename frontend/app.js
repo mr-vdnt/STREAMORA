@@ -1333,7 +1333,7 @@ window.submitAuth = async function() {
             const email = document.getElementById('auth-email').value;
             const displayName = document.getElementById('auth-display-name').value || username;
             
-            const regRes = await fetch('http://127.0.0.1:8004/register', {
+            const regRes = await fetch('/register', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({username, email, password, display_name: displayName})
@@ -1350,7 +1350,7 @@ window.submitAuth = async function() {
         formData.append('username', username);
         formData.append('password', password);
         
-        const res = await fetch('http://127.0.0.1:8004/token', {
+        const res = await fetch('/token', {
             method: 'POST',
             body: formData
         });
@@ -1422,7 +1422,7 @@ function showAuthScreen() {
 async function syncWatchlistFromBackend() {
     if (isGuest || !token) return;
     try {
-        const res = await authFetch('http://127.0.0.1:8004/me/watchlist');
+        const res = await authFetch('/me/watchlist');
         if (res.ok) {
             const backendList = await res.json();
             // Merge with local list if local items exist that aren't in backend
@@ -1436,7 +1436,7 @@ async function syncWatchlistFromBackend() {
             localStorage.setItem('streamora_mylist', JSON.stringify(myList));
             
             // Sync merged list back to backend
-            await authFetch('http://127.0.0.1:8004/me/watchlist', {
+            await authFetch('/me/watchlist', {
                 method: 'PUT',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(myList)
@@ -1450,7 +1450,7 @@ async function syncWatchlistFromBackend() {
 async function syncWatchlistToBackend() {
     if (isGuest || !token) return;
     try {
-        await authFetch('http://127.0.0.1:8004/me/watchlist', {
+        await authFetch('/me/watchlist', {
             method: 'PUT',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(myList)
@@ -1471,7 +1471,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Auth Check
     if (token) {
         try {
-            const res = await authFetch('http://127.0.0.1:8004/me');
+            const res = await authFetch('/me');
             if (res.ok) {
                 await syncWatchlistFromBackend();
                 hideAuthScreen();
