@@ -103,10 +103,19 @@ def autocomplete(request: Request, q: str, current_user: dict = Depends(get_curr
     try:
         if os.path.exists("data/raw/movies.csv"):
             df = pd.read_csv("data/raw/movies.csv")
-            matches = df[df['title'].str.contains(q, case=False, na=False)].head(5)
-            titles = matches['title'].tolist()
-            titles = [t.split(" (")[0] for t in titles]
-            return titles
+            matches = df[df['title'].str.contains(q, case=False, na=False)].head(6)
+            results = []
+            for _, row in matches.iterrows():
+                results.append({
+                    "item_id": int(row["item_id"]),
+                    "title": str(row["title"]),
+                    "poster_url": str(row.get("poster_url", "")),
+                    "content_type": str(row.get("content_type", "movie")),
+                    "genres": str(row.get("genres", "")).split("|")[:2],
+                    "rating": float(row.get("rating", 7.0)),
+                    "director": str(row.get("director", ""))
+                })
+            return results
     except Exception as e:
         print("Autocomplete error:", e)
     return []

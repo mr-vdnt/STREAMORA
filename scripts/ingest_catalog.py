@@ -22,12 +22,16 @@ def _is_synthetic(row) -> bool:
     if tmdb_id <= 0:
         return True
     title = str(row.get('title', ''))
-    if _SYNTHETIC_TITLE_RE.search(title):
-        return True
+    suffix_match = re.search(r'\s+(\d+)$', title)
+    if suffix_match:
+        suffix_num = suffix_match.group(1)
+        if not (len(suffix_num) == 4 and (suffix_num.startswith('19') or suffix_num.startswith('20'))):
+            return True
     overview = str(row.get('overview', ''))
     if _SYNTHETIC_OVERVIEW_RE.search(overview):
         return True
     return False
+
 
 
 

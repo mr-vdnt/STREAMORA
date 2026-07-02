@@ -1531,17 +1531,40 @@ searchInput.addEventListener('input', () => {
         try {
             const r = await authFetch(`/autocomplete?q=${encodeURIComponent(q)}`);
             if (!r.ok) return;
-            const titles = await r.json();
-            searchResults.innerHTML = titles.map(t => `
-                <div class="search-hit" onclick="executeSearch('Similar to ${esc(t)}')">
-                    <div>
-                        <div class="search-hit__title">${t}</div>
-                        <div class="search-hit__sub">Find similar titles</div>
+            const results = await r.json();
+            if (results.length === 0) {
+                searchResults.innerHTML = `<div style="text-align: center; padding: 20px; color: var(--text-muted);">No titles found matching "${q}"</div>`;
+                return;
+            }
+            searchResults.innerHTML = results.map(m => {
+                const genresText = m.genres.join(', ');
+                const typeText = m.content_type === 'series' ? 'TV Series' : m.content_type.charAt(0).toUpperCase() + m.content_type.slice(1);
+                return `
+                    <div class="search-hit" onclick="openModal(${m.item_id}); closeSearch();" style="display: flex; align-items: center; gap: 16px; padding: 10px 16px;">
+                        <img src="${m.poster_url}" alt="${m.title}" style="width: 45px; height: 65px; object-fit: cover; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);">
+                        <div style="flex: 1;">
+                            <div class="search-hit__title" style="font-size: 1.05rem; margin-bottom: 2px;">${m.title}</div>
+                            <div class="search-hit__sub" style="font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                <span style="background: rgba(0,240,255,0.15); color: var(--streamora-cyan); padding: 1px 6px; border-radius: 4px; font-weight: 600; font-size: 0.7rem; text-transform: uppercase;">${typeText}</span>
+                                <span>${genresText}</span>
+                                <span>•</span>
+                                <span style="color: #ffb800; font-weight: 500;">★ ${m.rating.toFixed(1)}</span>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         } catch (e) { /* network error */ }
     }, 250);
+});
+
+searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        const firstHit = searchResults.querySelector('.search-hit');
+        if (firstHit) {
+            firstHit.click();
+        }
+    }
 });
 
 function executeSearch(query) {

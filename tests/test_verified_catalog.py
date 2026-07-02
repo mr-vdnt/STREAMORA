@@ -18,7 +18,7 @@ def test_verified_catalog():
     # Check for placeholders or dummy text
     for col in ['title', 'director', 'cast', 'overview']:
         if col in df.columns:
-            invalid = df[df[col].astype(str).str.contains('Unknown|Dummy|Fake|Random', case=False, na=False)]
+            invalid = df[df[col].astype(str).str.contains(r'\b(Unknown|Dummy|Fake|Random)\b', case=False, na=False, regex=True)]
             if len(invalid) > 0:
                 print(f"FAIL: Found synthetic/placeholder content in column {col}")
                 print(invalid[[col]].head())

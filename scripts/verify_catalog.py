@@ -94,9 +94,14 @@ def run():
             flag(f"TMDB ID is 0 or missing (unassigned)", rid, title)
             synthetic_count += 1
 
-        if SYNTHETIC_TITLE_RE.search(title):
-            flag(f"Title looks generated (numeric suffix): '{title}'", rid)
-            synthetic_count += 1
+        # Check for synthetic title suffixes (e.g., 'Whiplash 10') but ignore 4-digit years
+        suffix_match = re.search(r"\s+(\d+)$", title)
+        if suffix_match:
+            suffix_num = suffix_match.group(1)
+            # If it's a 4-digit year (like 2049 or 1917), it's likely a real title
+            if not (len(suffix_num) == 4 and (suffix_num.startswith("19") or suffix_num.startswith("20"))):
+                flag(f"Title looks generated (numeric suffix): '{title}'", rid)
+                synthetic_count += 1
 
         overview = str(row.get("overview", ""))
         if SYNTHETIC_OVERVIEW_RE.search(overview):
