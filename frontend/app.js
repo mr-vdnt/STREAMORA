@@ -1594,7 +1594,7 @@ function initApp() {
     });
 
     navigateTo('home');
-});
+}
 
 // ══════════════════════════════════════════════════════════════════════
 //  SIDEBAR & MOBILE SLIDING DRAWER MENU
