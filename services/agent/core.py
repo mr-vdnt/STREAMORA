@@ -6,7 +6,7 @@ Uses NLP to classify user intent and route to the correct tool.
 import os
 import re
 import pandas as pd
-from services.agent.tools import get_recommendations, get_explanation, get_trending, search_movie_by_title, get_similar_movies
+from services.agent.tools import get_recommendations, get_explanation, get_trending, search_movie_by_title, get_similar_movies, search_semantic_vector
 
 # Load movies DB once globally
 movies_df = None
@@ -98,108 +98,28 @@ class OrchestratorAgent:
         response_data = None
         
         if top_intent == "category_cluster":
-            if movies_df is not None:
-                # 1. Normalize Category
-                genres_list = ["horror", "comedy", "action", "thriller", "drama", "anime", "sci-fi", "romance", "psychological", "family", "mind-bending", "dark", "crime", "space", "time travel", "epic", "feel-good", "historical", "hidden gems"]
-                detected_genre = next((g for g in genres_list if g in lower_q), None)
-                if not detected_genre:
-                    detected_genre = "action"
-                
-                # 2. Find Candidate Seeds based on tags and overview
-                search_term = detected_genre.lower()
-                if search_term == "sci-fi":
-                    search_term = "science fiction"
-                elif search_term == "anime":
-                    search_term = "animation"
-                
-                core_genre_map = {
-                    "horror": "Horror",
-                    "comedy": "Comedy",
-                    "action": "Action",
-                    "sci-fi": "Sci-Fi",
-                    "science fiction": "Sci-Fi",
-                    "romance": "Romance",
-                    "animation": "Animation",
-                    "anime": "Animation",
-                    "documentary": "Documentary",
-                    "family": "Family"
-                }
-                
-                if search_term == "hidden gems":
-                    matched = movies_df[(movies_df['rating'] > 7.5)]
-                elif search_term in core_genre_map:
-                    matched = movies_df[movies_df['genres'].str.contains(core_genre_map[search_term], case=False, na=False)]
-                else:
-                    matched = movies_df[movies_df['rich_tags'].str.lower().str.contains(search_term, na=False) | movies_df['genres'].str.lower().str.contains(search_term, na=False) | movies_df['overview'].str.lower().str.contains(search_term, na=False)]
-                
-                if matched.empty:
-                    matched = movies_df.sort_values(by='rating', ascending=False).head(50)
-                
-                valid_seeds = matched[~matched['item_id'].isin(exclude_ids)]
-                if valid_seeds.empty: valid_seeds = matched
-                
-                if not valid_seeds.empty:
-                    # Pick a seed movie from the top highly rated matches
-                    seed_row = valid_seeds.sort_values(by='rating', ascending=False).head(20).sample(1).iloc[0]
-                    seed_id = int(seed_row['item_id'])
-                    
-                    # 3. RAG Retrieval via Vector Search FAISS
-                    sim_resp = get_similar_movies(seed_id, exclude_ids)
-                    if sim_resp["status"] == "success":
-                        similar_items = sim_resp["data"]
-                        response_data = []
-                        if seed_id not in exclude_ids:
-                            response_data.append({
-                                "item_id": seed_id,
-                                "title": seed_row['title'],
-                                "poster_url": seed_row.get('poster_url', ''),
-                                "backdrop_url": seed_row.get('backdrop_url', ''),
-                                "overview": seed_row.get('overview', ''),
-                                "rich_metadata": _get_movie_metadata(seed_row),
-                                "explanation": f"Chosen as an anchor for '{detected_genre.title()}'."
-                            })
-                            exclude_ids.append(seed_id)
-                            
-                        for item in similar_items:
-                            if item['item_id'] in exclude_ids: continue
-                            if len(response_data) >= 15: break
-                            
-                            row = movies_df[movies_df['item_id'] == item['item_id']]
-                            if not row.empty:
-                                r = row.iloc[0]
-                                
-                                # Enforce strict category integrity constraint to prevent leaks
-                                if search_term in core_genre_map:
-                                    g_target = core_genre_map[search_term]
-                                    if g_target.lower() not in str(r.get('genres', '')).lower():
-                                        continue
-                                        
-                                response_data.append({
-                                    "item_id": int(r['item_id']),
-                                    "title": r['title'],
-                                    "poster_url": r.get('poster_url', ''),
-                                    "backdrop_url": r.get('backdrop_url', ''),
-                                    "overview": r.get('overview', ''),
-                                    "rich_metadata": _get_movie_metadata(r),
-                                    "explanation": f"Semantically related to '{detected_genre.title()}' based on plot embeddings and tags."
-                                })
-                    else:
-                        # Fallback: get top matched items locally
-                        response_data = []
-                        for _, r in matched.head(15).iterrows():
-                            iid = int(r['item_id'])
-                            if iid in exclude_ids: continue
+            # Direct semantic vector search against FAISS plot embeddings
+            tool_resp = search_semantic_vector(query, exclude_ids)
+            if tool_resp["status"] == "success":
+                similar_items = tool_resp["data"]
+                response_data = []
+                for item in similar_items:
+                    iid = item.get("item_id", 0)
+                    if iid in exclude_ids:
+                        continue
+                    if movies_df is not None:
+                        row = movies_df[movies_df['item_id'] == iid]
+                        if not row.empty:
+                            r = row.iloc[0]
                             response_data.append({
                                 "item_id": iid,
-                                "title": r['title'],
-                                "poster_url": r.get('poster_url', ''),
-                                "backdrop_url": r.get('backdrop_url', ''),
-                                "overview": r.get('overview', ''),
+                                "title": str(r['title']),
+                                "poster_url": str(r.get('poster_url', '')),
+                                "backdrop_url": str(r.get('backdrop_url', '')),
+                                "overview": str(r.get('overview', '')),
                                 "rich_metadata": _get_movie_metadata(r),
-                                "explanation": f"Recommended for the '{detected_genre.title()}' category."
+                                "explanation": f"Recommended for query '{query}' based on plot embedding similarity."
                             })
-                else:
-                    response_data = []
             else:
                 response_data = []
 

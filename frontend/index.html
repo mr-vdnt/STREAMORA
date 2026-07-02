@@ -483,6 +483,15 @@
         <button onclick="window.closeVoiceSearch()" style="background: rgba(255,255,255,0.08); border: 1px solid var(--glass-border); padding: 10px 24px; border-radius: var(--r-pill); color: white; cursor: pointer; font-weight: 600; margin-top: 15px;">Cancel</button>
     </div>
 
+    <!-- Cinematic Trailer Lightbox Overlay -->
+    <div class="trailer-lightbox" id="trailer-lightbox">
+        <div class="trailer-lightbox__backdrop" onclick="window.closeTrailerLightbox()"></div>
+        <div class="trailer-lightbox__container">
+            <button class="trailer-lightbox__close" onclick="window.closeTrailerLightbox()">✕</button>
+            <div class="trailer-lightbox__video-wrapper" id="lightbox-video-wrapper"></div>
+        </div>
+    </div>
+
     <script src="app.js?v=2"></script>
 </body>
 </html>

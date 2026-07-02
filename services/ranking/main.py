@@ -37,6 +37,7 @@ faiss_index: faiss.Index | None = None
 movies_df: pd.DataFrame | None = None
 num_users: int = 0
 num_items: int = 0
+model = None
 
 
 class FeedbackEvent(BaseModel):
@@ -46,7 +47,7 @@ class FeedbackEvent(BaseModel):
 
 @app.on_event("startup")
 async def startup_event():
-    global two_tower, deepfm, deepfm_optimizer, faiss_index, movies_df, num_users, num_items
+    global two_tower, deepfm, deepfm_optimizer, faiss_index, movies_df, num_users, num_items, model
     print("Loading models and data …")
 
     # Load metadata to figure out counts
@@ -65,6 +66,14 @@ async def startup_event():
     # ── DeepFM (re-ranking) ─────────────────────────────────────────
     print("  [OK] DeepFM disabled to save 150MB RAM on Render")
 
+    # ── SentenceTransformer ─────────────────────────────────────────
+    try:
+        from sentence_transformers import SentenceTransformer
+        model = SentenceTransformer('all-MiniLM-L6-v2')
+        print("  [OK] SentenceTransformer model loaded")
+    except Exception as e:
+        print(f"  [ERROR] Failed to load SentenceTransformer: {e}")
+
     # ── Movie metadata ──────────────────────────────────────────────
     if os.path.exists("data/raw/movies.csv"):
         movies_df = pd.read_csv("data/raw/movies.csv")
@@ -78,6 +87,55 @@ def health():
         "retrieval_ready": faiss_index is not None,
         "ranking_ready": deepfm is not None,
     }
+
+
+class SearchRequest(BaseModel):
+    query: str
+    top_k: int = 20
+    exclude_ids: list[int] = []
+
+
+@app.post("/search", response_model=list[RankedItem])
+def search_semantic(request: SearchRequest):
+    if faiss_index is None or model is None:
+        raise HTTPException(status_code=503, detail="Semantic Search models not ready.")
+    
+    try:
+        # Encode query
+        query_emb = model.encode([request.query], convert_to_numpy=True)
+        query_emb = query_emb.astype('float32')
+        
+        # Search FAISS index
+        search_k = request.top_k + len(request.exclude_ids)
+        distances, indices = faiss_index.search(query_emb, search_k)
+        
+        candidate_ids = (indices[0] + 1).tolist()
+        retrieval_scores = distances[0].tolist()
+        
+        results = []
+        for cid, r_score in zip(candidate_ids, retrieval_scores):
+            if cid in request.exclude_ids:
+                continue
+                
+            title = ""
+            if movies_df is not None:
+                row = movies_df[movies_df['item_id'] == cid]
+                if not row.empty:
+                    title = row.iloc[0]['title']
+                    
+            results.append(RankedItem(
+                item_id=cid,
+                title=title,
+                retrieval_score=float(r_score),
+                ranking_score=float(r_score)
+            ))
+            
+            if len(results) == request.top_k:
+                break
+                
+        return results
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 class SimilarRequest(BaseModel):

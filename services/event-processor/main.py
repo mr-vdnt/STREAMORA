@@ -129,8 +129,17 @@ def get_user_features(user_id: int):
 @app.get("/features/global")
 def get_global_features():
     """Get global trending items."""
-    trending = feature_store.get_global_trending(top_k=5)
-    # If no trending data yet (e.g., fresh start without event simulator), return some defaults
+    trending = feature_store.get_global_trending(top_k=20)
+    # If no trending data yet (e.g., fresh start without event simulator), return fallback from movies.csv sorted by popularity
+    if not trending:
+        try:
+            import pandas as pd
+            if os.path.exists("data/raw/movies.csv"):
+                df = pd.read_csv("data/raw/movies.csv")
+                top_pops = df.sort_values(by='popularity', ascending=False).head(20)
+                trending = [(int(row['item_id']), float(row['popularity'])) for _, row in top_pops.iterrows()]
+        except Exception as e:
+            print(f"Error loading trending fallback: {e}")
     if not trending:
         trending = [(1, 5.0), (2, 4.5), (3, 4.0), (4, 3.5), (5, 3.0)]
     return {"popular_items": trending}

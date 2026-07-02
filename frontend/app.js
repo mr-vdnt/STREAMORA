@@ -3175,14 +3175,13 @@ window.executeSearchPageQuery = async function(query) {
         movies = [...window.ragCache[`search_${query}`]];
     } else {
         try {
-            const resp = await fetch('/chat', {
+            const resp = await fetch('/search', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ user_id: userId, query, exclude_ids: [] })
+                body: JSON.stringify({ query, top_k: 20 })
             });
             if (resp.ok) {
-                const data = await resp.json();
-                movies = Array.isArray(data.response) ? data.response : (data.response && data.response.value);
+                movies = await resp.json();
                 if (movies && movies.length > 0) {
                     window.ragCache = window.ragCache || {};
                     window.ragCache[`search_${query}`] = movies;
@@ -3341,6 +3340,8 @@ function renderHero(movie) {
     const castString = getMovieCast(title) || 'Cast details unavailable';
     const languages = getMovieLanguages(movie);
     const saved = isInMyList(movie.item_id);
+    const tUrl = movie.trailer_url || m.trailer_url || '';
+    const tUrlEscaped = tUrl ? `'${tUrl.replace(/'/g, "\\'")}'` : 'null';
 
     window.updateAmbientBackground(bg);
 
@@ -3375,7 +3376,7 @@ function renderHero(movie) {
                     </div>
                     
                     <div class="hero__btns" style="justify-content: flex-start; width: 100%;">
-                        <button class="hero-btn hero-btn--play" onclick="event.stopPropagation(); openModal(${movie.item_id})" style="cursor: pointer;">
+                        <button class="hero-btn hero-btn--play" onclick="event.stopPropagation(); if (${tUrlEscaped}) { window.openTrailerLightbox(${tUrlEscaped}, '${title.replace(/'/g, "\\'")}'); } else { openModal(${movie.item_id}); }" style="cursor: pointer;">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Watch Trailer
                         </button>
                         <button class="hero-btn hero-btn--info" onclick="event.stopPropagation(); openModal(${movie.item_id})" style="cursor: pointer;">
@@ -3400,7 +3401,7 @@ function renderHero(movie) {
                 
                 <!-- Right Column: Poster with 3D Hover & Play Overlay -->
                 <div class="hero__right">
-                    <div class="hero__poster-wrapper" onclick="openModal(${movie.item_id})">
+                    <div class="hero__poster-wrapper" onclick="event.stopPropagation(); if (${tUrlEscaped}) { window.openTrailerLightbox(${tUrlEscaped}, '${title.replace(/'/g, "\\'")}'); } else { openModal(${movie.item_id}); }">
                         <div class="img-container" style="border-radius: var(--r-md); aspect-ratio: 2/3; height: auto;">
                             <div class="img-placeholder"><div class="blur-skeleton"></div></div>
                             <img src="${poster}" alt="${title}" loading="lazy" onload="window.imageLoaded(this)" onerror="window.imageLoadError(this, '${title.replace(/'/g, "\\'")}')">
@@ -3451,6 +3452,8 @@ function appendRow(title, movies) {
         const score = m.match_percentage || randScore();
         const genres = (m.tags || []).slice(0, 3).map(g => `<span>${g}</span>`).join('');
         const saved = isInMyList(movie.item_id);
+        const tUrl = movie.trailer_url || m.trailer_url || '';
+        const tUrlEscaped = tUrl ? `'${tUrl.replace(/'/g, "\\'")}'` : 'null';
 
         return `
         <div class="card-wrap" data-idx="${i}" style="cursor: pointer;">
@@ -3484,7 +3487,7 @@ function appendRow(title, movies) {
                         </ul>
                     </div>
                     <div class="card-expand__btns">
-                        <button class="card-expand__btn card-expand__btn--play" onclick="event.stopPropagation(); openModal(${movie.item_id})" aria-label="Play">
+                        <button class="card-expand__btn card-expand__btn--play" onclick="event.stopPropagation(); if (${tUrlEscaped}) { window.openTrailerLightbox(${tUrlEscaped}, '${t.replace(/'/g, "\\'")}'); } else { openModal(${movie.item_id}); }" aria-label="Play">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                         </button>
                         <button class="card-expand__btn" onclick="event.stopPropagation(); toggleSave(${movie.item_id}); this.setAttribute('aria-label', isInMyList(${movie.item_id}) ? 'Remove from list' : 'Add to list'); this.querySelector('svg').innerHTML = isInMyList(${movie.item_id}) ? '<line x1=&quot;5&quot; y1=&quot;12&quot; x2=&quot;19&quot; y2=&quot;12&quot;/>' : '<line x1=&quot;12&quot; y1=&quot;5&quot; x2=&quot;12&quot; y2=&quot;19&quot;/><line x1=&quot;5&quot; y1=&quot;12&quot; x2=&quot;19&quot; y2=&quot;12&quot;/>';" aria-label="${saved ? 'Remove from list' : 'Add to list'}">
@@ -3850,9 +3853,10 @@ function renderModalData(m, id) {
         const newBtnWatch = btnWatch.cloneNode(true);
         btnWatch.parentNode.replaceChild(newBtnWatch, btnWatch);
         newBtnWatch.addEventListener('click', () => {
-            const trailerSection = document.getElementById('modal-trailer-wrapper');
-            if (trailerSection) {
-                trailerSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (m.trailer_url) {
+                window.openTrailerLightbox(m.trailer_url, m.title);
+            } else {
+                alert("Trailer is currently unavailable.");
             }
         });
     }
@@ -4839,3 +4843,45 @@ document.addEventListener('keydown', (e) => {
         card.click();
     }
 });
+
+// ── Cinematic Trailer Lightbox Overlay Controller ────────────────────
+window.openTrailerLightbox = function(url, title) {
+    if (!url) return;
+    
+    let embedUrl = url;
+    if (embedUrl.includes('youtube.com/embed/')) {
+        if (!embedUrl.includes('?')) {
+            embedUrl += '?autoplay=1&mute=0';
+        } else if (!embedUrl.includes('autoplay=')) {
+            embedUrl += '&autoplay=1&mute=0';
+        }
+    }
+    
+    const lightbox = document.getElementById('trailer-lightbox');
+    const wrapper = document.getElementById('lightbox-video-wrapper');
+    if (lightbox && wrapper) {
+        wrapper.innerHTML = `
+            <iframe src="${embedUrl}" 
+                    title="${title || 'Trailer'}" 
+                    frameborder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                    allowfullscreen>
+            </iframe>
+        `;
+        lightbox.style.display = 'flex';
+        lightbox.offsetHeight; // force reflow
+        lightbox.classList.add('active');
+    }
+};
+
+window.closeTrailerLightbox = function() {
+    const lightbox = document.getElementById('trailer-lightbox');
+    const wrapper = document.getElementById('lightbox-video-wrapper');
+    if (lightbox) {
+        lightbox.classList.remove('active');
+        setTimeout(() => {
+            lightbox.style.display = 'none';
+            if (wrapper) wrapper.innerHTML = '';
+        }, 300);
+    }
+};

@@ -83,3 +83,15 @@ def get_similarity_explanation(source_item_id: int, target_item_id: int) -> dict
         return {"status": "error", "message": f"RAG API returned {resp.status_code}"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+def search_semantic_vector(query: str, exclude_ids: list[int] = None) -> dict:
+    """Hits the Ranking Service (Port 8001) for direct semantic search against plot vectors."""
+    print(f"Agent Tool: Searching semantically for '{query}'")
+    try:
+        req = {"query": query, "top_k": 20, "exclude_ids": exclude_ids or []}
+        resp = requests.post("http://127.0.0.1:8001/search", json=req, timeout=15)
+        if resp.status_code == 200:
+            return {"status": "success", "data": resp.json()}
+        return {"status": "error", "message": f"Ranking Search API returned {resp.status_code}"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}

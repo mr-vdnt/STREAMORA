@@ -155,6 +155,49 @@ def get_movie_details(request: Request, item_id: int, current_user: dict = Depen
     except Exception as e:
         return {"error": str(e)}
 
+class SearchRequest(BaseModel):
+    query: str
+    top_k: int = 20
+
+@app.post("/search")
+@limiter.limit("30/minute")
+def search_endpoint(request: Request, req: SearchRequest, current_user: dict = Depends(get_current_user)):
+    """Semantic query search utilizing SentenceTransformer + FAISS."""
+    try:
+        resp = requests.post("http://127.0.0.1:8001/search", json={"query": req.query, "top_k": req.top_k}, timeout=10)
+        if resp.status_code == 200:
+            similar_items = resp.json()
+            results = []
+            if os.path.exists("data/raw/movies.csv"):
+                df = pd.read_csv("data/raw/movies.csv")
+                for sim in similar_items:
+                    sid = sim["item_id"]
+                    row = df[df['item_id'] == sid]
+                    if not row.empty:
+                        r = row.iloc[0]
+                        results.append({
+                            "item_id": sid,
+                            "title": str(r['title']),
+                            "poster_url": str(r.get('poster_url', '')),
+                            "backdrop_url": str(r.get('backdrop_url', '')),
+                            "overview": str(r.get('overview', '')),
+                            "rich_metadata": {
+                                "title": str(r['title']),
+                                "year": str(r.get('year', '2024')),
+                                "match_percentage": int(max(70, 99 - (sim.get('retrieval_score', 0) * 10))),
+                                "rating": float(r.get('rating', 8.0)),
+                                "runtime": str(r.get('runtime', '120 min')),
+                                "director": str(r.get('director', 'Unknown Director')),
+                                "genres": str(r.get('genres', '')).split('|'),
+                                "themes": str(r.get('themes', '')).split('|'),
+                                "moods": str(r.get('moods', '')).split('|')
+                            }
+                        })
+            return results
+        return {"error": f"Ranking API returned {resp.status_code}"}
+    except Exception as e:
+        return {"error": str(e)}
+
 class EventRequest(BaseModel):
     event_type: str
     item_id: int
