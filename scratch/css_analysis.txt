@@ -1,0 +1,108 @@
+--- CSS SELECTORS WITH CARD/ROW ---
+/* ── Content Rows ────────────────────────────────────────────────── */
+.rows
+.row-section
+.row-section__title
+.row-scroll
+.row-scroll::-webkit-scrollbar
+/* ── 3D Movie Card ───────────────────────────────────────────────── */
+.card-wrap
+.card-wrap:hover
+.card-3d
+.card-3d:hover
+.card-3d img
+/* Glass shine overlay */
+.card-3d::after
+.card-3d:hover::after
+.card-3d__badge
+/* ── Hover Expansion Panel ───────────────────────────────────────── */
+.card-expand
+.card-wrap:hover .card-expand
+.card-wrap:first-child .card-expand
+.card-wrap:first-child:hover .card-expand
+.card-wrap:last-child .card-expand
+.card-wrap:last-child:hover .card-expand
+.card-expand__img
+.card-expand__body
+.card-expand__title
+.card-expand__meta
+.card-expand__pct
+.card-expand__genres
+.card-expand__genres span:not(:last-child)::after
+.card-expand__ai
+.card-expand__ai-label
+.card-expand__ai ul
+.card-expand__ai li
+.card-expand__ai li::before
+.card-expand__btns
+.card-expand__btn
+.card-expand__btn:hover
+.card-expand__btn--play
+.card-expand__btn--play:hover
+.card-wrap
+.card-wrap
+.card-wrap
+.modal-meta-row
+.cast-card
+.cast-card:hover
+.advisory-row
+/* Horizontal Scrolling Rows */
+.modal-similar-row, .modal-cast-row
+.modal-similar-row::-webkit-scrollbar, .modal-cast-row::-webkit-scrollbar
+/* Glassmorphic Carousel Arrows */
+.carousel-arrow
+.carousel-arrow--left
+.carousel-arrow--right
+.modal-similar-container:hover .carousel-arrow
+.carousel-arrow:hover
+.carousel-arrow:active
+.carousel-arrow
+.carousel-arrow:focus-visible
+/* Recommendation Card Sizing & Layout */
+.sim-card
+.sim-card:hover
+.sim-card:focus-visible
+.sim-card:hover .sim-poster
+.sim-meta-row
+.sim-card
+.sim-card
+.sim-card
+.modal-meta-row, .modal-genres, .modal-actions
+.modal-form-row
+.modal-form-row label
+.modal-form-row input, .modal-form-row select, .modal-form-row textarea
+.modal-form-row input:focus, .modal-form-row select:focus, .modal-form-row textarea:focus
+/* 3D card glare effect style */
+.card-3d__glare
+.card-3d:hover .card-3d__glare
+/* Carousels: 2–4 cards visible */
+  .card-wrap
+/* Similar movies: 3-4 cards */
+  .sim-card
+/* Carousels: 1–2 cards visible */
+  .card-wrap
+.modal-meta-row, .modal-genres, .modal-actions
+/* Similar movies carousel on mobile: horizontal scroll card size */
+  .sim-card
+/* ── EDGE-AWARE CARD HOVER EXPANSION CLASSES ─────────────────────────── */
+.card-expand.expand-left-edge
+.card-wrap:hover .card-expand.expand-left-edge
+.card-expand.expand-right-edge
+.card-wrap:hover .card-expand.expand-right-edge
+.card-expand.expand-center
+.card-wrap:hover .card-expand.expand-center
+/* Specs Row */
+.modal-specs-row
+.spec-card
+.advisory-card
+.modal-meta-row, .modal-genres, .modal-actions
+.modal-specs-row
+/* Modal and Hero Image Progressive Load animations */
+.modal-hero-poster.loading,
+.card-expand__img.loading,
+.hero__bg.backdrop-loading,
+.modal-hero.backdrop-loading
+.modal-hero-poster.loaded,
+.card-expand__img.loaded,
+.hero__bg.backdrop-loaded,
+.modal-hero.backdrop-loaded

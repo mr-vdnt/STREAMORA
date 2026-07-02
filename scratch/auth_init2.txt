@@ -1,0 +1,74 @@
+1211: localStorage.setItem('streamora_theme', themeName);
+1236: localStorage.setItem('streamora_current_format', format);
+1272: let myList = JSON.parse(localStorage.getItem('streamora_mylist') || '[]');
+1274: let token = localStorage.getItem('streamora_jwt') || null;
+1275: let userProfile = JSON.parse(localStorage.getItem('streamora_profile')) || null;
+1282: if (token) {
+1283: options.headers['Authorization'] = `Bearer ${token}`;
+1353: const res = await fetch('/token', {
+1364: token = data.access_token;
+1375: localStorage.setItem('streamora_jwt', token);
+1376: localStorage.setItem('streamora_profile', JSON.stringify(userProfile));
+1395: token = null;
+1403: const screen = document.getElementById('auth-screen');
+1413: const screen = document.getElementById('auth-screen');
+1423: if (isGuest || !token) return;
+1436: localStorage.setItem('streamora_mylist', JSON.stringify(myList));
+1451: if (isGuest || !token) return;
+1463: document.addEventListener('DOMContentLoaded', async () => {
+1464: const savedTheme = localStorage.getItem('streamora_theme') || 'neon';
+1467: const savedFormat = localStorage.getItem('streamora_current_format') || 'all';
+1472: if (token) {
+2097: if (isGuest || !token) {
+2126: localStorage.setItem('streamora_profile', JSON.stringify(userProfile));
+2142: const autoplay = localStorage.getItem('streamora_autoplay') !== 'false';
+2143: const quality = localStorage.getItem('streamora_quality') || 'auto';
+2144: const motion = localStorage.getItem('streamora_reduced_motion') === 'true';
+2145: const theme = localStorage.getItem('streamora_theme') || 'neon';
+2146: const language = localStorage.getItem('streamora_language') || 'en';
+2148: const notifNew = localStorage.getItem('streamora_notif_new') !== 'false';
+2149: const notifRec = localStorage.getItem('streamora_notif_rec') !== 'false';
+2150: const notifDl = localStorage.getItem('streamora_notif_dl') !== 'false';
+2255: localStorage.clear();
+2271: localStorage.setItem('streamora_autoplay', autoplay);
+2272: localStorage.setItem('streamora_reduced_motion', motion);
+2273: localStorage.setItem('streamora_quality', quality);
+2274: localStorage.setItem('streamora_language', language);
+2276: localStorage.setItem('streamora_notif_new', notifNew);
+2277: localStorage.setItem('streamora_notif_rec', notifRec);
+2278: localStorage.setItem('streamora_notif_dl', notifDl);
+2297: let downloads = JSON.parse(localStorage.getItem('streamora_downloads') || '[]');
+2303: let downloading = JSON.parse(localStorage.getItem('streamora_downloading') || '[]');
+2310: localStorage.setItem('streamora_downloading', JSON.stringify(downloading));
+2316: let currentDownloading = JSON.parse(localStorage.getItem('streamora_downloading') || '[]');
+2327: localStorage.setItem('streamora_downloading', JSON.stringify(currentDownloading));
+2329: let currentDownloaded = JSON.parse(localStorage.getItem('streamora_downloads') || '[]');
+2331: localStorage.setItem('streamora_downloads', JSON.stringify(currentDownloaded));
+2333: localStorage.setItem('streamora_downloading', JSON.stringify(currentDownloading));
+2344: let downloads = JSON.parse(localStorage.getItem('streamora_downloads') || '[]');
+2346: localStorage.setItem('streamora_downloads', JSON.stringify(downloads));
+2357: const downloads = JSON.parse(localStorage.getItem('streamora_downloads') || '[]');
+2358: const downloading = JSON.parse(localStorage.getItem('streamora_downloading') || '[]');
+2379: const downloaded = JSON.parse(localStorage.getItem('streamora_downloads') || '[]');
+2380: const downloading = JSON.parse(localStorage.getItem('streamora_downloading') || '[]');
+2474: const history = JSON.parse(localStorage.getItem('streamora_history') || '[]');
+2717: const rawHistory = JSON.parse(localStorage.getItem('streamora_history') || '[]');
+2740: localStorage.setItem('streamora_mylist', JSON.stringify(myList));
+2751: let history = JSON.parse(localStorage.getItem('streamora_history') || '[]');
+2755: localStorage.setItem('streamora_history', JSON.stringify(history));
+3089: const history = JSON.parse(localStorage.getItem('streamora_history') || '[]');
+3090: const watchlist = JSON.parse(localStorage.getItem('streamora_mylist') || '[]');
+3224: const recentSearches = JSON.parse(localStorage.getItem('streamora_recent_searches') || '[]');
+3404: let recent = JSON.parse(localStorage.getItem('streamora_recent_searches') || '[]');
+3408: localStorage.setItem('streamora_recent_searches', JSON.stringify(recent));
+3434: headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+4603: const autoplay = localStorage.getItem('streamora_autoplay') !== 'false';
+4604: const quality = localStorage.getItem('streamora_quality') || 'auto';
+4605: const motion = localStorage.getItem('streamora_reduced_motion') === 'true';
+4634: const currentTheme = localStorage.getItem('streamora_theme') || 'neon';
+4741: localStorage.setItem('streamora_autoplay', autoplay);
+4742: localStorage.setItem('streamora_quality', quality);
+4743: localStorage.setItem('streamora_reduced_motion', motion);
+4770: token = null;
+4774: localStorage.removeItem('streamora_jwt');
+4775: localStorage.removeItem('streamora_profile');

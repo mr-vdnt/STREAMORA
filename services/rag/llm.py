@@ -149,19 +149,19 @@ class IntelligentExtractor(LLMProvider):
             backdrop_url = str(row.get('backdrop_url', ''))
             
             # Read new metadata fields directly from row
-            writer = str(row.get('writer', 'Unknown Writer'))
-            producer = str(row.get('producer', 'Unknown Producer'))
-            studio = str(row.get('studio', 'Unknown Studio'))
-            cast = str(row.get('cast', ''))
-            awards = str(row.get('awards', 'None'))
-            availability = str(row.get('availability', 'Available on Streamora'))
-            countries = str(row.get('countries', 'United States'))
-            languages = str(row.get('languages', 'English'))
-            budget = str(row.get('budget', 'Unknown'))
-            revenue = str(row.get('revenue', 'Unknown'))
-            box_office = str(row.get('box_office', 'Unknown'))
-            franchise = str(row.get('franchise', 'None'))
-            trailer_url = str(row.get('trailer_url', ''))
+            writer = str(row.get('writer', '')) if pd.notna(row.get('writer')) and row.get('writer') else None
+            producer = str(row.get('producer', '')) if pd.notna(row.get('producer')) and row.get('producer') else None
+            studio = str(row.get('studio', '')) if pd.notna(row.get('studio')) and row.get('studio') else None
+            cast_str = str(row.get('cast', '')) if pd.notna(row.get('cast')) else ''
+            awards = str(row.get('awards', '')) if pd.notna(row.get('awards')) and row.get('awards') else None
+            availability = str(row.get('availability', '')) if pd.notna(row.get('availability')) and row.get('availability') else None
+            countries = str(row.get('countries', '')) if pd.notna(row.get('countries')) and row.get('countries') else None
+            languages = str(row.get('languages', '')) if pd.notna(row.get('languages')) and row.get('languages') else None
+            budget = str(row.get('budget', '')) if pd.notna(row.get('budget')) and row.get('budget') else None
+            revenue = str(row.get('revenue', '')) if pd.notna(row.get('revenue')) and row.get('revenue') else None
+            box_office = str(row.get('box_office', '')) if pd.notna(row.get('box_office')) and row.get('box_office') else None
+            franchise = str(row.get('franchise', '')) if pd.notna(row.get('franchise')) and row.get('franchise') else None
+            trailer_url = str(row.get('trailer_url', '')) if pd.notna(row.get('trailer_url')) and row.get('trailer_url') else None
             
             themes_str = str(row.get('themes', ''))
             moods_str = str(row.get('moods', ''))
@@ -211,7 +211,7 @@ class IntelligentExtractor(LLMProvider):
         if score > 0:
             match_percentage = int(max(70, 99 - (score * 10)))
         else:
-            match_percentage = int(99 - (random.random() * 20))
+            match_percentage = None
 
         return {
             "title": title,
@@ -238,7 +238,7 @@ class IntelligentExtractor(LLMProvider):
             "writer": writer,
             "producer": producer,
             "studio": studio,
-            "cast": [c.strip() for c in cast.split(",")] if cast else [],
+            "cast": list(dict.fromkeys([c.strip() for c in cast_str.split(",") if c.strip()])) if cast_str else [],
             "awards": awards,
             "availability": availability,
             "countries": countries,

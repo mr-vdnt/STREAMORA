@@ -1188,28 +1188,19 @@ window.isSeries = function(movie) {
 const isSeries = window.isSeries;
 
 window.applyTheme = function(themeName) {
-    const root = document.documentElement;
-    if (themeName === 'oled') {
-        root.style.setProperty('--bg-void', '#000000');
-        root.style.setProperty('--bg-deep', '#000000');
-        root.style.setProperty('--bg-dark', '#020202');
-        root.style.setProperty('--bg-surface', '#080808');
-        root.style.setProperty('--bg-raised', '#0c0c0c');
-    } else if (themeName === 'slate') {
-        root.style.setProperty('--bg-void', '#0B0F19');
-        root.style.setProperty('--bg-deep', '#0F172A');
-        root.style.setProperty('--bg-dark', '#1E293B');
-        root.style.setProperty('--bg-surface', '#334155');
-        root.style.setProperty('--bg-raised', '#475569');
-    } else {
-        root.style.removeProperty('--bg-void');
-        root.style.removeProperty('--bg-deep');
-        root.style.removeProperty('--bg-dark');
-        root.style.removeProperty('--bg-surface');
-        root.style.removeProperty('--bg-raised');
-    }
+    document.documentElement.setAttribute('data-theme', themeName);
     localStorage.setItem('streamora_theme', themeName);
 };
+
+window.savePageTheme = function(themeName) {
+    window.applyTheme(themeName);
+};
+
+window.savePageSettings = function() {
+    // Basic stub to prevent errors, since UI calls this
+    console.log("Settings saved.");
+};
+
 
 window.updateFormatTabs = function() {
     const tabs = ['all', 'movie', 'series'];
@@ -4028,12 +4019,23 @@ function renderModalData(m, id) {
     document.getElementById('adv-adult').textContent = m.adult ? 'Yes' : 'No';
     
     // Populate metadata grid and bottom details panel
-    document.getElementById('modal-director').textContent = m.director || 'Unknown';
-    document.getElementById('modal-writers').textContent = m.writer || m.writers || 'Unknown';
-    document.getElementById('modal-producers').textContent = m.producer || m.producers || 'Unknown';
-    document.getElementById('modal-studios').textContent = m.studio || m.studios || 'Unknown';
-    document.getElementById('modal-countries').textContent = m.countries || 'Unknown';
-    document.getElementById('modal-languages').textContent = m.languages || 'English';
+    function setMetaGrid(id, val) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (val && val !== 'Unknown' && val !== 'None') {
+            el.textContent = val;
+            el.parentElement.style.display = '';
+        } else {
+            el.parentElement.style.display = 'none';
+        }
+    }
+    
+    setMetaGrid('modal-director', m.director);
+    setMetaGrid('modal-writers', m.writer || m.writers);
+    setMetaGrid('modal-producers', m.producer || m.producers);
+    setMetaGrid('modal-studios', m.studio || m.studios);
+    setMetaGrid('modal-countries', m.countries);
+    setMetaGrid('modal-languages', m.languages || 'English');
 
     // Content-type adaptive metadata: show movie fields for movies, series fields for TV/anime/docs
     const isTVContent = ['series', 'anime', 'documentary'].includes((m.content_type || '').toLowerCase());
@@ -4058,8 +4060,8 @@ function renderModalData(m, id) {
         document.getElementById('modal-franchise').textContent = m.franchise || 'Standalone';
     }
 
-    document.getElementById('modal-awards').textContent = m.awards || 'None';
-    document.getElementById('modal-availability').textContent = m.availability || 'Available on Streamora';
+    setMetaGrid('modal-awards', m.awards);
+    setMetaGrid('modal-availability', m.availability);
 
     const seedMovie = globalMovies.find(item => item.item_id === id) || FALLBACK_MOVIES.find(item => item.item_id === id) || { item_id: id, rich_metadata: m, title: m.title };
 
@@ -5268,3 +5270,49 @@ hoverPortal.addEventListener('click', (e) => {
         }
     }
 });
+
+// -----------------------------------------------------------------------------
+// Cinematic Trailer Lightbox
+// -----------------------------------------------------------------------------
+window.openTrailerLightbox = function(url, title) {
+    const lightbox = document.getElementById('trailer-lightbox');
+    const wrapper = document.getElementById('lightbox-video-wrapper');
+    if (!lightbox || !wrapper || !url) {
+        alert("Trailer is currently unavailable.");
+        return;
+    }
+    
+    // Auto-play the YouTube video and ensure high quality
+    let embedUrl = url;
+    if (embedUrl.includes('?')) {
+        embedUrl += '&autoplay=1&rel=0&modestbranding=1&vq=hd1080';
+    } else {
+        embedUrl += '?autoplay=1&rel=0&modestbranding=1&vq=hd1080';
+    }
+    
+    wrapper.innerHTML = `
+        <iframe src="${embedUrl}"
+                title="${title} Official Trailer"
+                frameborder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen
+                style="width: 100%; height: 100%; position: absolute; top: 0; left: 0;">
+        </iframe>
+    `;
+    
+    lightbox.classList.add('active');
+    document.body.style.overflow = 'hidden';
+};
+
+window.closeTrailerLightbox = function() {
+    const lightbox = document.getElementById('trailer-lightbox');
+    const wrapper = document.getElementById('lightbox-video-wrapper');
+    if (lightbox) {
+        lightbox.classList.remove('active');
+    }
+    if (wrapper) {
+        // Clear iframe to stop playback immediately
+        wrapper.innerHTML = '';
+    }
+    document.body.style.overflow = '';
+};
