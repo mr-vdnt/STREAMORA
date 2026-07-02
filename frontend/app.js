@@ -2278,6 +2278,11 @@ async function loadHomePage() {
     let scifiTitle = isMovie ? 'Sci-Fi Movies' : (isSeriesVal ? 'Sci-Fi TV Shows' : 'Mind-Bending Sci-Fi');
     await fetchAndRender(scifiQuery, scifiTitle, false);
 
+    // Curated rows pulling from FAISS index with specific semantic queries
+    await fetchAndRender('Award Winners', 'Award Winners', false);
+    await fetchAndRender('Anime', 'Top Rated Anime', false);
+    await fetchAndRender('True Events', 'Based on True Events', false);
+
     const genres = [
         { q: 'Action', title: isMovie ? 'Action Movies' : (isSeriesVal ? 'Action Series' : 'Action Thrillers') },
         { q: 'Comedy', title: isMovie ? 'Comedy Movies' : (isSeriesVal ? 'Comedy Series' : 'Comedy Classics') },
