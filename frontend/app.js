@@ -185,920 +185,1485 @@ window.getSimilarRecommendations = function(seedMovie) {
 // ── Fallback Database ──────────────────────────────────────────────────
 const FALLBACK_MOVIES = [
     {
-        item_id: 1,
-        title: "Spider-Man: No Way Home",
-        poster_url: "https://image.tmdb.org/t/p/original/1g0dhYtq4irTY1GPXvft6k4YLjm.jpg",
-        backdrop_url: "https://image.tmdb.org/t/p/original/1g0dhYtq4irTY1GPXvft6k4YLjm.jpg",
-        overview: "Peter Parker is unmasked and no longer able to separate his normal life from the high-stakes of being a super-hero. When he asks for help from Doctor Strange the stakes become even more dangerous, forcing him to discover what it truly means to be Spider-Man.",
-        rich_metadata: {
-            title: "Spider-Man: No Way Home",
-            year: "2021",
-            match_percentage: 95,
-            rating: 8.3,
-            runtime: "148 min",
-            director: "Jon Watts",
-            genres: ["Action", "Adventure", "Science Fiction"],
-            tags: ["Action", "Adventure", "Science Fiction"],
-            audience_type: "Family/General",
-            story_summary: "Peter Parker is unmasked and no longer able to separate his normal life from the high-stakes of being a super-hero. When he asks for help from Doctor Strange the stakes become even more dangerous, forcing him to discover what it truly means to be Spider-Man.",
-            why_recommended: "Recommended because it matches your preferred genres of action and adventure with high thematic similarity.",
-            themes: ["Identity", "Heroism", "Multiverse", "Sacrifice"],
-            moods: ["Exciting", "Emotional", "Adventurous"],
-            pacing: "Fast-Paced",
-            complexity: "Medium",
-            world_building: "Rich",
-            action_level: "High",
-            violence_level: "Moderate",
-            language_severity: "Mild",
-            adult: false,
-            similar_movies: [
-                { item_id: 2, title: "The Batman", poster_url: "https://image.tmdb.org/t/p/original/74xTEgt7R36Fpooo50r9T25onhq.jpg", score: 88 },
-                { item_id: 5, title: "The King's Man", poster_url: "https://image.tmdb.org/t/p/original/aq4Pwv5Xeuvj6HZKtxyd23e6bE9.jpg", score: 82 }
+        "item_id": 1,
+        "title": "Inception",
+        "poster_url": "https://image.tmdb.org/t/p/w500/xlaY2zyzMfkhk0HSC5VUwzoZPU1.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/8ZTVqvKDQ8emSGUEMjsS4yHAwrp.jpg",
+        "overview": "Cobb, a skilled thief who commits corporate espionage by infiltrating the subconscious of his targets is offered a chance to regain his old life as payment for a task considered to be impossible: \"inception\", the implantation of another person's idea into a target's subconscious.",
+        "rich_metadata": {
+            "title": "Inception",
+            "year": "2010",
+            "match_percentage": 83,
+            "rating": 8.372,
+            "runtime": "148 min",
+            "director": "Christopher Nolan",
+            "genres": [
+                "Action",
+                "Science Fiction",
+                "Adventure"
+            ],
+            "tags": [
+                "Action",
+                "Science Fiction",
+                "Adventure"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "Cobb, a skilled thief who commits corporate espionage by infiltrating the subconscious of his targets is offered a chance to regain his old life as payment for a task considered to be impossible: \"inception\", the implantation of another person's idea into a target's subconscious.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Heroism",
+                "Justice",
+                "Technology",
+                "Survival"
+            ],
+            "moods": [
+                "Exciting",
+                "Thought-Provoking"
             ]
         }
     },
     {
-        item_id: 2,
-        title: "The Batman",
-        poster_url: "https://image.tmdb.org/t/p/original/74xTEgt7R36Fpooo50r9T25onhq.jpg",
-        backdrop_url: "https://image.tmdb.org/t/p/original/74xTEgt7R36Fpooo50r9T25onhq.jpg",
-        overview: "In his second year of fighting crime, Batman uncovers corruption in Gotham City that connects to his own family while facing a serial killer known as the Riddler.",
-        rich_metadata: {
-            title: "The Batman",
-            year: "2022",
-            match_percentage: 92,
-            rating: 8.3,
-            runtime: "176 min",
-            director: "Matt Reeves",
-            genres: ["Crime", "Mystery", "Thriller"],
-            tags: ["Crime", "Mystery", "Thriller"],
-            audience_type: "Adult",
-            story_summary: "In his second year of fighting crime, Batman uncovers corruption in Gotham City that connects to his own family while facing a serial killer known as the Riddler.",
-            why_recommended: "Recommended for its dark mystery detective elements and excellent atmospheric cinematography.",
-            themes: ["Vengeance", "Corruption", "Justice", "Family Secrets"],
-            moods: ["Gritty", "Dark", "Atmospheric"],
-            pacing: "Slow Burn",
-            complexity: "Medium",
-            world_building: "Rich",
-            action_level: "Medium",
-            violence_level: "Moderate",
-            language_severity: "Mild",
-            adult: false,
-            similar_movies: [
-                { item_id: 1, title: "Spider-Man: No Way Home", poster_url: "https://image.tmdb.org/t/p/original/1g0dhYtq4irTY1GPXvft6k4YLjm.jpg", score: 85 },
-                { item_id: 3, title: "No Exit", poster_url: "https://image.tmdb.org/t/p/original/vDHsLnOWKlPGmWs0kGfuhNF4w5l.jpg", score: 80 }
+        "item_id": 2,
+        "title": "The Dark Knight",
+        "poster_url": "https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/cfT29Im5VDvjE0RpyKOSdCKZal7.jpg",
+        "overview": "Batman raises the stakes in his war on crime. With the help of Lt. Jim Gordon and District Attorney Harvey Dent, Batman sets out to dismantle the remaining criminal organizations that plague the streets. The partnership proves to be effective, but they soon find themselves prey to a reign of chaos unleashed by a rising criminal mastermind known to the terrified citizens of Gotham as the Joker.",
+        "rich_metadata": {
+            "title": "The Dark Knight",
+            "year": "2008",
+            "match_percentage": 85,
+            "rating": 8.531,
+            "runtime": "152 min",
+            "director": "Christopher Nolan",
+            "genres": [
+                "Action",
+                "Crime",
+                "Thriller"
+            ],
+            "tags": [
+                "Action",
+                "Crime",
+                "Thriller"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "Batman raises the stakes in his war on crime. With the help of Lt. Jim Gordon and District Attorney Harvey Dent, Batman sets out to dismantle the remaining criminal organizations that plague the streets. The partnership proves to be effective, but they soon find themselves prey to a reign of chaos unleashed by a rising criminal mastermind known to the terrified citizens of Gotham as the Joker.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Heroism",
+                "Justice",
+                "Corruption",
+                "Greed"
+            ],
+            "moods": [
+                "Exciting",
+                "Intense"
             ]
         }
     },
     {
-        item_id: 3,
-        title: "No Exit",
-        poster_url: "https://image.tmdb.org/t/p/w500/vDHsLnOWKlPGmWs0kGfuhNF4w5l.jpg",
-        backdrop_url: "https://image.tmdb.org/t/p/w1280/vDHsLnOWKlPGmWs0kGfuhNF4w5l.jpg",
-        overview: "During a blizzard and stranded at a highway rest stop in the mountains, a college student discovers a kidnapped child hidden in a car belonging to one of the people inside.",
-        rich_metadata: {
-            title: "No Exit",
-            year: "2022",
-            match_percentage: 84,
-            rating: 6.1,
-            runtime: "95 min",
-            director: "Damien Power",
-            genres: ["Thriller"],
-            tags: ["Thriller"],
-            audience_type: "Adult",
-            story_summary: "During a blizzard and stranded at a highway rest stop in the mountains, a college student discovers a kidnapped child hidden in a car belonging to one of the people inside.",
-            why_recommended: "Recommended because it is a fast-paced mystery thriller with constant high stakes.",
-            themes: ["Survival", "Trust", "Deception"],
-            moods: ["Suspenseful", "Intense", "Claustrophobic"],
-            pacing: "Fast-Paced",
-            complexity: "Medium",
-            world_building: "Standard",
-            action_level: "High",
-            violence_level: "High",
-            language_severity: "Strong",
-            adult: false,
-            similar_movies: [
-                { item_id: 2, title: "The Batman", poster_url: "https://image.tmdb.org/t/p/original/74xTEgt7R36Fpooo50r9T25onhq.jpg", score: 79 }
+        "item_id": 3,
+        "title": "Interstellar",
+        "poster_url": "https://image.tmdb.org/t/p/w500/yQvGrMoipbRoddT0ZR8tPoR7NfX.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/2ssWTSVklAEc98frZUQhgtGHx7s.jpg",
+        "overview": "The adventures of a group of explorers who make use of a newly discovered wormhole to surpass the limitations on human space travel and conquer the vast distances involved in an interstellar voyage.",
+        "rich_metadata": {
+            "title": "Interstellar",
+            "year": "2014",
+            "match_percentage": 84,
+            "rating": 8.479,
+            "runtime": "169 min",
+            "director": "Christopher Nolan",
+            "genres": [
+                "Adventure",
+                "Drama",
+                "Science Fiction"
+            ],
+            "tags": [
+                "Adventure",
+                "Drama",
+                "Science Fiction"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "The adventures of a group of explorers who make use of a newly discovered wormhole to surpass the limitations on human space travel and conquer the vast distances involved in an interstellar voyage.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Heroism",
+                "Justice",
+                "Technology",
+                "Survival"
+            ],
+            "moods": [
+                "Exciting",
+                "Thought-Provoking",
+                "Emotional"
             ]
         }
     },
     {
-        item_id: 4,
-        title: "Encanto",
-        poster_url: "https://image.tmdb.org/t/p/original/4j0PNHkMr5ax3IA8tjtxcmPU3QT.jpg",
-        backdrop_url: "https://image.tmdb.org/t/p/original/4j0PNHkMr5ax3IA8tjtxcmPU3QT.jpg",
-        overview: "The tale of an extraordinary family, the Madrigals, who live hidden in the mountains of Colombia, in a magical house, in a vibrant town, in a wondrous, charmed place called an Encanto. The magic of the Encanto has blessed every child in the family with a unique gift from super strength to the power to heal—every child except one, Mirabel.",
-        rich_metadata: {
-            title: "Encanto",
-            year: "2021",
-            match_percentage: 90,
-            rating: 7.2,
-            runtime: "102 min",
-            director: "Jared Bush",
-            genres: ["Animation", "Comedy", "Family", "Fantasy"],
-            tags: ["Animation", "Comedy", "Family", "Fantasy"],
-            audience_type: "Family Friendly",
-            story_summary: "The tale of an extraordinary family, the Madrigals, who live hidden in the mountains of Colombia, in a magical house, in a vibrant town, in a wondrous, charmed place called an Encanto. The magic of the Encanto has blessed every child in the family with a unique gift from super strength to the power to heal—every child except one, Mirabel.",
-            why_recommended: "Recommended for its heartwarming family themes, gorgeous animation, and catchy musical numbers.",
-            themes: ["Family Burden", "Self-Worth", "Identity", "Acceptance"],
-            moods: ["Uplifting", "Emotional", "Joyful"],
-            pacing: "Steady",
-            complexity: "Medium",
-            world_building: "Rich",
-            action_level: "Medium",
-            violence_level: "None",
-            language_severity: "None",
-            adult: false,
-            similar_movies: [
-                { item_id: 1, title: "Spider-Man: No Way Home", poster_url: "https://image.tmdb.org/t/p/original/1g0dhYtq4irTY1GPXvft6k4YLjm.jpg", score: 83 }
+        "item_id": 4,
+        "title": "The Matrix",
+        "poster_url": "https://image.tmdb.org/t/p/w500/dXNAPwY7VrqMAo51EKhhCJfaGb5.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/tlm8UkiQsitc8rSuIAscQDCnP8d.jpg",
+        "overview": "Set in the 22nd century, The Matrix tells the story of a computer hacker who joins a group of underground insurgents fighting the vast and powerful computers who now rule the earth.",
+        "rich_metadata": {
+            "title": "The Matrix",
+            "year": "1999",
+            "match_percentage": 82,
+            "rating": 8.25,
+            "runtime": "136 min",
+            "director": "Lana Wachowski",
+            "genres": [
+                "Action",
+                "Science Fiction"
+            ],
+            "tags": [
+                "Action",
+                "Science Fiction"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "Set in the 22nd century, The Matrix tells the story of a computer hacker who joins a group of underground insurgents fighting the vast and powerful computers who now rule the earth.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Heroism",
+                "Justice",
+                "Technology",
+                "Survival"
+            ],
+            "moods": [
+                "Exciting",
+                "Thought-Provoking"
             ]
         }
     },
     {
-        item_id: 5,
-        title: "The King's Man",
-        poster_url: "https://image.tmdb.org/t/p/original/aq4Pwv5Xeuvj6HZKtxyd23e6bE9.jpg",
-        backdrop_url: "https://image.tmdb.org/t/p/original/aq4Pwv5Xeuvj6HZKtxyd23e6bE9.jpg",
-        overview: "As a collection of history's worst tyrants and criminal masterminds gather to plot a war to wipe out millions, one man must race against time to stop them. Discover the origins of the very first independent intelligence agency in The King's Man.",
-        rich_metadata: {
-            title: "The King's Man",
-            year: "2021",
-            match_percentage: 85,
-            rating: 6.3,
-            runtime: "131 min",
-            director: "Matthew Vaughn",
-            genres: ["Action", "Adventure", "Thriller", "War"],
-            tags: ["Action", "Adventure", "Thriller", "War"],
-            audience_type: "Adult",
-            story_summary: "As a collection of history's worst tyrants and criminal masterminds gather to plot a war to wipe out millions, one man must race against time to stop them. Discover the origins of the very first independent intelligence agency in The King's Man.",
-            why_recommended: "Recommended for its high-octane action sequences and stylized historical references.",
-            themes: ["Duty", "Legacy", "Origin Stories", "Espionage"],
-            moods: ["Exciting", "Stylized", "Adventurous"],
-            pacing: "Fast-Paced",
-            complexity: "Medium",
-            world_building: "Rich",
-            action_level: "High",
-            violence_level: "High",
-            language_severity: "Strong",
-            adult: false,
-            similar_movies: [
-                { item_id: 1, title: "Spider-Man: No Way Home", poster_url: "https://image.tmdb.org/t/p/original/1g0dhYtq4irTY1GPXvft6k4YLjm.jpg", score: 82 }
+        "item_id": 5,
+        "title": "Avengers: Infinity War",
+        "poster_url": "https://image.tmdb.org/t/p/w500/7WsyChQLEftFiDOVTGkv3hFpyyt.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/mDfJG3LC3Dqb67AZ52x3Z0jU0uB.jpg",
+        "overview": "As the Avengers and their allies have continued to protect the world from threats too large for any one hero to handle, a new danger has emerged from the cosmic shadows: Thanos. A despot of intergalactic infamy, his goal is to collect all six Infinity Stones, artifacts of unimaginable power, and use them to inflict his twisted will on all of reality. Everything the Avengers have fought for has led up to this moment - the fate of Earth and existence itself has never been more uncertain.",
+        "rich_metadata": {
+            "title": "Avengers: Infinity War",
+            "year": "2018",
+            "match_percentage": 82,
+            "rating": 8.238,
+            "runtime": "149 min",
+            "director": "Joe Russo",
+            "genres": [
+                "Adventure",
+                "Action",
+                "Science Fiction"
+            ],
+            "tags": [
+                "Adventure",
+                "Action",
+                "Science Fiction"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "As the Avengers and their allies have continued to protect the world from threats too large for any one hero to handle, a new danger has emerged from the cosmic shadows: Thanos. A despot of intergalactic infamy, his goal is to collect all six Infinity Stones, artifacts of unimaginable power, and use them to inflict his twisted will on all of reality. Everything the Avengers have fought for has led up to this moment - the fate of Earth and existence itself has never been more uncertain.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Heroism",
+                "Justice",
+                "Technology",
+                "Survival"
+            ],
+            "moods": [
+                "Exciting",
+                "Thought-Provoking"
             ]
         }
     },
     {
-        item_id: 10,
-        title: "Interstellar",
-        poster_url: "https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg",
-        backdrop_url: "https://image.tmdb.org/t/p/w1280/xJHokMbljvjEVAle2OvwIeEXpN.jpg",
-        overview: "The adventures of a group of explorers who make use of a newly discovered wormhole to surpass the limitations on human space travel and conquer the vast distances involved in an interstellar voyage.",
-        rich_metadata: {
-            title: "Interstellar",
-            year: "2014",
-            match_percentage: 97,
-            rating: 8.7,
-            runtime: "169 min",
-            director: "Christopher Nolan",
-            genres: ["Science Fiction", "Drama", "Adventure"],
-            tags: ["Science Fiction", "Drama", "Adventure"],
-            audience_type: "General",
-            story_summary: "The adventures of a group of explorers who make use of a newly discovered wormhole to surpass the limitations on human space travel and conquer the vast distances involved in an interstellar voyage.",
-            why_recommended: "Recommended because it is a mind-bending sci-fi epic with profound emotional core and stellar score.",
-            themes: ["Survival", "Time & Space", "Parental Love", "Human Destiny"],
-            moods: ["Epic", "Thought-Provoking", "Atmospheric", "Emotional"],
-            pacing: "Steady",
-            complexity: "High",
-            world_building: "Exceptional",
-            action_level: "Medium",
-            violence_level: "Mild",
-            language_severity: "Mild",
-            adult: false,
-            similar_movies: [
-                { item_id: 1, title: "Spider-Man: No Way Home", poster_url: "https://image.tmdb.org/t/p/original/1g0dhYtq4irTY1GPXvft6k4YLjm.jpg", score: 87 }
+        "item_id": 6,
+        "title": "Pulp Fiction",
+        "poster_url": "https://image.tmdb.org/t/p/w500/vQWk5YBFWF4bZaofAbv0tShwBvQ.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/suaEOtk1N1sgg2MTM7oZd2cfVp3.jpg",
+        "overview": "A burger-loving hit man, his philosophical partner, a drug-addled gangster's moll and a washed-up boxer converge in this sprawling, comedic crime caper. Their adventures unfurl in three stories that ingeniously trip back and forth in time.",
+        "rich_metadata": {
+            "title": "Pulp Fiction",
+            "year": "1994",
+            "match_percentage": 84,
+            "rating": 8.482,
+            "runtime": "154 min",
+            "director": "Quentin Tarantino",
+            "genres": [
+                "Thriller",
+                "Crime",
+                "Comedy"
+            ],
+            "tags": [
+                "Thriller",
+                "Crime",
+                "Comedy"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "A burger-loving hit man, his philosophical partner, a drug-addled gangster's moll and a washed-up boxer converge in this sprawling, comedic crime caper. Their adventures unfurl in three stories that ingeniously trip back and forth in time.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Corruption",
+                "Greed",
+                "Friendship"
+            ],
+            "moods": [
+                "Intense",
+                "Lighthearted"
             ]
         }
     },
     {
-        item_id: 11,
-        title: "Stranger Things",
-        poster_url: "https://image.tmdb.org/t/p/w500/49WJfeN0moxb9IPfGn8AIqMGskD.jpg",
-        backdrop_url: "https://image.tmdb.org/t/p/w1280/rcA17r9GKqd8OHsSHLDOwlziR5N.jpg",
-        overview: "When a young boy vanishes, a small town uncovers a mystery involving secret experiments, terrifying supernatural forces and one strange little girl.",
-        rich_metadata: {
-            title: "Stranger Things",
-            type: "series",
-            year: "2016",
-            match_percentage: 96,
-            rating: 8.8,
-            runtime: "Series",
-            director: "The Duffer Brothers",
-            genres: ["Drama", "Science Fiction", "Mystery"],
-            tags: ["Drama", "Science Fiction", "Mystery"],
-            audience_type: "General",
-            story_summary: "When a young boy vanishes, a small town uncovers a mystery involving secret experiments, terrifying supernatural forces and one strange little girl.",
-            why_recommended: "Recommended for its thrilling nostalgia and suspenseful supernatural mystery.",
-            themes: ["Friendship", "Good vs Evil", "Mystery", "Survival"],
-            moods: ["Atmospheric", "Suspenseful", "Captivating"],
-            pacing: "Fast-Paced",
-            complexity: "Medium",
-            world_building: "Rich",
-            action_level: "Medium",
-            violence_level: "Moderate",
-            language_severity: "Mild",
-            adult: false,
-            similar_movies: [
-                { item_id: 2, title: "The Batman", poster_url: "https://image.tmdb.org/t/p/original/74xTEgt7R36Fpooo50r9T25onhq.jpg", score: 88 }
+        "item_id": 7,
+        "title": "The Shawshank Redemption",
+        "poster_url": "https://image.tmdb.org/t/p/w500/9cqNxx0GxF0bflZmeSMuL5tnGzr.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/zfbjgQE1uSd9wiPTX4VzsLi0rGG.jpg",
+        "overview": "Imprisoned in the 1940s for the double murder of his wife and her lover, upstanding banker Andy Dufresne begins a new life at the Shawshank prison, where he puts his accounting skills to work for an amoral warden. During his long stretch in prison, Dufresne comes to be admired by the other inmates -- including an older prisoner named Red -- for his integrity and unquenchable sense of hope.",
+        "rich_metadata": {
+            "title": "The Shawshank Redemption",
+            "year": "1994",
+            "match_percentage": 87,
+            "rating": 8.723,
+            "runtime": "142 min",
+            "director": "Frank Darabont",
+            "genres": [
+                "Drama",
+                "Crime"
+            ],
+            "tags": [
+                "Drama",
+                "Crime"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "Imprisoned in the 1940s for the double murder of his wife and her lover, upstanding banker Andy Dufresne begins a new life at the Shawshank prison, where he puts his accounting skills to work for an amoral warden. During his long stretch in prison, Dufresne comes to be admired by the other inmates -- including an older prisoner named Red -- for his integrity and unquenchable sense of hope.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Sacrifice",
+                "Identity",
+                "Corruption",
+                "Greed"
+            ],
+            "moods": [
+                "Emotional",
+                "Intense"
             ]
         }
     },
     {
-        item_id: 12,
-        title: "Wednesday",
-        poster_url: "https://image.tmdb.org/t/p/w500/9PFonBhy4cQy7Jz20NpMygczOkv.jpg",
-        backdrop_url: "https://image.tmdb.org/t/p/w1280/iHSwvRVsRyxpX7FE7GbviaDvgGZ.jpg",
-        overview: "A sleuthing, supernaturally infused mystery charting Wednesday Addams' years as a student at Nevermore Academy.",
-        rich_metadata: {
-            title: "Wednesday",
-            type: "series",
-            year: "2022",
-            match_percentage: 91,
-            rating: 8.2,
-            runtime: "Series",
-            director: "Tim Burton",
-            genres: ["Comedy", "Fantasy", "Mystery"],
-            tags: ["Comedy", "Fantasy", "Mystery"],
-            audience_type: "General",
-            story_summary: "A sleuthing, supernaturally infused mystery charting Wednesday Addams' years as a student at Nevermore Academy.",
-            why_recommended: "Recommended for its dark wit and gothic mystery themes.",
-            themes: ["Mystery", "Good vs Evil", "Destiny"],
-            moods: ["Dark", "Lighthearted", "Atmospheric"],
-            pacing: "Steady",
-            complexity: "Medium",
-            world_building: "Rich",
-            action_level: "Medium",
-            violence_level: "Moderate",
-            language_severity: "Mild",
-            adult: false,
-            similar_movies: [
-                { item_id: 4, title: "Encanto", poster_url: "https://image.tmdb.org/t/p/original/4j0PNHkMr5ax3IA8tjtxcmPU3QT.jpg", score: 80 }
+        "item_id": 8,
+        "title": "The Godfather",
+        "poster_url": "https://image.tmdb.org/t/p/w500/3bhkrj58Vtu7enYsRolD1fZdja1.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/ejdD20cdHNFAYAN2DlqPToXKyzx.jpg",
+        "overview": "Spanning the years 1945 to 1955, a chronicle of the fictional Italian-American Corleone crime family. When organized crime family patriarch, Vito Corleone barely survives an attempt on his life, his youngest son, Michael steps in to take care of the would-be killers, launching a campaign of bloody revenge.",
+        "rich_metadata": {
+            "title": "The Godfather",
+            "year": "1972",
+            "match_percentage": 87,
+            "rating": 8.7,
+            "runtime": "175 min",
+            "director": "Francis Ford Coppola",
+            "genres": [
+                "Drama",
+                "Crime"
+            ],
+            "tags": [
+                "Drama",
+                "Crime"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "Spanning the years 1945 to 1955, a chronicle of the fictional Italian-American Corleone crime family. When organized crime family patriarch, Vito Corleone barely survives an attempt on his life, his youngest son, Michael steps in to take care of the would-be killers, launching a campaign of bloody revenge.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Sacrifice",
+                "Identity",
+                "Corruption",
+                "Greed"
+            ],
+            "moods": [
+                "Emotional",
+                "Intense"
             ]
         }
     },
     {
-        item_id: 13,
-        title: "Dune",
-        poster_url: "https://image.tmdb.org/t/p/w500/d5NXSklXo0qyIYkgV94XAgMIckC.jpg",
-        backdrop_url: "https://image.tmdb.org/t/p/w1280/jYEW5xZkZk2WTrdbMGAPFuBqbDc.jpg",
-        overview: "Paul Atreides, a brilliant and gifted young man born into a great destiny beyond his understanding, must travel to the most dangerous planet in the universe to ensure the future of his family and his people.",
-        rich_metadata: {
-            title: "Dune",
-            year: "2021",
-            match_percentage: 95,
-            rating: 8.0,
-            runtime: "155 min",
-            director: "Denis Villeneuve",
-            genres: ["Science Fiction", "Adventure", "Drama"],
-            tags: ["Science Fiction", "Adventure", "Drama"],
-            audience_type: "General",
-            story_summary: "Paul Atreides, a brilliant and gifted young man born into a great destiny beyond his understanding, must travel to the most dangerous planet in the universe to ensure the future of his family and his people.",
-            why_recommended: "Recommended for its massive epic scale, complex political intrigue, and stellar sound design.",
-            themes: ["Destiny", "Survival", "War & Peace", "Humanity"],
-            moods: ["Epic", "Atmospheric", "Thought-Provoking"],
-            pacing: "Slow Burn",
-            complexity: "High",
-            world_building: "Exceptional",
-            action_level: "High",
-            violence_level: "Moderate",
-            language_severity: "Mild",
-            adult: false,
-            similar_movies: [
-                { item_id: 10, title: "Interstellar", poster_url: "https://placehold.co/400x600/111/333?text=Interstellar", score: 92 }
+        "item_id": 9,
+        "title": "Forrest Gump",
+        "poster_url": "https://image.tmdb.org/t/p/w500/Cw4hIUIAmSYfK9QfaUW5igp9La.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/66Kn4XWhkuPkJxOJyPEx4U2CUfN.jpg",
+        "overview": "A man with a low IQ has accomplished great things in his life and been present during significant historic events\u2014in each case, far exceeding what anyone imagined he could do. But despite all he has achieved, his one true love eludes him.",
+        "rich_metadata": {
+            "title": "Forrest Gump",
+            "year": "1994",
+            "match_percentage": 84,
+            "rating": 8.464,
+            "runtime": "142 min",
+            "director": "Robert Zemeckis",
+            "genres": [
+                "Comedy",
+                "Drama",
+                "Romance"
+            ],
+            "tags": [
+                "Comedy",
+                "Drama",
+                "Romance"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "A man with a low IQ has accomplished great things in his life and been present during significant historic events\u2014in each case, far exceeding what anyone imagined he could do. But despite all he has achieved, his one true love eludes him.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Sacrifice",
+                "Identity",
+                "Friendship"
+            ],
+            "moods": [
+                "Emotional",
+                "Lighthearted"
             ]
         }
     },
     {
-        item_id: 14,
-        title: "The Grand Budapest Hotel",
-        poster_url: "https://image.tmdb.org/t/p/w500/eWd26co59HRmzZoxbWYvJ7wjTBm.jpg",
-        backdrop_url: "https://image.tmdb.org/t/p/w1280/58QT4cPJ2u2TqWZkterDq9q4yT5.jpg",
-        overview: "The writer relates his adventures at a renowned European resort hotel between the first and second World Wars with a concierge who is wrongly framed for murder.",
-        rich_metadata: {
-            title: "The Grand Budapest Hotel",
-            year: "2014",
-            match_percentage: 89,
-            rating: 8.0,
-            runtime: "99 min",
-            director: "Wes Anderson",
-            genres: ["Comedy", "Drama"],
-            tags: ["Comedy", "Drama"],
-            audience_type: "General",
-            story_summary: "The writer relates his adventures at a renowned European resort hotel between the first and second World Wars with a concierge who is wrongly framed for murder.",
-            why_recommended: "Recommended for its distinct visual style, quirky humor, and stellar ensemble cast.",
-            themes: ["Friendship", "Loyalty", "Mystery"],
-            moods: ["Lighthearted", "Captivating", "Stylized"],
-            pacing: "Fast-Paced",
-            complexity: "Medium",
-            world_building: "Rich",
-            action_level: "Low",
-            violence_level: "Mild",
-            language_severity: "Moderate",
-            adult: false,
-            similar_movies: [
-                { item_id: 4, title: "Encanto", poster_url: "https://image.tmdb.org/t/p/original/4j0PNHkMr5ax3IA8tjtxcmPU3QT.jpg", score: 81 }
+        "item_id": 10,
+        "title": "Gladiator",
+        "poster_url": "https://image.tmdb.org/t/p/w500/wN2xWp1eIwCKOD0BHTcErTBv1Uq.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/jhk6D8pim3yaByu1801kMoxXFaX.jpg",
+        "overview": "After the death of Emperor Marcus Aurelius, his devious son takes power and demotes Maximus, one of Rome's most capable generals who Marcus preferred. Eventually, Maximus is forced to become a gladiator and battle to the death against other men for the amusement of paying audiences.",
+        "rich_metadata": {
+            "title": "Gladiator",
+            "year": "2000",
+            "match_percentage": 82,
+            "rating": 8.226,
+            "runtime": "155 min",
+            "director": "Ridley Scott",
+            "genres": [
+                "Action",
+                "Drama",
+                "Adventure"
+            ],
+            "tags": [
+                "Action",
+                "Drama",
+                "Adventure"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "After the death of Emperor Marcus Aurelius, his devious son takes power and demotes Maximus, one of Rome's most capable generals who Marcus preferred. Eventually, Maximus is forced to become a gladiator and battle to the death against other men for the amusement of paying audiences.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Heroism",
+                "Justice",
+                "Sacrifice",
+                "Identity"
+            ],
+            "moods": [
+                "Exciting",
+                "Emotional"
             ]
         }
     },
     {
-        item_id: 20,
-        title: "Breaking Bad",
-        poster_url: "https://image.tmdb.org/t/p/w500/ggFHVNu6YYI5L9pCfOacjizRGt.jpg",
-        backdrop_url: "https://image.tmdb.org/t/p/w1280/tsRy63Mu5cu8etL1X7ZLyf7UP1M.jpg",
-        overview: "A high school chemistry teacher diagnosed with inoperable lung cancer turns to manufacturing and selling methamphetamine with a former student.",
-        rich_metadata: {
-            title: "Breaking Bad",
-            type: "series",
-            year: "2008",
-            match_percentage: 98,
-            rating: 9.5,
-            runtime: "Series",
-            director: "Vince Gilligan",
-            genres: ["Drama", "Crime", "Thriller"],
-            tags: ["Drama", "Crime", "Thriller"],
-            audience_type: "Adult",
-            story_summary: "A high school chemistry teacher diagnosed with inoperable lung cancer turns to manufacturing and selling methamphetamine with a former student.",
-            why_recommended: "Recommended as one of the highest-rated television dramas of all time.",
-            themes: ["Morality", "Family", "Greed", "Crime"],
-            moods: ["Intense", "Dark", "Captivating"],
-            pacing: "Steady",
-            complexity: "High",
-            world_building: "Rich",
-            action_level: "Medium",
-            violence_level: "High",
-            language_severity: "Strong",
-            adult: false,
-            similar_movies: [
-                { item_id: 2, title: "The Batman", poster_url: "https://image.tmdb.org/t/p/original/74xTEgt7R36Fpooo50r9T25onhq.jpg", score: 85 }
+        "item_id": 11,
+        "title": "Spider-Man: Into the Spider-Verse",
+        "poster_url": "https://image.tmdb.org/t/p/w500/iiZZdoQBEYBv6id8su7ImL0oCbD.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/8mnXR9rey5uQ08rZAvzojKWbDQS.jpg",
+        "overview": "Struggling to find his place in the world while juggling school and family, Brooklyn teenager Miles Morales is unexpectedly bitten by a radioactive spider and develops unfathomable powers just like the one and only Spider-Man. While wrestling with the implications of his new abilities, Miles discovers a super collider created by the madman Wilson \"Kingpin\" Fisk, causing others from across the Spider-Verse to be inadvertently transported to his dimension.",
+        "rich_metadata": {
+            "title": "Spider-Man: Into the Spider-Verse",
+            "year": "2018",
+            "match_percentage": 83,
+            "rating": 8.393,
+            "runtime": "117 min",
+            "director": "Bob Persichetti",
+            "genres": [
+                "Animation",
+                "Action",
+                "Adventure",
+                "Science Fiction"
+            ],
+            "tags": [
+                "Animation",
+                "Action",
+                "Adventure",
+                "Science Fiction"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "Struggling to find his place in the world while juggling school and family, Brooklyn teenager Miles Morales is unexpectedly bitten by a radioactive spider and develops unfathomable powers just like the one and only Spider-Man. While wrestling with the implications of his new abilities, Miles discovers a super collider created by the madman Wilson \"Kingpin\" Fisk, causing others from across the Spider-Verse to be inadvertently transported to his dimension.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Heroism",
+                "Justice",
+                "Technology",
+                "Survival"
+            ],
+            "moods": [
+                "Exciting",
+                "Thought-Provoking",
+                "Joyful"
             ]
         }
     },
     {
-        item_id: 21,
-        title: "Game of Thrones",
-        poster_url: "https://image.tmdb.org/t/p/w500/u3bB5t7wQk576Gmg23sGF75agbE.jpg",
-        backdrop_url: "https://image.tmdb.org/t/p/w1280/2OMB0ynKlyIenMJWI2Dy9IWT4c.jpg",
-        overview: "Nine noble families fight for control over the lands of Westeros, while an ancient enemy returns after being dormant for thousands of years.",
-        rich_metadata: {
-            title: "Game of Thrones",
-            type: "series",
-            year: "2011",
-            match_percentage: 97,
-            rating: 9.2,
-            runtime: "Series",
-            director: "David Benioff",
-            genres: ["Drama", "Fantasy", "Action"],
-            tags: ["Drama", "Fantasy", "Action"],
-            audience_type: "Adult",
-            story_summary: "Nine noble families fight for control over the lands of Westeros, while an ancient enemy returns after being dormant for thousands of years.",
-            why_recommended: "Recommended for its epic fantasy world-building and political intrigue.",
-            themes: ["Power", "Betrayal", "Survival", "Destiny"],
-            moods: ["Epic", "Intense", "Dark"],
-            pacing: "Steady",
-            complexity: "High",
-            world_building: "Exceptional",
-            action_level: "High",
-            violence_level: "High",
-            language_severity: "Strong",
-            adult: false,
-            similar_movies: [
-                { item_id: 13, title: "Dune", poster_url: "https://placehold.co/400x600/111/333?text=Dune", score: 90 }
+        "item_id": 12,
+        "title": "Parasite",
+        "poster_url": "https://image.tmdb.org/t/p/w500/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/wCuUKiRaz0wEESsYqmQy005xvTE.jpg",
+        "overview": "All unemployed, Ki-taek's family takes peculiar interest in the wealthy and glamorous Parks for their livelihood until they get entangled in an unexpected incident.",
+        "rich_metadata": {
+            "title": "Parasite",
+            "year": "2019",
+            "match_percentage": 84,
+            "rating": 8.492,
+            "runtime": "133 min",
+            "director": "Bong Joon Ho",
+            "genres": [
+                "Comedy",
+                "Thriller",
+                "Drama"
+            ],
+            "tags": [
+                "Comedy",
+                "Thriller",
+                "Drama"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "All unemployed, Ki-taek's family takes peculiar interest in the wealthy and glamorous Parks for their livelihood until they get entangled in an unexpected incident.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Sacrifice",
+                "Identity",
+                "Corruption",
+                "Greed"
+            ],
+            "moods": [
+                "Emotional",
+                "Intense",
+                "Lighthearted"
             ]
         }
     },
     {
-        item_id: 22,
-        title: "Succession",
-        poster_url: "https://image.tmdb.org/t/p/w500/e2X8MdMmLMBUB4G1YAjHMFhP5zy.jpg",
-        backdrop_url: "https://image.tmdb.org/t/p/w1280/3VNbPATrczBDxbLn3A4YdJpjEK.jpg",
-        overview: "The Roy family is known for controlling the biggest media and entertainment company in the world. However, their world changes when their father steps down.",
-        rich_metadata: {
-            title: "Succession",
-            type: "series",
-            year: "2018",
-            match_percentage: 94,
-            rating: 8.9,
-            runtime: "Series",
-            director: "Jesse Armstrong",
-            genres: ["Drama", "Comedy"],
-            tags: ["Drama", "Comedy"],
-            audience_type: "Adult",
-            story_summary: "The Roy family is known for controlling the biggest media and entertainment company in the world. However, their world changes when their father steps down.",
-            why_recommended: "Recommended for its sharp satire, incredible writing, and intense family drama.",
-            themes: ["Power", "Family", "Corporate Greed"],
-            moods: ["Cynical", "Intense", "Witty"],
-            pacing: "Steady",
-            complexity: "High",
-            world_building: "Rich",
-            action_level: "Low",
-            violence_level: "Low",
-            language_severity: "Strong",
-            adult: false,
-            similar_movies: [
-                { item_id: 14, title: "The Grand Budapest Hotel", poster_url: "https://placehold.co/400x600/111/333?text=Budapest+Hotel", score: 80 }
+        "item_id": 13,
+        "title": "Whiplash",
+        "poster_url": "https://image.tmdb.org/t/p/w500/7fn624j5lj3xTme2SgiLCeuedmO.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/wbQa0EnWUyRzQ5d1pHLNRlmsCUP.jpg",
+        "overview": "Under the direction of a ruthless instructor, a talented young drummer begins to pursue perfection at any cost, even his humanity.",
+        "rich_metadata": {
+            "title": "Whiplash",
+            "year": "2014",
+            "match_percentage": 83,
+            "rating": 8.375,
+            "runtime": "107 min",
+            "director": "Damien Chazelle",
+            "genres": [
+                "Drama",
+                "Music",
+                "Thriller"
+            ],
+            "tags": [
+                "Drama",
+                "Music",
+                "Thriller"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "Under the direction of a ruthless instructor, a talented young drummer begins to pursue perfection at any cost, even his humanity.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Sacrifice",
+                "Identity",
+                "Corruption",
+                "Greed"
+            ],
+            "moods": [
+                "Emotional",
+                "Intense"
             ]
         }
     },
     {
-        item_id: 23,
-        title: "The Crown",
-        poster_url: "https://image.tmdb.org/t/p/w500/8E2nCaTM9aHkKjHPYDiHPq9JzLF.jpg",
-        backdrop_url: "https://image.tmdb.org/t/p/w1280/9cJETuLMc6R0bTWRA5i7ctY9bxk.jpg",
-        overview: "Follows the political rivalries and romance of Queen Elizabeth II's reign and the events that shaped the second half of the twentieth century.",
-        rich_metadata: {
-            title: "The Crown",
-            type: "series",
-            year: "2016",
-            match_percentage: 93,
-            rating: 8.6,
-            runtime: "Series",
-            director: "Peter Morgan",
-            genres: ["Drama", "History"],
-            tags: ["Drama", "History"],
-            audience_type: "General",
-            story_summary: "Follows the political rivalries and romance of Queen Elizabeth II's reign and the events that shaped the second half of the twentieth century.",
-            why_recommended: "Recommended for its historical accuracy, gorgeous cinematography, and dramatic depth.",
-            themes: ["Duty", "Family", "Tradition", "Politics"],
-            moods: ["Atmospheric", "Emotional", "Serious"],
-            pacing: "Steady",
-            complexity: "Medium",
-            world_building: "Rich",
-            action_level: "Low",
-            violence_level: "Low",
-            language_severity: "Mild",
-            adult: false,
-            similar_movies: [
-                { item_id: 14, title: "The Grand Budapest Hotel", poster_url: "https://placehold.co/400x600/111/333?text=Budapest+Hotel", score: 75 }
+        "item_id": 14,
+        "title": "Dune",
+        "poster_url": "https://image.tmdb.org/t/p/w500/gDzOcq0pfeCeqMBwKIJlSmQpjkZ.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/zRKQW58MBEY078AxkHxEJzUskCl.jpg",
+        "overview": "Paul Atreides, a brilliant and gifted young man born into a great destiny beyond his understanding, must travel to the most dangerous planet in the universe to ensure the future of his family and his people. As malevolent forces explode into conflict over the planet's exclusive supply of the most precious resource in existence-a commodity capable of unlocking humanity's greatest potential-only those who can conquer their fear will survive.",
+        "rich_metadata": {
+            "title": "Dune",
+            "year": "2021",
+            "match_percentage": 77,
+            "rating": 7.78,
+            "runtime": "155 min",
+            "director": "Denis Villeneuve",
+            "genres": [
+                "Science Fiction",
+                "Adventure"
+            ],
+            "tags": [
+                "Science Fiction",
+                "Adventure"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "Paul Atreides, a brilliant and gifted young man born into a great destiny beyond his understanding, must travel to the most dangerous planet in the universe to ensure the future of his family and his people. As malevolent forces explode into conflict over the planet's exclusive supply of the most precious resource in existence-a commodity capable of unlocking humanity's greatest potential-only those who can conquer their fear will survive.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Heroism",
+                "Justice",
+                "Technology",
+                "Survival"
+            ],
+            "moods": [
+                "Exciting",
+                "Thought-Provoking"
             ]
         }
     },
     {
-        item_id: 24,
-        title: "Friends",
-        poster_url: "https://image.tmdb.org/t/p/w500/f496cm9enuEsZkSPzCwnTESEK5s.jpg",
-        backdrop_url: "https://image.tmdb.org/t/p/w1280/l0qVZIpXtIo7km9KLbQTxFEKpnc.jpg",
-        overview: "Follows the personal and professional lives of six twenty to thirty-something-year-old friends living in Manhattan.",
-        rich_metadata: {
-            title: "Friends",
-            type: "series",
-            year: "1994",
-            match_percentage: 95,
-            rating: 8.9,
-            runtime: "Series",
-            director: "David Crane",
-            genres: ["Comedy", "Romance"],
-            tags: ["Comedy", "Romance"],
-            audience_type: "Family/General",
-            story_summary: "Follows the personal and professional lives of six twenty to thirty-something-year-old friends living in Manhattan.",
-            why_recommended: "Recommended for its nostalgic, lighthearted humor and iconic cast dynamics.",
-            themes: ["Friendship", "Love", "Careers"],
-            moods: ["Lighthearted", "Uplifting", "Funny"],
-            pacing: "Fast-Paced",
-            complexity: "Low",
-            world_building: "Standard",
-            action_level: "Low",
-            violence_level: "None",
-            language_severity: "Mild",
-            adult: false,
-            similar_movies: [
-                { item_id: 4, title: "Encanto", poster_url: "https://image.tmdb.org/t/p/original/4j0PNHkMr5ax3IA8tjtxcmPU3QT.jpg", score: 78 }
+        "item_id": 15,
+        "title": "Oppenheimer",
+        "poster_url": "https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/neeNHeXjMF5fXoCJRsOmkNGC7q.jpg",
+        "overview": "The story of J. Robert Oppenheimer's role in the development of the atomic bomb during World War II.",
+        "rich_metadata": {
+            "title": "Oppenheimer",
+            "year": "2023",
+            "match_percentage": 80,
+            "rating": 8.025,
+            "runtime": "181 min",
+            "director": "Christopher Nolan",
+            "genres": [
+                "Drama",
+                "History"
+            ],
+            "tags": [
+                "Drama",
+                "History"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "The story of J. Robert Oppenheimer's role in the development of the atomic bomb during World War II.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Sacrifice",
+                "Identity",
+                "Destiny"
+            ],
+            "moods": [
+                "Emotional",
+                "Captivating"
             ]
         }
     },
     {
-        item_id: 25,
-        title: "The Office",
-        poster_url: "https://image.tmdb.org/t/p/w500/qWnJzyZhyy74gjpSjIXWmuk0ifX.jpg",
-        backdrop_url: "https://image.tmdb.org/t/p/w1280/4j0PNHkMr5ax3IA8tjtxcmPU3QT.jpg",
-        overview: "A mockumentary on a group of typical office workers, where the workday consists of ego clashes, inappropriate behavior, and tedium.",
-        rich_metadata: {
-            title: "The Office",
-            type: "series",
-            year: "2005",
-            match_percentage: 96,
-            rating: 9.0,
-            runtime: "Series",
-            director: "Greg Daniels",
-            genres: ["Comedy"],
-            tags: ["Comedy"],
-            audience_type: "Family/General",
-            story_summary: "A mockumentary on a group of typical office workers, where the workday consists of ego clashes, inappropriate behavior, and tedium.",
-            why_recommended: "Recommended for its hilarious cringe comedy and beloved character relationships.",
-            themes: ["Workplace", "Friendship", "Humor"],
-            moods: ["Lighthearted", "Witty", "Funny"],
-            pacing: "Fast-Paced",
-            complexity: "Low",
-            world_building: "Standard",
-            action_level: "Low",
-            violence_level: "None",
-            language_severity: "Mild",
-            adult: false,
-            similar_movies: [
-                { item_id: 4, title: "Encanto", poster_url: "https://image.tmdb.org/t/p/original/4j0PNHkMr5ax3IA8tjtxcmPU3QT.jpg", score: 76 }
+        "item_id": 16,
+        "title": "Alien",
+        "poster_url": "https://image.tmdb.org/t/p/w500/vfrQk5IPloGg1v9Rzbh2Eg3VGyM.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/AmR3JG1VQVxU8TfAvljUhfSFUOx.jpg",
+        "overview": "During its return to the earth, commercial spaceship Nostromo intercepts a distress signal from a distant planet. When a three-member team of the crew discovers a chamber containing thousands of eggs on the planet, a creature inside one of the eggs attacks an explorer. The entire crew is unaware of the impending nightmare set to descend upon them when the alien parasite planted inside its unfortunate host is birthed.",
+        "rich_metadata": {
+            "title": "Alien",
+            "year": "1979",
+            "match_percentage": 81,
+            "rating": 8.17,
+            "runtime": "117 min",
+            "director": "Ridley Scott",
+            "genres": [
+                "Horror",
+                "Science Fiction"
+            ],
+            "tags": [
+                "Horror",
+                "Science Fiction"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "During its return to the earth, commercial spaceship Nostromo intercepts a distress signal from a distant planet. When a three-member team of the crew discovers a chamber containing thousands of eggs on the planet, a creature inside one of the eggs attacks an explorer. The entire crew is unaware of the impending nightmare set to descend upon them when the alien parasite planted inside its unfortunate host is birthed.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Technology",
+                "Survival",
+                "Destiny"
+            ],
+            "moods": [
+                "Thought-Provoking",
+                "Captivating"
             ]
         }
     },
     {
-        item_id: 26,
-        title: "Sherlock",
-        poster_url: "https://image.tmdb.org/t/p/w500/7WTsnHkbA0FaG6R9twfFde0I9hn.jpg",
-        backdrop_url: "https://image.tmdb.org/t/p/w1280/oNuQqRjTdJhxT9GDGJf6e12ohls.jpg",
-        overview: "A modern update finds the famous sleuth and his doctor partner solving crime in 21st century London.",
-        rich_metadata: {
-            title: "Sherlock",
-            type: "series",
-            year: "2010",
-            match_percentage: 95,
-            rating: 9.1,
-            runtime: "Series",
-            director: "Steven Moffat",
-            genres: ["Drama", "Mystery", "Crime"],
-            tags: ["Drama", "Mystery", "Crime"],
-            audience_type: "General",
-            story_summary: "A modern update finds the famous sleuth and his doctor partner solving crime in 21st century London.",
-            why_recommended: "Recommended for its brilliant modern deduction and thrilling crime mysteries.",
-            themes: ["Intellect", "Friendship", "Justice"],
-            moods: ["Captivating", "Suspenseful", "Witty"],
-            pacing: "Fast-Paced",
-            complexity: "High",
-            world_building: "Rich",
-            action_level: "Medium",
-            violence_level: "Moderate",
-            language_severity: "Mild",
-            adult: false,
-            similar_movies: [
-                { item_id: 2, title: "The Batman", poster_url: "https://image.tmdb.org/t/p/original/74xTEgt7R36Fpooo50r9T25onhq.jpg", score: 88 }
+        "item_id": 17,
+        "title": "Blade Runner 2049",
+        "poster_url": "https://image.tmdb.org/t/p/w500/gajva2L0rPYkEWjzgFlBXCAVBE5.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/mVr0UiqyltcfqxbAUcLl9zWL8ah.jpg",
+        "overview": "Thirty years after the events of the first film, a new blade runner, LAPD Officer K, unearths a long-buried secret that has the potential to plunge what's left of society into chaos. K's discovery leads him on a quest to find Rick Deckard, a former LAPD blade runner who has been missing for 30 years.",
+        "rich_metadata": {
+            "title": "Blade Runner 2049",
+            "year": "2017",
+            "match_percentage": 75,
+            "rating": 7.595,
+            "runtime": "164 min",
+            "director": "Denis Villeneuve",
+            "genres": [
+                "Science Fiction",
+                "Drama"
+            ],
+            "tags": [
+                "Science Fiction",
+                "Drama"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "Thirty years after the events of the first film, a new blade runner, LAPD Officer K, unearths a long-buried secret that has the potential to plunge what's left of society into chaos. K's discovery leads him on a quest to find Rick Deckard, a former LAPD blade runner who has been missing for 30 years.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Technology",
+                "Survival",
+                "Sacrifice",
+                "Identity"
+            ],
+            "moods": [
+                "Thought-Provoking",
+                "Emotional"
             ]
         }
     },
     {
-        item_id: 27,
-        title: "Black Mirror",
-        poster_url: "https://image.tmdb.org/t/p/w500/7PRddO7z7mcPi21nZTCMGShAyy1.jpg",
-        backdrop_url: "https://image.tmdb.org/t/p/w1280/4pP8BWFD8wRFaejrqfO0bpQZgaX.jpg",
-        overview: "An anthology series exploring a twisted, high-tech multiverse where humanity's greatest innovations and darkest instincts collide.",
-        rich_metadata: {
-            title: "Black Mirror",
-            type: "series",
-            year: "2011",
-            match_percentage: 94,
-            rating: 8.7,
-            runtime: "Series",
-            director: "Charlie Brooker",
-            genres: ["Drama", "Science Fiction", "Thriller"],
-            tags: ["Drama", "Science Fiction", "Thriller"],
-            audience_type: "Adult",
-            story_summary: "An anthology series exploring a twisted, high-tech multiverse where humanity's greatest innovations and darkest instincts collide.",
-            why_recommended: "Recommended for its thought-provoking dark sci-fi themes and technological warnings.",
-            themes: ["Technology", "Society", "Human Nature"],
-            moods: ["Dark", "Thought-Provoking", "Atmospheric"],
-            pacing: "Steady",
-            complexity: "High",
-            world_building: "Rich",
-            action_level: "Low",
-            violence_level: "Moderate",
-            language_severity: "Strong",
-            adult: false,
-            similar_movies: [
-                { item_id: 10, title: "Interstellar", poster_url: "https://placehold.co/400x600/111/333?text=Interstellar", score: 85 }
+        "item_id": 18,
+        "title": "American Pie",
+        "poster_url": "https://image.tmdb.org/t/p/w500/5P68by2Thn8wHAziyWGEw2O7hco.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/z9DFGaWj4G4kZUWLZ6ESs1NP1Fp.jpg",
+        "overview": "At a high-school party, four friends find that losing their collective virginity isn't as easy as they had thought. But they still believe that they need to do so before college. To motivate themselves, they enter a pact to all \"score\" by their senior prom.",
+        "rich_metadata": {
+            "title": "American Pie",
+            "year": "1999",
+            "match_percentage": 66,
+            "rating": 6.609,
+            "runtime": "95 min",
+            "director": "Paul Weitz",
+            "genres": [
+                "Comedy",
+                "Romance"
+            ],
+            "tags": [
+                "Comedy",
+                "Romance"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "At a high-school party, four friends find that losing their collective virginity isn't as easy as they had thought. But they still believe that they need to do so before college. To motivate themselves, they enter a pact to all \"score\" by their senior prom.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Friendship",
+                "Destiny",
+                "Survival"
+            ],
+            "moods": [
+                "Lighthearted",
+                "Captivating"
             ]
         }
     },
     {
-        item_id: 28,
-        title: "Better Call Saul",
-        poster_url: "https://image.tmdb.org/t/p/w500/fC2HDm5t0kR9dtbuXZCXTeegEGq.jpg",
-        backdrop_url: "https://image.tmdb.org/t/p/w1280/vWTmiSMuqIJAJoVEJM17yNFNOcn.jpg",
-        overview: "The trials and tribulations of criminal lawyer Jimmy McGill in the years leading up to his fateful run-in with Walter White and Jesse Pinkman.",
-        rich_metadata: {
-            title: "Better Call Saul",
-            type: "series",
-            year: "2015",
-            match_percentage: 96,
-            rating: 8.9,
-            runtime: "Series",
-            director: "Vince Gilligan",
-            genres: ["Drama", "Crime"],
-            tags: ["Drama", "Crime"],
-            audience_type: "Adult",
-            story_summary: "The trials and tribulations of criminal lawyer Jimmy McGill in the years leading up to his fateful run-in with Walter White and Jesse Pinkman.",
-            why_recommended: "Recommended for its masterful character study, dark humor, and high-tension legal drama.",
-            themes: ["Morality", "Identity", "Family", "Crime"],
-            moods: ["Intense", "Dark", "Captivating"],
-            pacing: "Slow Burn",
-            complexity: "High",
-            world_building: "Rich",
-            action_level: "Low",
-            violence_level: "Moderate",
-            language_severity: "Strong",
-            adult: false,
-            similar_movies: [
-                { item_id: 20, title: "Breaking Bad", poster_url: "https://placehold.co/400x600/111/333?text=Breaking+Bad", score: 98 }
+        "item_id": 19,
+        "title": "Inglourious Basterds",
+        "poster_url": "https://image.tmdb.org/t/p/w500/3Gb6G2amMuKZmmCpRqM4N67s8eE.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/hwNtEmmugU5Yd7hpfprNWI0DGIn.jpg",
+        "overview": "In Nazi-occupied France during World War II, a group of Jewish-American soldiers known as \"The Basterds\" are chosen specifically to spread fear throughout the Third Reich by scalping and brutally killing Nazis. The Basterds, lead by Lt. Aldo Raine soon cross paths with a French-Jewish teenage girl who runs a movie theater in Paris which is targeted by the soldiers.",
+        "rich_metadata": {
+            "title": "Inglourious Basterds",
+            "year": "2009",
+            "match_percentage": 82,
+            "rating": 8.216,
+            "runtime": "153 min",
+            "director": "Quentin Tarantino",
+            "genres": [
+                "Drama",
+                "Thriller",
+                "War"
+            ],
+            "tags": [
+                "Drama",
+                "Thriller",
+                "War"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "In Nazi-occupied France during World War II, a group of Jewish-American soldiers known as \"The Basterds\" are chosen specifically to spread fear throughout the Third Reich by scalping and brutally killing Nazis. The Basterds, lead by Lt. Aldo Raine soon cross paths with a French-Jewish teenage girl who runs a movie theater in Paris which is targeted by the soldiers.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Sacrifice",
+                "Identity",
+                "Corruption",
+                "Greed"
+            ],
+            "moods": [
+                "Emotional",
+                "Intense"
             ]
         }
     },
     {
-        item_id: 29,
-        title: "The Last of Us",
-        poster_url: "https://image.tmdb.org/t/p/w500/uKvVjHNqB5VmOrdxqAt2F7J78ED.jpg",
-        backdrop_url: "https://image.tmdb.org/t/p/w1280/lFiCNvBXUwlNfGjRkG05V3l3EQX.jpg",
-        overview: "Twenty years after modern civilization has been destroyed, Joel, a hardened survivor, is hired to smuggle Ellie, a 14-year-old girl, out of an oppressive quarantine zone.",
-        rich_metadata: {
-            title: "The Last of Us",
-            type: "series",
-            year: "2023",
-            match_percentage: 95,
-            rating: 8.8,
-            runtime: "Series",
-            director: "Craig Mazin",
-            genres: ["Drama", "Action", "Adventure", "Science Fiction"],
-            tags: ["Drama", "Action", "Adventure", "Science Fiction"],
-            audience_type: "Adult",
-            story_summary: "Twenty years after modern civilization has been destroyed, Joel, a hardened survivor, is hired to smuggle Ellie, a 14-year-old girl, out of an oppressive quarantine zone.",
-            why_recommended: "Recommended for its emotional depth, post-apocalyptic survival theme, and gripping narrative.",
-            themes: ["Survival", "Fatherhood", "Loss", "Hope"],
-            moods: ["Emotional", "Intense", "Atmospheric"],
-            pacing: "Steady",
-            complexity: "Medium",
-            world_building: "Exceptional",
-            action_level: "High",
-            violence_level: "High",
-            language_severity: "Strong",
-            adult: false,
-            similar_movies: [
-                { item_id: 11, title: "Stranger Things", poster_url: "https://placehold.co/400x600/111/333?text=Stranger+Things", score: 87 }
+        "item_id": 20,
+        "title": "The Prestige",
+        "poster_url": "https://image.tmdb.org/t/p/w500/Ag2B2KHKQPukjH7WutmgnnSNurZ.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/z3br1ub7spqGMkxgjgJSdM4DC21.jpg",
+        "overview": "A mysterious story of two magicians whose intense rivalry leads them on a life-long battle for supremacy -- full of obsession, deceit and jealousy with dangerous and deadly consequences.",
+        "rich_metadata": {
+            "title": "The Prestige",
+            "year": "2006",
+            "match_percentage": 82,
+            "rating": 8.209,
+            "runtime": "130 min",
+            "director": "Christopher Nolan",
+            "genres": [
+                "Drama",
+                "Mystery",
+                "Science Fiction"
+            ],
+            "tags": [
+                "Drama",
+                "Mystery",
+                "Science Fiction"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "A mysterious story of two magicians whose intense rivalry leads them on a life-long battle for supremacy -- full of obsession, deceit and jealousy with dangerous and deadly consequences.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Technology",
+                "Survival",
+                "Sacrifice",
+                "Identity"
+            ],
+            "moods": [
+                "Thought-Provoking",
+                "Emotional",
+                "Intense"
             ]
         }
     },
     {
-        item_id: 30,
-        title: "The Mandalorian",
-        poster_url: "https://image.tmdb.org/t/p/w500/sWgBv7LV2PRoQgkxwlibdGXKz1S.jpg",
-        backdrop_url: "https://image.tmdb.org/t/p/w1280/9rT3l5n0bC3hd0CfzB9MxbIlHPB.jpg",
-        overview: "The travels of a lone bounty hunter in the outer reaches of the galaxy, far from the authority of the New Republic.",
-        rich_metadata: {
-            title: "The Mandalorian",
-            type: "series",
-            year: "2019",
-            match_percentage: 92,
-            rating: 8.7,
-            runtime: "Series",
-            director: "Jon Favreau",
-            genres: ["Action", "Adventure", "Science Fiction"],
-            tags: ["Action", "Adventure", "Science Fiction"],
-            audience_type: "Family Friendly",
-            story_summary: "The travels of a lone bounty hunter in the outer reaches of the galaxy, far from the authority of the New Republic.",
-            why_recommended: "Recommended for its exciting space adventure, rich world-building, and strong protector themes.",
-            themes: ["Honor", "Duty", "Fatherhood", "Journey"],
-            moods: ["Exciting", "Adventurous", "Uplifting"],
-            pacing: "Fast-Paced",
-            complexity: "Medium",
-            world_building: "Rich",
-            action_level: "High",
-            violence_level: "Moderate",
-            language_severity: "None",
-            adult: false,
-            similar_movies: [
-                { item_id: 1, title: "Spider-Man: No Way Home", poster_url: "https://image.tmdb.org/t/p/original/1g0dhYtq4irTY1GPXvft6k4YLjm.jpg", score: 85 }
+        "item_id": 21,
+        "title": "Django Unchained",
+        "poster_url": "https://image.tmdb.org/t/p/w500/7oWY8VDWW7thTzWh3OKYRkWUlD5.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/2oZklIzUbvZXXzIFzv7Hi68d6xf.jpg",
+        "overview": "With the help of a German bounty hunter, a freed slave sets out to rescue his wife from a brutal Mississippi plantation owner.",
+        "rich_metadata": {
+            "title": "Django Unchained",
+            "year": "2012",
+            "match_percentage": 81,
+            "rating": 8.192,
+            "runtime": "165 min",
+            "director": "Quentin Tarantino",
+            "genres": [
+                "Drama",
+                "Western"
+            ],
+            "tags": [
+                "Drama",
+                "Western"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "With the help of a German bounty hunter, a freed slave sets out to rescue his wife from a brutal Mississippi plantation owner.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Sacrifice",
+                "Identity",
+                "Destiny"
+            ],
+            "moods": [
+                "Emotional",
+                "Captivating"
             ]
         }
     },
     {
-        item_id: 31,
-        title: "Rick and Morty",
-        poster_url: "https://image.tmdb.org/t/p/w500/gdIrmf2DdY5mgN6ycVP0XlzKzbE.jpg",
-        backdrop_url: "https://image.tmdb.org/t/p/w1280/9oclGnOBgQ68WBQlJDy2jIJBwGF.jpg",
-        overview: "An animated series that follows the exploits of a super scientist and his inherently timid grandson.",
-        rich_metadata: {
-            title: "Rick and Morty",
-            type: "series",
-            year: "2013",
-            match_percentage: 97,
-            rating: 9.1,
-            runtime: "Series",
-            director: "Dan Harmon",
-            genres: ["Animation", "Comedy", "Science Fiction"],
-            tags: ["Animation", "Comedy", "Science Fiction"],
-            audience_type: "Adult",
-            story_summary: "An animated series that follows the exploits of a super scientist and his inherently timid grandson.",
-            why_recommended: "Recommended for its brilliant sci-fi concepts, dark absurdist humor, and mind-bending plots.",
-            themes: ["Existentialism", "Family", "Multiverse", "Scientific Ethics"],
-            moods: ["Witty", "Absurd", "Mind-Bending"],
-            pacing: "Fast-Paced",
-            complexity: "High",
-            world_building: "Rich",
-            action_level: "High",
-            violence_level: "High",
-            language_severity: "Strong",
-            adult: false,
-            similar_movies: [
-                { item_id: 10, title: "Interstellar", poster_url: "https://placehold.co/400x600/111/333?text=Interstellar", score: 80 }
+        "item_id": 22,
+        "title": "GoodFellas",
+        "poster_url": "https://image.tmdb.org/t/p/w500/9OkCLM73MIU2CrKZbqiT8Ln1wY2.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/gILte6Zd7m1YneIr6MVhh30S9pr.jpg",
+        "overview": "The true story of Henry Hill, a half-Irish, half-Sicilian Brooklyn kid who is adopted by neighbourhood gangsters at an early age and climbs the ranks of a Mafia family under the guidance of Jimmy Conway.",
+        "rich_metadata": {
+            "title": "GoodFellas",
+            "year": "1990",
+            "match_percentage": 85,
+            "rating": 8.5,
+            "runtime": "145 min",
+            "director": "Martin Scorsese",
+            "genres": [
+                "Drama",
+                "Crime"
+            ],
+            "tags": [
+                "Drama",
+                "Crime"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "The true story of Henry Hill, a half-Irish, half-Sicilian Brooklyn kid who is adopted by neighbourhood gangsters at an early age and climbs the ranks of a Mafia family under the guidance of Jimmy Conway.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Sacrifice",
+                "Identity",
+                "Corruption",
+                "Greed"
+            ],
+            "moods": [
+                "Emotional",
+                "Intense"
             ]
         }
     },
     {
-        item_id: 32,
-        title: "The Boys",
-        poster_url: "https://image.tmdb.org/t/p/w500/stTEycfG9928HYGEiL6SFhi3xc0.jpg",
-        backdrop_url: "https://image.tmdb.org/t/p/w1280/mY7SeH4HFFxW1hiI6cWuwCRKptN.jpg",
-        overview: "A fun and irreverent take on what happens when superheroes—who are as popular as celebrities—abuse their superpowers.",
-        rich_metadata: {
-            title: "The Boys",
-            type: "series",
-            year: "2019",
-            match_percentage: 93,
-            rating: 8.7,
-            runtime: "Series",
-            director: "Eric Kripke",
-            genres: ["Action", "Comedy", "Science Fiction"],
-            tags: ["Action", "Comedy", "Science Fiction"],
-            audience_type: "Adult",
-            story_summary: "A fun and irreverent take on what happens when superheroes—who are as popular as celebrities—abuse their superpowers.",
-            why_recommended: "Recommended for its dark superhero satire, high stakes, and intense action scenes.",
-            themes: ["Corruption", "Power", "Celebrity", "Revenge"],
-            moods: ["Gritty", "Satirical", "Violent", "Intense"],
-            pacing: "Fast-Paced",
-            complexity: "Medium",
-            world_building: "Rich",
-            action_level: "High",
-            violence_level: "High",
-            language_severity: "Strong",
-            adult: false,
-            similar_movies: [
-                { item_id: 2, title: "The Batman", poster_url: "https://image.tmdb.org/t/p/original/74xTEgt7R36Fpooo50r9T25onhq.jpg", score: 85 }
+        "item_id": 23,
+        "title": "Titanic",
+        "poster_url": "https://image.tmdb.org/t/p/w500/9xjZS2rlVxm8SFx8kPC3aIGCOYQ.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/xnHVX37XZEp33hhCbYlQFq7ux1J.jpg",
+        "overview": "101-year-old Rose DeWitt Bukater tells the story of her life aboard the Titanic, 84 years later. A young Rose boards the ship with her mother and fianc\u00e9. Meanwhile, Jack Dawson and Fabrizio De Rossi win third-class tickets aboard the ship. Rose tells the whole story from Titanic's departure through to its death\u2014on its first and last voyage\u2014on April 15, 1912.",
+        "rich_metadata": {
+            "title": "Titanic",
+            "year": "1997",
+            "match_percentage": 79,
+            "rating": 7.902,
+            "runtime": "194 min",
+            "director": "James Cameron",
+            "genres": [
+                "Drama",
+                "Romance"
+            ],
+            "tags": [
+                "Drama",
+                "Romance"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "101-year-old Rose DeWitt Bukater tells the story of her life aboard the Titanic, 84 years later. A young Rose boards the ship with her mother and fianc\u00e9. Meanwhile, Jack Dawson and Fabrizio De Rossi win third-class tickets aboard the ship. Rose tells the whole story from Titanic's departure through to its death\u2014on its first and last voyage\u2014on April 15, 1912.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Sacrifice",
+                "Identity",
+                "Destiny"
+            ],
+            "moods": [
+                "Emotional",
+                "Captivating"
             ]
         }
     },
     {
-        item_id: 33,
-        title: "The Sopranos",
-        poster_url: "https://image.tmdb.org/t/p/w500/rTc7ZXZRouPNNje52SApEEpgzRR.jpg",
-        backdrop_url: "https://image.tmdb.org/t/p/w1280/3O6xEHREW8PmhHnBl7HA4XZJGE7.jpg",
-        overview: "New Jersey mob boss Tony Soprano deals with personal and professional issues in his home and business life that affect his mental state.",
-        rich_metadata: {
-            title: "The Sopranos",
-            type: "series",
-            year: "1999",
-            match_percentage: 98,
-            rating: 9.2,
-            runtime: "Series",
-            director: "David Chase",
-            genres: ["Drama", "Crime"],
-            tags: ["Drama", "Crime"],
-            audience_type: "Adult",
-            story_summary: "New Jersey mob boss Tony Soprano deals with personal and professional issues in his home and business life that affect his mental state.",
-            why_recommended: "Recommended as a groundbreaking crime drama exploring morality, family conflicts, and psychological struggles.",
-            themes: ["Family", "Crime", "Guilt", "Identity"],
-            moods: ["Intense", "Dark", "Captivating"],
-            pacing: "Steady",
-            complexity: "High",
-            world_building: "Rich",
-            action_level: "Medium",
-            violence_level: "High",
-            language_severity: "Strong",
-            adult: false,
-            similar_movies: [
-                { item_id: 2, title: "The Batman", poster_url: "https://image.tmdb.org/t/p/original/74xTEgt7R36Fpooo50r9T25onhq.jpg", score: 84 }
+        "item_id": 24,
+        "title": "Saving Private Ryan",
+        "poster_url": "https://image.tmdb.org/t/p/w500/uqx37cS8cpHg8U35f9U5IBlrCV3.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/bdD39MpSVhKjxarTxLSfX6baoMP.jpg",
+        "overview": "As U.S. troops storm the beaches of Normandy, three brothers lie dead on the battlefield, with a fourth trapped behind enemy lines. Ranger captain John Miller and seven men are tasked with penetrating German-held territory and bringing the boy home.",
+        "rich_metadata": {
+            "title": "Saving Private Ryan",
+            "year": "1998",
+            "match_percentage": 82,
+            "rating": 8.228,
+            "runtime": "169 min",
+            "director": "Steven Spielberg",
+            "genres": [
+                "War",
+                "Drama",
+                "History"
+            ],
+            "tags": [
+                "War",
+                "Drama",
+                "History"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "As U.S. troops storm the beaches of Normandy, three brothers lie dead on the battlefield, with a fourth trapped behind enemy lines. Ranger captain John Miller and seven men are tasked with penetrating German-held territory and bringing the boy home.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Sacrifice",
+                "Identity",
+                "Destiny"
+            ],
+            "moods": [
+                "Emotional",
+                "Captivating"
             ]
         }
     },
     {
-        item_id: 34,
-        title: "The Wire",
-        poster_url: "https://image.tmdb.org/t/p/w500/4vZ3FeGmkVYos4yqTDU2MQw1hNQ.jpg",
-        backdrop_url: "https://image.tmdb.org/t/p/w1280/tRV2ChMuJQZ0hOXX4GqwK0MRJRP.jpg",
-        overview: "This series looks at the Baltimore drug scene through the eyes of both law enforcement and drug dealers.",
-        rich_metadata: {
-            title: "The Wire",
-            type: "series",
-            year: "2002",
-            match_percentage: 97,
-            rating: 9.3,
-            runtime: "Series",
-            director: "David Simon",
-            genres: ["Drama", "Crime", "Thriller"],
-            tags: ["Drama", "Crime", "Thriller"],
-            audience_type: "Adult",
-            story_summary: "This series looks at the Baltimore drug scene through the eyes of both law enforcement and drug dealers.",
-            why_recommended: "Recommended for its unmatched realism, complex characters, and profound examination of urban institutions.",
-            themes: ["Corruption", "Bureaucracy", "Class", "Justice"],
-            moods: ["Gritty", "Dark", "Realistic"],
-            pacing: "Slow Burn",
-            complexity: "High",
-            world_building: "Exceptional",
-            action_level: "Medium",
-            violence_level: "High",
-            language_severity: "Strong",
-            adult: false,
-            similar_movies: [
-                { item_id: 2, title: "The Batman", poster_url: "https://image.tmdb.org/t/p/original/74xTEgt7R36Fpooo50r9T25onhq.jpg", score: 86 }
+        "item_id": 25,
+        "title": "The Silence of the Lambs",
+        "poster_url": "https://image.tmdb.org/t/p/w500/uS9m8OBk1A8eM9I042bx8XXpqAq.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/aYcnDyLMnpKce1FOYUpZrXtgUye.jpg",
+        "overview": "Clarice Starling is a top student at the FBI's training academy.  Jack Crawford wants Clarice to interview Dr. Hannibal Lecter, a brilliant psychiatrist who is also a violent psychopath, serving life behind bars for various acts of murder and cannibalism.  Crawford believes that Lecter may have insight into a case and that Starling, as an attractive young woman, may be just the bait to draw him out.",
+        "rich_metadata": {
+            "title": "The Silence of the Lambs",
+            "year": "1991",
+            "match_percentage": 83,
+            "rating": 8.344,
+            "runtime": "119 min",
+            "director": "Jonathan Demme",
+            "genres": [
+                "Crime",
+                "Thriller",
+                "Drama"
+            ],
+            "tags": [
+                "Crime",
+                "Thriller",
+                "Drama"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "Clarice Starling is a top student at the FBI's training academy.  Jack Crawford wants Clarice to interview Dr. Hannibal Lecter, a brilliant psychiatrist who is also a violent psychopath, serving life behind bars for various acts of murder and cannibalism.  Crawford believes that Lecter may have insight into a case and that Starling, as an attractive young woman, may be just the bait to draw him out.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Sacrifice",
+                "Identity",
+                "Corruption",
+                "Greed"
+            ],
+            "moods": [
+                "Emotional",
+                "Intense"
             ]
         }
     },
     {
-        item_id: 35,
-        title: "Ted Lasso",
-        poster_url: "https://placehold.co/400x600/111/333?text=Ted+Lasso",
-        backdrop_url: "https://placehold.co/800x450/111/333?text=Ted+Lasso",
-        overview: "American college football coach Ted Lasso heads to London to manage AFC Richmond, a struggling English Premier League football team.",
-        rich_metadata: {
-            title: "Ted Lasso",
-            type: "series",
-            year: "2020",
-            match_percentage: 94,
-            rating: 8.8,
-            runtime: "Series",
-            director: "Bill Lawrence",
-            genres: ["Comedy", "Drama"],
-            tags: ["Comedy", "Drama"],
-            audience_type: "General",
-            story_summary: "American college football coach Ted Lasso heads to London to manage AFC Richmond, a struggling English Premier League football team.",
-            why_recommended: "Recommended for its infectious optimism, heartwarming characters, and uplifting humor.",
-            themes: ["Leadership", "Optimism", "Friendship", "Empathy"],
-            moods: ["Uplifting", "Joyful", "Emotional"],
-            pacing: "Steady",
-            complexity: "Medium",
-            world_building: "Rich",
-            action_level: "Low",
-            violence_level: "None",
-            language_severity: "Mild",
-            adult: false,
-            similar_movies: [
-                { item_id: 4, title: "Encanto", poster_url: "https://image.tmdb.org/t/p/original/4j0PNHkMr5ax3IA8tjtxcmPU3QT.jpg", score: 85 }
+        "item_id": 26,
+        "title": "Toy Story",
+        "poster_url": "https://image.tmdb.org/t/p/w500/uXDfjJbdP4ijW5hWSBrPrlKpxab.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/3Rfvhy1Nl6sSGJwyjb0QiZzZYlB.jpg",
+        "overview": "Led by Woody, Andy's toys live happily in his room until Andy's birthday brings Buzz Lightyear onto the scene. Afraid of losing his place in Andy's heart, Woody plots against Buzz. But when circumstances separate Buzz and Woody from their owner, the duo eventually learns to put aside their differences.",
+        "rich_metadata": {
+            "title": "Toy Story",
+            "year": "1995",
+            "match_percentage": 79,
+            "rating": 7.98,
+            "runtime": "81 min",
+            "director": "John Lasseter",
+            "genres": [
+                "Family",
+                "Comedy",
+                "Animation",
+                "Adventure"
+            ],
+            "tags": [
+                "Family",
+                "Comedy",
+                "Animation",
+                "Adventure"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "Led by Woody, Andy's toys live happily in his room until Andy's birthday brings Buzz Lightyear onto the scene. Afraid of losing his place in Andy's heart, Woody plots against Buzz. But when circumstances separate Buzz and Woody from their owner, the duo eventually learns to put aside their differences.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Heroism",
+                "Justice",
+                "Friendship",
+                "Love"
+            ],
+            "moods": [
+                "Exciting",
+                "Lighthearted",
+                "Joyful"
             ]
         }
     },
     {
-        item_id: 36,
-        title: "Fargo",
-        poster_url: "https://placehold.co/400x600/111/333?text=Fargo",
-        backdrop_url: "https://placehold.co/800x450/111/333?text=Fargo",
-        overview: "Various chronicles of deception, intrigue, and murder in and around frozen Minnesota. Yet all of these tales mysteriously lead back to one place.",
-        rich_metadata: {
-            title: "Fargo",
-            type: "series",
-            year: "2014",
-            match_percentage: 95,
-            rating: 8.9,
-            runtime: "Series",
-            director: "Noah Hawley",
-            genres: ["Crime", "Drama", "Thriller"],
-            tags: ["Crime", "Drama", "Thriller"],
-            audience_type: "Adult",
-            story_summary: "Various chronicles of deception, intrigue, and murder in and around frozen Minnesota. Yet all of these tales mysteriously lead back to one place.",
-            why_recommended: "Recommended for its dark absurdity, quirky characters, and high-tension crime plots.",
-            themes: ["Morality", "Chance", "Greed", "Deception"],
-            moods: ["Dark", "Intense", "Absurd"],
-            pacing: "Steady",
-            complexity: "High",
-            world_building: "Rich",
-            action_level: "Medium",
-            violence_level: "High",
-            language_severity: "Strong",
-            adult: false,
-            similar_movies: [
-                { item_id: 2, title: "The Batman", poster_url: "https://image.tmdb.org/t/p/original/74xTEgt7R36Fpooo50r9T25onhq.jpg", score: 83 }
+        "item_id": 27,
+        "title": "Spider-Man: No Way Home",
+        "poster_url": "https://image.tmdb.org/t/p/w500/1g0dhYtq4irTY1GPXvft6k4YLjm.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/AeK2MPOpYrOOgZNfFnfwp0L8tNn.jpg",
+        "overview": "Peter Parker is unmasked and no longer able to separate his normal life from the high-stakes of being a super-hero. When he asks for help from Doctor Strange the stakes become even more dangerous, forcing him to discover what it truly means to be Spider-Man.",
+        "rich_metadata": {
+            "title": "Spider-Man: No Way Home",
+            "year": "2021",
+            "match_percentage": 79,
+            "rating": 7.934,
+            "runtime": "148 min",
+            "director": "Jon Watts",
+            "genres": [
+                "Action",
+                "Adventure",
+                "Science Fiction"
+            ],
+            "tags": [
+                "Action",
+                "Adventure",
+                "Science Fiction"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "Peter Parker is unmasked and no longer able to separate his normal life from the high-stakes of being a super-hero. When he asks for help from Doctor Strange the stakes become even more dangerous, forcing him to discover what it truly means to be Spider-Man.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Heroism",
+                "Justice",
+                "Technology",
+                "Survival"
+            ],
+            "moods": [
+                "Exciting",
+                "Thought-Provoking"
             ]
         }
     },
     {
-        item_id: 37,
-        title: "Dark",
-        poster_url: "https://placehold.co/400x600/111/333?text=Dark",
-        backdrop_url: "https://placehold.co/800x450/111/333?text=Dark",
-        overview: "A family saga with a supernatural twist, set in a German town, where the disappearance of two young children exposes the relationships among four families.",
-        rich_metadata: {
-            title: "Dark",
-            type: "series",
-            year: "2017",
-            match_percentage: 96,
-            rating: 8.7,
-            runtime: "Series",
-            director: "Baran bo Odar",
-            genres: ["Drama", "Mystery", "Science Fiction", "Thriller"],
-            tags: ["Drama", "Mystery", "Science Fiction", "Thriller"],
-            audience_type: "Adult",
-            story_summary: "A family saga with a supernatural twist, set in a German town, where the disappearance of two young children exposes the relationships among four families.",
-            why_recommended: "Recommended for its complex time-travel mythology, deep existential themes, and dark atmospheric suspense.",
-            themes: ["Time Travel", "Fate", "Determinism", "Family Secrets"],
-            moods: ["Atmospheric", "Dark", "Mind-Bending"],
-            pacing: "Steady",
-            complexity: "Exceptional",
-            world_building: "Exceptional",
-            action_level: "Low",
-            violence_level: "Moderate",
-            language_severity: "Moderate",
-            adult: false,
-            similar_movies: [
-                { item_id: 10, title: "Interstellar", poster_url: "https://placehold.co/400x600/111/333?text=Interstellar", score: 92 }
+        "item_id": 28,
+        "title": "Black Panther",
+        "poster_url": "https://image.tmdb.org/t/p/w500/uxzzxijgPIY7slzFvMotPv8wjKA.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/19Ed4XgjahPm4U8JT7SnntERIlt.jpg",
+        "overview": "King T'Challa returns home to the reclusive, technologically advanced African nation of Wakanda to serve as his country's new leader. However, T'Challa soon finds that he is challenged for the throne by factions within his own country as well as without. Using powers reserved to Wakandan kings, T'Challa assumes the Black Panther mantle to join with ex-girlfriend Nakia, the queen-mother, his princess-kid sister, members of the Dora Milaje (the Wakandan 'special forces') and an American secret agent, to prevent Wakanda from being dragged into a world war.",
+        "rich_metadata": {
+            "title": "Black Panther",
+            "year": "2018",
+            "match_percentage": 73,
+            "rating": 7.364,
+            "runtime": "135 min",
+            "director": "Ryan Coogler",
+            "genres": [
+                "Action",
+                "Adventure",
+                "Science Fiction"
+            ],
+            "tags": [
+                "Action",
+                "Adventure",
+                "Science Fiction"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "King T'Challa returns home to the reclusive, technologically advanced African nation of Wakanda to serve as his country's new leader. However, T'Challa soon finds that he is challenged for the throne by factions within his own country as well as without. Using powers reserved to Wakandan kings, T'Challa assumes the Black Panther mantle to join with ex-girlfriend Nakia, the queen-mother, his princess-kid sister, members of the Dora Milaje (the Wakandan 'special forces') and an American secret agent, to prevent Wakanda from being dragged into a world war.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Heroism",
+                "Justice",
+                "Technology",
+                "Survival"
+            ],
+            "moods": [
+                "Exciting",
+                "Thought-Provoking"
+            ]
+        }
+    },
+    {
+        "item_id": 29,
+        "title": "The Lord of the Rings: The Fellowship of the Ring",
+        "poster_url": "https://image.tmdb.org/t/p/w500/6oom5QYQ2yQTMJIbnvbkBL9cHo6.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/oiwc338EoBgS4sEI2ixAny4KQKg.jpg",
+        "overview": "Young hobbit Frodo Baggins, after inheriting a mysterious ring from his uncle Bilbo, must leave his home in order to keep it from falling into the hands of its evil creator. Along the way, a fellowship is formed to protect the ringbearer and make sure that the ring arrives at its final destination: Mt. Doom, the only place where it can be destroyed.",
+        "rich_metadata": {
+            "title": "The Lord of the Rings: The Fellowship of the Ring",
+            "year": "2001",
+            "match_percentage": 84,
+            "rating": 8.436,
+            "runtime": "179 min",
+            "director": "Peter Jackson",
+            "genres": [
+                "Adventure",
+                "Fantasy",
+                "Action"
+            ],
+            "tags": [
+                "Adventure",
+                "Fantasy",
+                "Action"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "Young hobbit Frodo Baggins, after inheriting a mysterious ring from his uncle Bilbo, must leave his home in order to keep it from falling into the hands of its evil creator. Along the way, a fellowship is formed to protect the ringbearer and make sure that the ring arrives at its final destination: Mt. Doom, the only place where it can be destroyed.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Heroism",
+                "Justice",
+                "Destiny"
+            ],
+            "moods": [
+                "Exciting",
+                "Captivating"
+            ]
+        }
+    },
+    {
+        "item_id": 30,
+        "title": "The Lord of the Rings: The Two Towers",
+        "poster_url": "https://image.tmdb.org/t/p/w500/5VTN0pR8gcqV3EPUHHfMGnJYN9L.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/6G73mNyooWAEQTpckPSnFxFoNmc.jpg",
+        "overview": "Frodo Baggins and the other members of the Fellowship continue on their sacred quest to destroy the One Ring--but on separate paths. Their destinies lie at two towers--Orthanc Tower in Isengard, where the corrupt wizard Saruman awaits, and Sauron's fortress at Barad-dur, deep within the dark lands of Mordor. Frodo and Sam are trekking to Mordor to destroy the One Ring of Power while Gimli, Legolas and Aragorn search for the orc-captured Merry and Pippin. All along, nefarious wizard Saruman awaits the Fellowship members at the Orthanc Tower in Isengard.",
+        "rich_metadata": {
+            "title": "The Lord of the Rings: The Two Towers",
+            "year": "2002",
+            "match_percentage": 84,
+            "rating": 8.421,
+            "runtime": "179 min",
+            "director": "Peter Jackson",
+            "genres": [
+                "Adventure",
+                "Fantasy",
+                "Action"
+            ],
+            "tags": [
+                "Adventure",
+                "Fantasy",
+                "Action"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "Frodo Baggins and the other members of the Fellowship continue on their sacred quest to destroy the One Ring--but on separate paths. Their destinies lie at two towers--Orthanc Tower in Isengard, where the corrupt wizard Saruman awaits, and Sauron's fortress at Barad-dur, deep within the dark lands of Mordor. Frodo and Sam are trekking to Mordor to destroy the One Ring of Power while Gimli, Legolas and Aragorn search for the orc-captured Merry and Pippin. All along, nefarious wizard Saruman awaits the Fellowship members at the Orthanc Tower in Isengard.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Heroism",
+                "Justice",
+                "Destiny"
+            ],
+            "moods": [
+                "Exciting",
+                "Captivating"
+            ]
+        }
+    },
+    {
+        "item_id": 31,
+        "title": "The Lord of the Rings: The Return of the King",
+        "poster_url": "https://image.tmdb.org/t/p/w500/rCzpDGLbOoPwLjy3OAm5NUPOTrC.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/2u7zbn8EudG6kLlBzUYqP8RyFU4.jpg",
+        "overview": "As armies mass for a final battle that will decide the fate of the world--and powerful, ancient forces of Light and Dark compete to determine the outcome--one member of the Fellowship of the Ring is revealed as the noble heir to the throne of the Kings of Men. Yet, the sole hope for triumph over evil lies with a brave hobbit, Frodo, who, accompanied by his loyal friend Sam and the hideous, wretched Gollum, ventures deep into the very dark heart of Mordor on his seemingly impossible quest to destroy the Ring of Power.\u200b",
+        "rich_metadata": {
+            "title": "The Lord of the Rings: The Return of the King",
+            "year": "2003",
+            "match_percentage": 85,
+            "rating": 8.5,
+            "runtime": "201 min",
+            "director": "Peter Jackson",
+            "genres": [
+                "Adventure",
+                "Fantasy",
+                "Action"
+            ],
+            "tags": [
+                "Adventure",
+                "Fantasy",
+                "Action"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "As armies mass for a final battle that will decide the fate of the world--and powerful, ancient forces of Light and Dark compete to determine the outcome--one member of the Fellowship of the Ring is revealed as the noble heir to the throne of the Kings of Men. Yet, the sole hope for triumph over evil lies with a brave hobbit, Frodo, who, accompanied by his loyal friend Sam and the hideous, wretched Gollum, ventures deep into the very dark heart of Mordor on his seemingly impossible quest to destroy the Ring of Power.\u200b",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Heroism",
+                "Justice",
+                "Destiny"
+            ],
+            "moods": [
+                "Exciting",
+                "Captivating"
+            ]
+        }
+    },
+    {
+        "item_id": 32,
+        "title": "Spirited Away",
+        "poster_url": "https://image.tmdb.org/t/p/w500/39wmItIWsg5sZMyRUHLkWBcuVCM.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/dyJvKsNs2KP8qQnAXbRwDjblViy.jpg",
+        "overview": "A young girl, Chihiro, becomes trapped in a strange new world of spirits. When her parents undergo a mysterious transformation, she must call upon the courage she never knew she had to free her family.",
+        "rich_metadata": {
+            "title": "Spirited Away",
+            "year": "2001",
+            "match_percentage": 85,
+            "rating": 8.534,
+            "runtime": "125 min",
+            "director": "Hayao Miyazaki",
+            "genres": [
+                "Animation",
+                "Family",
+                "Fantasy"
+            ],
+            "tags": [
+                "Animation",
+                "Family",
+                "Fantasy"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "A young girl, Chihiro, becomes trapped in a strange new world of spirits. When her parents undergo a mysterious transformation, she must call upon the courage she never knew she had to free her family.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Love",
+                "Growing Up",
+                "Destiny"
+            ],
+            "moods": [
+                "Joyful",
+                "Captivating"
+            ]
+        }
+    },
+    {
+        "item_id": 33,
+        "title": "Your Name.",
+        "poster_url": "https://image.tmdb.org/t/p/w500/q719jXXEzOoYaps6babgKnONONX.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/mMtUybQ6hL24FXo0F3Z4j2KG7kZ.jpg",
+        "overview": "High schoolers Mitsuha and Taki are complete strangers living separate lives. But one night, they suddenly switch places. Mitsuha wakes up in Taki\u2019s body, and he in hers. This bizarre occurrence continues to happen randomly, and the two must adjust their lives around each other.",
+        "rich_metadata": {
+            "title": "Your Name.",
+            "year": "2016",
+            "match_percentage": 84,
+            "rating": 8.481,
+            "runtime": "106 min",
+            "director": "Makoto Shinkai",
+            "genres": [
+                "Animation",
+                "Romance",
+                "Drama"
+            ],
+            "tags": [
+                "Animation",
+                "Romance",
+                "Drama"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "High schoolers Mitsuha and Taki are complete strangers living separate lives. But one night, they suddenly switch places. Mitsuha wakes up in Taki\u2019s body, and he in hers. This bizarre occurrence continues to happen randomly, and the two must adjust their lives around each other.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Sacrifice",
+                "Identity",
+                "Love",
+                "Growing Up"
+            ],
+            "moods": [
+                "Emotional",
+                "Joyful"
+            ]
+        }
+    },
+    {
+        "item_id": 34,
+        "title": "Breaking Bad",
+        "poster_url": "https://image.tmdb.org/t/p/w500/ztkUQFLlC19CCMYHW9o1zWhJRNq.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/tsRy63Mu5cu8etL1X7ZLyf7UP1M.jpg",
+        "overview": "Walter White, a New Mexico chemistry teacher, is diagnosed with Stage III cancer and given a prognosis of only two years left to live. He becomes filled with a sense of fearlessness and an unrelenting desire to secure his family's financial future at any cost as he enters the dangerous world of drugs and crime.",
+        "rich_metadata": {
+            "title": "Breaking Bad",
+            "year": "2008",
+            "match_percentage": 89,
+            "rating": 8.946,
+            "runtime": "5 Seasons min",
+            "director": "Vince Gilligan",
+            "genres": [
+                "Drama",
+                "Crime"
+            ],
+            "tags": [
+                "Drama",
+                "Crime"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "Walter White, a New Mexico chemistry teacher, is diagnosed with Stage III cancer and given a prognosis of only two years left to live. He becomes filled with a sense of fearlessness and an unrelenting desire to secure his family's financial future at any cost as he enters the dangerous world of drugs and crime.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Sacrifice",
+                "Identity",
+                "Corruption",
+                "Greed"
+            ],
+            "moods": [
+                "Emotional",
+                "Intense"
+            ]
+        }
+    },
+    {
+        "item_id": 35,
+        "title": "Game of Thrones",
+        "poster_url": "https://image.tmdb.org/t/p/w500/1XS1oqL89opfnbLl8WnZY1O1uJx.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/2OMB0ynKlyIenMJWI2Dy9IWT4c.jpg",
+        "overview": "Seven noble families fight for control of the mythical land of Westeros. Friction between the houses leads to full-scale war. All while a very ancient evil awakens in the farthest north. Amidst the war, a neglected military order of misfits, the Night's Watch, is all that stands between the realms of men and icy horrors beyond.",
+        "rich_metadata": {
+            "title": "Game of Thrones",
+            "year": "2011",
+            "match_percentage": 84,
+            "rating": 8.464,
+            "runtime": "8 Seasons min",
+            "director": "David Benioff",
+            "genres": [
+                "Sci-Fi & Fantasy",
+                "Drama",
+                "Action & Adventure"
+            ],
+            "tags": [
+                "Sci-Fi & Fantasy",
+                "Drama",
+                "Action & Adventure"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "Seven noble families fight for control of the mythical land of Westeros. Friction between the houses leads to full-scale war. All while a very ancient evil awakens in the farthest north. Amidst the war, a neglected military order of misfits, the Night's Watch, is all that stands between the realms of men and icy horrors beyond.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Heroism",
+                "Justice",
+                "Technology",
+                "Survival"
+            ],
+            "moods": [
+                "Exciting",
+                "Thought-Provoking",
+                "Emotional"
+            ]
+        }
+    },
+    {
+        "item_id": 36,
+        "title": "Stranger Things",
+        "poster_url": "https://image.tmdb.org/t/p/w500/uOOtwVbSr4QDjAGIifLDwpb2Pdl.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/56v2KjBlU4XaOv9rVYEQypROD7P.jpg",
+        "overview": "When a young boy vanishes, a small town uncovers a mystery involving secret experiments, terrifying supernatural forces, and one strange little girl.",
+        "rich_metadata": {
+            "title": "Stranger Things",
+            "year": "2016",
+            "match_percentage": 85,
+            "rating": 8.562,
+            "runtime": "5 Seasons min",
+            "director": "Ross Duffer",
+            "genres": [
+                "Action & Adventure",
+                "Mystery",
+                "Sci-Fi & Fantasy"
+            ],
+            "tags": [
+                "Action & Adventure",
+                "Mystery",
+                "Sci-Fi & Fantasy"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "When a young boy vanishes, a small town uncovers a mystery involving secret experiments, terrifying supernatural forces, and one strange little girl.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Heroism",
+                "Justice",
+                "Technology",
+                "Survival"
+            ],
+            "moods": [
+                "Exciting",
+                "Thought-Provoking",
+                "Intense"
+            ]
+        }
+    },
+    {
+        "item_id": 37,
+        "title": "Better Call Saul",
+        "poster_url": "https://image.tmdb.org/t/p/w500/zjg4jpK1Wp2kiRvtt5ND0kznako.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/og2jKploGHYnCz68vV1nRSEE0xV.jpg",
+        "overview": "Six years before Saul Goodman meets Walter White. We meet him when the man who will become Saul Goodman is known as Jimmy McGill, a small-time lawyer searching for his destiny, and, more immediately, hustling to make ends meet. Working alongside, and, often, against Jimmy, is \u201cfixer\u201d Mike Ehrmantraut. The series tracks Jimmy\u2019s transformation into Saul Goodman, the man who puts \u201ccriminal\u201d in \u201ccriminal lawyer\".",
+        "rich_metadata": {
+            "title": "Better Call Saul",
+            "year": "2015",
+            "match_percentage": 87,
+            "rating": 8.706,
+            "runtime": "6 Seasons min",
+            "director": "Vince Gilligan",
+            "genres": [
+                "Crime",
+                "Drama"
+            ],
+            "tags": [
+                "Crime",
+                "Drama"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "Six years before Saul Goodman meets Walter White. We meet him when the man who will become Saul Goodman is known as Jimmy McGill, a small-time lawyer searching for his destiny, and, more immediately, hustling to make ends meet. Working alongside, and, often, against Jimmy, is \u201cfixer\u201d Mike Ehrmantraut. The series tracks Jimmy\u2019s transformation into Saul Goodman, the man who puts \u201ccriminal\u201d in \u201ccriminal lawyer\".",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Sacrifice",
+                "Identity",
+                "Corruption",
+                "Greed"
+            ],
+            "moods": [
+                "Emotional",
+                "Intense"
+            ]
+        }
+    },
+    {
+        "item_id": 38,
+        "title": "The Sopranos",
+        "poster_url": "https://image.tmdb.org/t/p/w500/rTc7ZXdroqjkKivFPvCPX0Ru7uw.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/lNpkvX2s8LGB0mjGODMT4o6Up7j.jpg",
+        "overview": "The story of New Jersey-based Italian-American mobster Tony Soprano and the difficulties he faces as he tries to balance the conflicting requirements of his home life and the criminal organization he heads. Those difficulties are often highlighted through his ongoing professional relationship with psychiatrist Jennifer Melfi. The show features Tony's family members and Mafia associates in prominent roles and story arcs, most notably his wife Carmela and his cousin and prot\u00e9g\u00e9 Christopher Moltisanti.",
+        "rich_metadata": {
+            "title": "The Sopranos",
+            "year": "1999",
+            "match_percentage": 86,
+            "rating": 8.672,
+            "runtime": "6 Seasons min",
+            "director": "David Chase",
+            "genres": [
+                "Crime",
+                "Drama"
+            ],
+            "tags": [
+                "Crime",
+                "Drama"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "The story of New Jersey-based Italian-American mobster Tony Soprano and the difficulties he faces as he tries to balance the conflicting requirements of his home life and the criminal organization he heads. Those difficulties are often highlighted through his ongoing professional relationship with psychiatrist Jennifer Melfi. The show features Tony's family members and Mafia associates in prominent roles and story arcs, most notably his wife Carmela and his cousin and prot\u00e9g\u00e9 Christopher Moltisanti.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Sacrifice",
+                "Identity",
+                "Corruption",
+                "Greed"
+            ],
+            "moods": [
+                "Emotional",
+                "Intense"
+            ]
+        }
+    },
+    {
+        "item_id": 39,
+        "title": "Succession",
+        "poster_url": "https://image.tmdb.org/t/p/w500/z0XiwdrCQ9yVIr4O0pxzaAYRxdW.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/bcdUYUFk8GdpZJPiSAas9UeocLH.jpg",
+        "overview": "Follow the lives of the Roy family as they contemplate their future once their aging father begins to step back from the media and entertainment conglomerate they control.",
+        "rich_metadata": {
+            "title": "Succession",
+            "year": "2018",
+            "match_percentage": 82,
+            "rating": 8.294,
+            "runtime": "4 Seasons min",
+            "director": "Jesse Armstrong",
+            "genres": [
+                "Drama",
+                "Comedy"
+            ],
+            "tags": [
+                "Drama",
+                "Comedy"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "Follow the lives of the Roy family as they contemplate their future once their aging father begins to step back from the media and entertainment conglomerate they control.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Sacrifice",
+                "Identity",
+                "Friendship"
+            ],
+            "moods": [
+                "Emotional",
+                "Lighthearted"
+            ]
+        }
+    },
+    {
+        "item_id": 40,
+        "title": "The Crown",
+        "poster_url": "https://image.tmdb.org/t/p/w500/1M876KPjulVwppEpldhdc8V4o68.jpg",
+        "backdrop_url": "https://image.tmdb.org/t/p/w1280/8VXhcrl5z2I1zEU9X3pkkNrZlD.jpg",
+        "overview": "The gripping, decades-spanning inside story of Her Majesty Queen Elizabeth II and the Prime Ministers who shaped Britain's post-war destiny.   The Crown tells the inside story of two of the most famous addresses in the world \u2013 Buckingham Palace and 10 Downing Street \u2013 and the intrigues, love lives and machinations behind the great events that shaped the second half of the 20th century. Two houses, two courts, one Crown.",
+        "rich_metadata": {
+            "title": "The Crown",
+            "year": "2016",
+            "match_percentage": 81,
+            "rating": 8.187,
+            "runtime": "6 Seasons min",
+            "director": "Peter Morgan",
+            "genres": [
+                "Drama"
+            ],
+            "tags": [
+                "Drama"
+            ],
+            "audience_type": "Family/General",
+            "story_summary": "The gripping, decades-spanning inside story of Her Majesty Queen Elizabeth II and the Prime Ministers who shaped Britain's post-war destiny.   The Crown tells the inside story of two of the most famous addresses in the world \u2013 Buckingham Palace and 10 Downing Street \u2013 and the intrigues, love lives and machinations behind the great events that shaped the second half of the 20th century. Two houses, two courts, one Crown.",
+            "why_recommended": "Matches your preferred genres.",
+            "themes": [
+                "Sacrifice",
+                "Identity",
+                "Destiny"
+            ],
+            "moods": [
+                "Emotional",
+                "Captivating"
             ]
         }
     }
