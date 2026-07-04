@@ -2507,9 +2507,9 @@ async function loadHomePage() {
     await fetchAndRender(scifiQuery, scifiTitle, false);
 
     // Curated rows pulling from FAISS index with specific semantic queries
-    await fetchAndRender('Award Winners', 'Award Winners', false);
-    await fetchAndRender('Anime', 'Top Rated Anime', false);
-    await fetchAndRender('True Events', 'Based on True Events', false);
+    setTimeout(() => fetchAndRender('Award Winners', 'Award Winners', false), 50);
+    setTimeout(() => fetchAndRender('Anime', 'Top Rated Anime', false), 100);
+    setTimeout(() => fetchAndRender('True Events', 'Based on True Events', false), 150);
 
     const genres = [
         { q: 'Action', title: isMovie ? 'Action Movies' : (isSeriesVal ? 'Action Series' : 'Action Thrillers') },
@@ -2522,10 +2522,9 @@ async function loadHomePage() {
         { q: 'Hidden Gems', title: isMovie ? 'Hidden Gem Movies' : (isSeriesVal ? 'Hidden Gem Series' : 'Hidden Gems') }
     ];
 
-    for (const g of genres) {
-        await new Promise(resolve => setTimeout(resolve, 80));
-        await fetchAndRender(g.q, g.title, false);
-    }
+    genres.forEach((g, i) => {
+        setTimeout(() => fetchAndRender(g.q, g.title, false), 200 + (i * 50));
+    });
 }
 
 // ── Category Page ─────────────────────────────────────────────────────

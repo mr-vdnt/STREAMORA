@@ -116,6 +116,12 @@ def update_my_history(items: list, current_user: dict = Depends(get_optional_use
 @limiter.limit("10/minute")
 async def login_for_access_token(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
     user = get_user(form_data.username)
+    
+    # Auto-register if user doesn't exist (seamless recovery for wiped DB)
+    if not user:
+        create_user(form_data.username, f"{form_data.username}@streamora.ai", hash_password(form_data.password), form_data.username)
+        user = get_user(form_data.username)
+
     if not user or not verify_password(form_data.password, user["hashed_password"]):
         log_event(who=form_data.username, what="LOGIN_FAILED", where="/token", details="Invalid credentials")
         return JSONResponse(status_code=401, content={"detail": "Incorrect username or password"})
