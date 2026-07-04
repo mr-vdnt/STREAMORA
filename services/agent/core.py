@@ -64,6 +64,57 @@ class OrchestratorAgent:
         title_words = [w for w in words if w.lower() not in stopwords]
         return " ".join(title_words) if title_words else "Toy Story"
 
+    def _validate_and_enrich(self, raw_items: list, query: str = "", exclude_ids: list[int] = None, top_k: int = 15, base_explanation: str = "Recommended by Streamora AI.") -> list:
+        if exclude_ids is None: exclude_ids = []
+        if movies_df is None: return []
+        
+        lower_q = query.lower()
+        
+        target_content_type = None
+        if "movie" in lower_q or "film" in lower_q: target_content_type = "movie"
+        elif "series" in lower_q or "show" in lower_q: target_content_type = "series"
+        elif "anime" in lower_q: target_content_type = "anime"
+        elif "documentary" in lower_q or "documentaries" in lower_q: target_content_type = "documentary"
+        
+        valid_genres = ["action", "comedy", "horror", "drama", "romance", "thriller", "animation", "sci-fi", "science fiction", "psychological", "family", "crime"]
+        target_genre = next((g for g in valid_genres if g in lower_q), None)
+        if target_genre == "sci-fi": target_genre = "sci"
+        
+        enriched = []
+        for item in raw_items:
+            iid = item.get("item_id", 0) if isinstance(item, dict) else int(item)
+            if iid in exclude_ids: continue
+            
+            row = movies_df[movies_df['item_id'] == iid]
+            if row.empty: continue
+            
+            r = row.iloc[0]
+            
+            item_type = str(r.get("content_type", "")).lower()
+            if target_content_type:
+                if target_content_type == "series" and "series" not in item_type: continue
+                elif target_content_type != "series" and item_type != target_content_type: continue
+                
+            item_genres = str(r.get("genres", "")).lower()
+            if target_genre and target_genre not in item_genres:
+                continue
+                
+            if not r.get("title") or pd.isna(r.get("title")): continue
+            if not r.get("poster_url") or pd.isna(r.get("poster_url")): continue
+
+            enriched.append({
+                "item_id": int(iid),
+                "title": str(r['title']),
+                "poster_url": str(r.get('poster_url', '')),
+                "backdrop_url": str(r.get('backdrop_url', '')),
+                "overview": str(r.get('overview', '')),
+                "rich_metadata": _get_movie_metadata(r),
+                "explanation": base_explanation
+            })
+            if len(enriched) >= top_k: break
+                
+        return enriched
+
     def process_query(self, user_id: int, query: str, exclude_ids: list[int] = None) -> dict:
         if exclude_ids is None:
             exclude_ids = []
@@ -102,24 +153,10 @@ class OrchestratorAgent:
             tool_resp = search_semantic_vector(query, exclude_ids)
             if tool_resp["status"] == "success":
                 similar_items = tool_resp["data"]
-                response_data = []
-                for item in similar_items:
-                    iid = item.get("item_id", 0)
-                    if iid in exclude_ids:
-                        continue
-                    if movies_df is not None:
-                        row = movies_df[movies_df['item_id'] == iid]
-                        if not row.empty:
-                            r = row.iloc[0]
-                            response_data.append({
-                                "item_id": iid,
-                                "title": str(r['title']),
-                                "poster_url": str(r.get('poster_url', '')),
-                                "backdrop_url": str(r.get('backdrop_url', '')),
-                                "overview": str(r.get('overview', '')),
-                                "rich_metadata": _get_movie_metadata(r),
-                                "explanation": f"Recommended for query '{query}' based on plot embedding similarity."
-                            })
+                response_data = self._validate_and_enrich(
+                    similar_items, query, exclude_ids, 15,
+                    f"Recommended for query '{query}' based on plot similarity and validated attributes."
+                )
             else:
                 response_data = []
 
@@ -131,23 +168,10 @@ class OrchestratorAgent:
                 sim_resp = get_similar_movies(source_id, exclude_ids)
                 if sim_resp["status"] == "success":
                     similar_items = sim_resp["data"]
-                    enriched = []
-                    for item in similar_items:
-                        if item['item_id'] in exclude_ids: continue
-                        if movies_df is not None:
-                            row = movies_df[movies_df['item_id'] == item['item_id']]
-                            if not row.empty:
-                                r = row.iloc[0]
-                                enriched.append({
-                                    "item_id": int(r['item_id']),
-                                    "title": r['title'],
-                                    "poster_url": r.get('poster_url', ''),
-                                    "backdrop_url": r.get('backdrop_url', ''),
-                                    "overview": r.get('overview', ''),
-                                    "rich_metadata": _get_movie_metadata(r),
-                                    "explanation": f"Similar to {search_res['title']} based on semantic embeddings."
-                                })
-                    response_data = enriched
+                    response_data = self._validate_and_enrich(
+                        similar_items, query, exclude_ids, 15,
+                        f"Similar to {search_res['title']} based on semantic embeddings and validated attributes."
+                    )
                 else:
                     # Fallback to genre-matching similar movies
                     if movies_df is not None:
@@ -198,24 +222,10 @@ class OrchestratorAgent:
             tool_resp = get_recommendations(user_id, exclude_ids)
             if tool_resp["status"] == "success":
                 raw_items = tool_resp["data"]["recommendations"]
-                enriched = []
-                for item in raw_items:
-                    iid = item.get("item_id", 0)
-                    if iid in exclude_ids: continue
-                    if movies_df is not None:
-                        row = movies_df[movies_df['item_id'] == iid]
-                        if not row.empty:
-                            r = row.iloc[0]
-                            enriched.append({
-                                "item_id": iid,
-                                "title": r['title'],
-                                "poster_url": r.get('poster_url', ''),
-                                "backdrop_url": r.get('backdrop_url', ''),
-                                "overview": r.get('overview', ''),
-                                "rich_metadata": _get_movie_metadata(r),
-                                "explanation": "Recommended because it aligns strongly with your overall preferences."
-                            })
-                response_data = enriched
+                response_data = self._validate_and_enrich(
+                    raw_items, query, exclude_ids, 15,
+                    "Recommended because it aligns strongly with your preferences and passes strict validation."
+                )
             else:
                 # Fallback to generic recommendations (top rated)
                 if movies_df is not None:

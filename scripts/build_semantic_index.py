@@ -44,9 +44,17 @@ def build_index():
     # The IDs will correspond to the dataframe index.
     faiss_index.add(embeddings)
 
+    # Create mapping from FAISS index to item_id
+    id_mapping = df['item_id'].tolist()
+    
+    import json
     os.makedirs("data/index", exist_ok=True)
     faiss.write_index(faiss_index, "data/index/semantic_items.index")
-    print(f"Successfully saved Semantic FAISS index with {faiss_index.ntotal} vectors to data/index/semantic_items.index!")
+    
+    with open("data/index/semantic_items_mapping.json", "w") as f:
+        json.dump(id_mapping, f)
+        
+    print(f"Successfully saved Semantic FAISS index with {faiss_index.ntotal} vectors and mapping to data/index/!")
 
 if __name__ == "__main__":
     build_index()

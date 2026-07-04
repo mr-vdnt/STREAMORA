@@ -34,6 +34,7 @@ deepfm = None
 deepfm_optimizer = None
 deepfm_loss_fn = None
 faiss_index: faiss.Index | None = None
+faiss_id_mapping: list[int] = []
 movies_df: pd.DataFrame | None = None
 num_users: int = 0
 num_items: int = 0
@@ -47,7 +48,7 @@ class FeedbackEvent(BaseModel):
 
 @app.on_event("startup")
 async def startup_event():
-    global two_tower, deepfm, deepfm_optimizer, faiss_index, movies_df, num_users, num_items, model
+    global two_tower, deepfm, deepfm_optimizer, faiss_index, faiss_id_mapping, movies_df, num_users, num_items, model
     print("Loading models and data …")
 
     # Load metadata to figure out counts
@@ -57,9 +58,16 @@ async def startup_event():
 
     # ── Semantic Search (retrieval) ─────────────────────────────────
     semantic_index_path = "data/index/semantic_items.index"
+    mapping_path = "data/index/semantic_items_mapping.json"
     if os.path.exists(semantic_index_path):
         faiss_index = faiss.read_index(semantic_index_path)
         print("  [OK] Semantic Content FAISS index loaded")
+        if os.path.exists(mapping_path):
+            import json
+            with open(mapping_path, "r") as f:
+                global faiss_id_mapping
+                faiss_id_mapping = json.load(f)
+            print("  [OK] Semantic ID mapping loaded")
     else:
         print("  [MISSING] Semantic FAISS index not found - retrieval disabled")
 
@@ -109,7 +117,12 @@ def search_semantic(request: SearchRequest):
         search_k = request.top_k + len(request.exclude_ids)
         distances, indices = faiss_index.search(query_emb, search_k)
         
-        candidate_ids = (indices[0] + 1).tolist()
+        candidate_ids = []
+        for idx in indices[0]:
+            if idx >= 0 and idx < len(faiss_id_mapping):
+                candidate_ids.append(faiss_id_mapping[idx])
+            else:
+                candidate_ids.append(int(idx + 1))
         retrieval_scores = distances[0].tolist()
         
         results = []
@@ -153,8 +166,15 @@ def get_similar_items(request: SimilarRequest):
         raise HTTPException(status_code=503, detail="Semantic FAISS index not loaded.")
         
     try:
-        # FAISS is 0-indexed, our item_ids are 1-based sequential
-        idx = request.item_id - 1
+        idx = -1
+        if faiss_id_mapping and request.item_id in faiss_id_mapping:
+            idx = faiss_id_mapping.index(request.item_id)
+        else:
+            idx = request.item_id - 1
+            
+        if idx < 0:
+            raise HTTPException(status_code=404, detail="Item ID not found in FAISS mapping")
+            
         item_emb = faiss_index.reconstruct(idx)
         # Reshape to (1, D)
         item_emb = np.array([item_emb]).astype('float32')
@@ -164,7 +184,12 @@ def get_similar_items(request: SimilarRequest):
     search_k = request.top_k + len(request.exclude_ids) + 1
     distances, indices = faiss_index.search(item_emb, search_k)
     
-    candidate_ids = (indices[0] + 1).tolist()
+    candidate_ids = []
+    for idx in indices[0]:
+        if idx >= 0 and idx < len(faiss_id_mapping):
+            candidate_ids.append(faiss_id_mapping[idx])
+        else:
+            candidate_ids.append(int(idx + 1))
     retrieval_scores = distances[0].tolist()
     
     results = []

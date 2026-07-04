@@ -263,31 +263,31 @@ class IntelligentExtractor(LLMProvider):
     def generate_explanation(self, user_context: str, movie_title: str, graph_path: list[str], item_id: int = None) -> str:
         """Generates dynamic explanations using Knowledge Graph paths and User Context."""
         director = "Unknown Director"
+        genres = "its"
         cast_names = []
         if item_id is not None and not self.movies_df.empty:
             matches = self.movies_df[self.movies_df['item_id'] == item_id]
             if not matches.empty:
                 row = matches.iloc[0]
                 director = row.get('director', 'Unknown Director')
+                genres = str(row.get('genres', 'its')).replace('|', ' and ')
                 cast = row.get('cast', '')
                 if cast and isinstance(cast, str):
                     cast_names = [c.strip() for c in cast.split(',')][:3]
                     
-        cast_str = f" starring {', '.join(cast_names)}" if cast_names else ""
-        
-        if not graph_path:
-            explanation = (
-                f"Recommended because '{movie_title}'{cast_str}, directed by {director}, "
-                f"aligns perfectly with your preference for {user_context}."
-            )
-        else:
+        connection_text = ""
+        if graph_path:
             connection = str(graph_path[-1] if len(graph_path) > 0 else "similar themes")
             connection_clean = connection.replace("Movie:", "").replace("_", " ")
-            explanation = (
-                f"Recommended because '{movie_title}'{cast_str}, directed by {director}, "
-                f"shares the same emotional storytelling, engaging themes, and powerful visuals "
-                f"found in {connection_clean}. It strongly resonates with your interest in {user_context}."
-            )
+            connection_text = f"• Shares the same emotional storytelling and themes found in {connection_clean}.\n"
+
+        explanation = (
+            f"Recommended because:\n"
+            f"• Shares the {genres} genres.\n"
+            f"• Directed by {director}.\n"
+            f"{connection_text}"
+            f"• Strong semantic similarity to your preference for {user_context}."
+        )
             
         # Strict Entity Validation check
         if item_id is not None:
@@ -297,8 +297,9 @@ class IntelligentExtractor(LLMProvider):
                 print(f"[RAG Validation Warning] {e} Sanitizing explanation to resolve contradiction.")
                 # Fall back to a simplified validated template
                 explanation = (
-                    f"Recommended because '{movie_title}' directed by {director} "
-                    f"perfectly aligns with your preference for {user_context}."
+                    f"Recommended because:\n"
+                    f"• Directed by {director}.\n"
+                    f"• Perfectly aligns with your preference for {user_context}."
                 )
             
         return explanation
