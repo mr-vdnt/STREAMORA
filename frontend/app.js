@@ -3930,6 +3930,8 @@ function generateAudienceMatch(movie) {
 }
 
 function renderModalData(m, id) {
+    if (window.activeModalRequest !== id) return; // double check before rendering
+    
     // Cache title for history breadcrumbs
     window.modalMovieTitleCache = window.modalMovieTitleCache || {};
     window.modalMovieTitleCache[id] = m.title || 'Unknown';
@@ -4306,6 +4308,11 @@ window.modalHistoryForward = function() {
 };
 
 async function openModalInternal(id, appendToHistory = true) {
+    if (window.DEBUG_MODE) {
+        console.log(`[Diagnostic] Requested ID: ${id}`);
+    }
+    window.activeModalRequest = id;
+
     // Save current scroll position before leaving
     const cinematicModal = document.querySelector('.cinematic-modal');
     if (cinematicModal && window.modalHistoryIndex >= 0) {
@@ -4356,9 +4363,23 @@ async function openModalInternal(id, appendToHistory = true) {
         if (resp.ok) {
             m = await resp.json();
         }
+        if (window.activeModalRequest !== id) {
+            if (window.DEBUG_MODE) console.error(`[Diagnostic] Race condition prevented! Requested ID: ${window.activeModalRequest} | Retrieved ID: ${id}. Aborting render.`);
+            return;
+        }
         if (!m || m.error) {
             throw new Error((m && m.error) || 'Failed to fetch details');
         }
+        
+        // Ensure the ID returned from the backend matches the requested ID
+        const retrievedId = m.item_id !== undefined ? parseInt(m.item_id) : id;
+        if (retrievedId !== parseInt(id)) {
+            if (window.DEBUG_MODE) console.error(`[Diagnostic] Identity drift! Requested ID: ${id} | Retrieved ID from backend: ${retrievedId}. Aborting render.`);
+            throw new Error('Identity integrity mismatch from backend.');
+        }
+
+        if (window.DEBUG_MODE) console.log(`[Diagnostic] Retrieved ID: ${retrievedId} | Rendered ID: ${id}`);
+        
         window.currentModalMovieData = m;
         window.currentModalMovieId = id;
         renderModalData(m, id);

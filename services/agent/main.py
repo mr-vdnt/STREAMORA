@@ -194,17 +194,40 @@ def get_movie_details(request: Request, item_id: int, current_user: dict = Depen
     """Aggregates all 19 fields of rich metadata and similar movies for the Cinematic Modal."""
     user_id = current_user["id"] if current_user else 32
     try:
+        # Load local ground-truth for strict ID validation
+        expected_title = None
+        expected_poster = None
+        if os.path.exists("data/raw/movies.csv"):
+            df = pd.read_csv("data/raw/movies.csv")
+            row = df[df['item_id'] == item_id]
+            if not row.empty:
+                expected_title = row.iloc[0]['title']
+                expected_poster = row.iloc[0].get('poster_url', '')
+
         rag_resp = requests.post("http://127.0.0.1:8003/explain", json={"user_id": user_id, "item_id": item_id}, timeout=10)
         metadata = {}
         if rag_resp.status_code == 200:
             metadata = rag_resp.json().get("rich_metadata", {})
+            
+        # STRICT IDENTITY VALIDATION
+        # 1. Enforce ID mapping
+        metadata["item_id"] = item_id 
+        
+        # 2. Reject if RAG hallucinated or drifted identity
+        if expected_title and metadata.get("title") and metadata["title"] != expected_title:
+            return {"error": f"Identity mismatch: Requested ID {item_id} ({expected_title}), but got '{metadata.get('title')}'"}
+            
+        if expected_poster and metadata.get("poster_url") and metadata["poster_url"] != expected_poster:
+            return {"error": f"Identity mismatch: Poster URL drift detected for ID {item_id}"}
         
         sim_resp = requests.post("http://127.0.0.1:8001/similar", json={"item_id": item_id, "top_k": 10}, timeout=10)
         similar_movies = []
         if sim_resp.status_code == 200:
             similar_items = sim_resp.json()
             if os.path.exists("data/raw/movies.csv"):
-                df = pd.read_csv("data/raw/movies.csv")
+                # We already loaded df above, but just in case
+                if 'df' not in locals():
+                    df = pd.read_csv("data/raw/movies.csv")
                 for sim in similar_items:
                     sid = sim["item_id"]
                     sm_row = df[df['item_id'] == sid]
