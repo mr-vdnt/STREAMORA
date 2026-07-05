@@ -1839,6 +1839,14 @@ async function authFetch(url, options = {}) {
         options.headers['Authorization'] = `Bearer ${token}`;
     }
     const res = await fetch(url, options);
+    if (res.status === 401 && !isGuest) {
+        localStorage.removeItem('streamora_jwt');
+        localStorage.removeItem('streamora_profile');
+        token = null;
+        userProfile = null;
+        userId = null;
+        showAuthScreen();
+    }
     return res;
 }
 

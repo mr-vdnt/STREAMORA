@@ -76,9 +76,7 @@ def register_user(request: Request, req: RegisterRequest):
     return {"status": "success", "user_id": user_id}
 
 @app.get("/me")
-def get_me(current_user: dict = Depends(get_optional_user)):
-    if not current_user:
-        raise HTTPException(status_code=401, detail="Not authenticated")
+def get_me(current_user: dict = Depends(get_current_user)):
     user_data = dict(current_user)
     user_data.pop("hashed_password", None)
     return user_data
@@ -88,27 +86,27 @@ class UpdateProfileRequest(BaseModel):
     email: str
 
 @app.put("/me")
-def update_me(req: UpdateProfileRequest, current_user: dict = Depends(get_optional_user)):
+def update_me(req: UpdateProfileRequest, current_user: dict = Depends(get_current_user)):
     success = update_user_profile(current_user["id"], req.display_name, req.email)
     if not success:
         return JSONResponse(status_code=400, content={"detail": "Failed to update profile or email already exists"})
     return {"status": "success"}
 
 @app.get("/me/watchlist")
-def get_my_watchlist(current_user: dict = Depends(get_optional_user)):
+def get_my_watchlist(current_user: dict = Depends(get_current_user)):
     return get_watchlist(current_user["id"])
 
 @app.put("/me/watchlist")
-def update_my_watchlist(items: list, current_user: dict = Depends(get_optional_user)):
+def update_my_watchlist(items: list, current_user: dict = Depends(get_current_user)):
     save_watchlist(current_user["id"], items)
     return {"status": "success"}
 
 @app.get("/me/history")
-def get_my_history(current_user: dict = Depends(get_optional_user)):
+def get_my_history(current_user: dict = Depends(get_current_user)):
     return get_history(current_user["id"])
 
 @app.put("/me/history")
-def update_my_history(items: list, current_user: dict = Depends(get_optional_user)):
+def update_my_history(items: list, current_user: dict = Depends(get_current_user)):
     save_history(current_user["id"], items)
     return {"status": "success"}
 
