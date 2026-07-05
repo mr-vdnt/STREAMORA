@@ -25,6 +25,7 @@ class RankedItem(BaseModel):
     title: str
     retrieval_score: float
     ranking_score: float
+    explanation: list[str] = []
 
 
 # ── Global state ────────────────────────────────────────────────────
@@ -192,26 +193,61 @@ def get_similar_items(request: SimilarRequest):
             candidate_ids.append(int(idx + 1))
     retrieval_scores = distances[0].tolist()
     
+    # ── Fetch Seed Metadata for Hybrid Filtering ──
+    seed_content_type = "movie"
+    seed_genres = set()
+    seed_director = ""
+    if movies_df is not None:
+        seed_row = movies_df[movies_df['item_id'] == request.item_id]
+        if not seed_row.empty:
+            seed_content_type = seed_row.iloc[0].get('content_type', 'movie')
+            seed_genres = set(str(seed_row.iloc[0].get('genres', '')).split('|'))
+            seed_director = str(seed_row.iloc[0].get('director', ''))
+
     results = []
     for cid, r_score in zip(candidate_ids, retrieval_scores):
         if cid == request.item_id or cid in request.exclude_ids:
             continue # Skip the seed movie itself or excluded items
             
-        # Confidence Threshold: exclude matches with inner product < 0.40 (low similarity)
-        if float(r_score) < 0.40:
+        # Confidence Threshold: strict threshold for semantic similarity
+        if float(r_score) < 0.50:
             continue
             
         title = ""
+        explanation_list = []
         if movies_df is not None:
             row = movies_df[movies_df['item_id'] == cid]
             if not row.empty:
-                title = row.iloc[0]['title']
+                cand = row.iloc[0]
+                
+                # STRICT FILTERING 1: Content Type Match
+                if cand.get('content_type', 'movie') != seed_content_type:
+                    continue
+                    
+                # STRICT FILTERING 2: Genre Overlap
+                cand_genres = set(str(cand.get('genres', '')).split('|'))
+                overlap = seed_genres.intersection(cand_genres)
+                if not overlap:
+                    continue
+                    
+                title = cand['title']
+                
+                # DYNAMIC EXPLANATION GENERATION
+                if seed_director and cand.get('director') == seed_director:
+                    explanation_list.append("Same director")
+                
+                if overlap:
+                    explanation_list.append(" + ".join(list(overlap)[:3]))
+                    
+                if float(r_score) > 0.70:
+                    explanation_list.append("Strong semantic similarity")
                 
         results.append(RankedItem(
             item_id=cid,
             title=title,
             retrieval_score=float(r_score),
-            ranking_score=float(r_score) # no deepfm re-ranking for pure similarity yet
+            ranking_score=float(r_score), # no deepfm re-ranking for pure similarity yet
+            explanation=explanation_list
         ))
         
         if len(results) == request.top_k:

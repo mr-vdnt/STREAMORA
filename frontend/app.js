@@ -3619,14 +3619,14 @@ function createMovieCardHTML(movie) {
                     ${m.runtime ? `<span>${m.runtime}</span>` : ''}
                 </div>
                 <div class="card-expand__genres">${genres}</div>
+                ${(movie.explanation && movie.explanation.length > 0) ? `
                 <div class="card-expand__ai">
                     <div class="card-expand__ai-label">Why Streamora Picked This</div>
                     <ul>
-                        <li>Matches your preferred genres</li>
-                        <li>High thematic similarity</li>
-                        <li>Popular among similar viewers</li>
+                        ${movie.explanation.map(r => `<li>${r}</li>`).join('')}
                     </ul>
                 </div>
+                ` : ''}
                 <div class="card-expand__btns">
                     <button class="card-expand__btn card-expand__btn--play" onclick="event.stopPropagation(); openModal(${movie.item_id})" aria-label="Play">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
@@ -4298,14 +4298,14 @@ function appendRow(title, movies) {
                         ${m.runtime ? `<span>${m.runtime}</span>` : ''}
                     </div>
                     <div class="card-expand__genres">${genres}</div>
+                    ${(movie.explanation && movie.explanation.length > 0) ? `
                     <div class="card-expand__ai">
                         <div class="card-expand__ai-label">Why Streamora Picked This</div>
                         <ul>
-                            <li>Matches your preferred genres</li>
-                            <li>High thematic similarity</li>
-                            <li>Popular among similar viewers</li>
+                            ${movie.explanation.map(r => `<li>${r}</li>`).join('')}
                         </ul>
                     </div>
+                    ` : ''}
                     <div class="card-expand__btns">
                         <button class="card-expand__btn card-expand__btn--play" onclick="event.stopPropagation(); if (${tUrlEscaped}) { window.openTrailerLightbox(${tUrlEscaped}, '${t.replace(/'/g, "\\'")}'); } else { openModal(${movie.item_id}); }" aria-label="Play">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>

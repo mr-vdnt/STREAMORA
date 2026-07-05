@@ -237,7 +237,8 @@ def get_movie_details(request: Request, item_id: int, current_user: dict = Depen
                             "item_id": sid,
                             "title": sm['title'],
                             "poster_url": sm.get('poster_url', ''),
-                            "score": int(max(70, 99 - (sim.get('retrieval_score', 0) * 10)))
+                            "score": int(max(70, 99 - (sim.get('retrieval_score', 0) * 10))),
+                            "explanation": sim.get("explanation", [])
                         })
                         
         metadata["similar_movies"] = similar_movies
