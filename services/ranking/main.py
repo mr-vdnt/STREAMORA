@@ -100,9 +100,13 @@ def health():
 
 class SearchRequest(BaseModel):
     query: str
+    target_genres: list[str] = []
+    target_moods: list[str] = []
+    target_actors: list[str] = []
+    target_director: str = ""
+    target_content_type: str = ""
     top_k: int = 20
     exclude_ids: list[int] = []
-
 
 @app.post("/search", response_model=list[RankedItem])
 def search_semantic(request: SearchRequest):
@@ -110,44 +114,121 @@ def search_semantic(request: SearchRequest):
         raise HTTPException(status_code=503, detail="Semantic Search models not ready.")
     
     try:
-        # Encode query
-        query_emb = model.encode([request.query], convert_to_numpy=True)
-        query_emb = query_emb.astype('float32')
-        
-        # Search FAISS index
-        search_k = request.top_k + len(request.exclude_ids)
+        # Phase 2: Search Modes - Exact Match Check First
+        exact_matches = []
+        if movies_df is not None and len(request.query) > 2:
+            query_lower = request.query.lower().strip()
+            # Simple Exact/Fuzzy Title Match
+            exact_rows = movies_df[movies_df['title'].str.lower() == query_lower]
+            if exact_rows.empty:
+                exact_rows = movies_df[movies_df['title'].str.lower().str.contains(query_lower, regex=False)]
+            for _, row in exact_rows.iterrows():
+                exact_matches.append(int(row['item_id']))
+                
+        # Phase 2: Semantic Search (FAISS)
+        query_emb = model.encode([request.query], convert_to_numpy=True).astype('float32')
+        search_k = 150  # Pull large candidate pool for robust re-ranking
         distances, indices = faiss_index.search(query_emb, search_k)
         
         candidate_ids = []
-        for idx in indices[0]:
-            if idx >= 0 and idx < len(faiss_id_mapping):
-                candidate_ids.append(faiss_id_mapping[idx])
-            else:
-                candidate_ids.append(int(idx + 1))
-        retrieval_scores = distances[0].tolist()
+        retrieval_scores = []
         
+        # Merge exact matches into candidates to ensure they get scored
+        for ex_id in exact_matches:
+            if ex_id not in request.exclude_ids:
+                candidate_ids.append(ex_id)
+                retrieval_scores.append(0.0) # Dist 0 for perfect match
+                
+        for idx_pos, idx in enumerate(indices[0]):
+            if idx >= 0 and idx < len(faiss_id_mapping):
+                cid = faiss_id_mapping[idx]
+            else:
+                cid = int(idx + 1)
+                
+            if cid not in candidate_ids and cid not in request.exclude_ids:
+                candidate_ids.append(cid)
+                retrieval_scores.append(float(distances[0][idx_pos]))
+                
         results = []
         for cid, r_score in zip(candidate_ids, retrieval_scores):
-            if cid in request.exclude_ids:
-                continue
+            if movies_df is None: continue
+            row = movies_df[movies_df['item_id'] == cid]
+            if row.empty: continue
+            cand = row.iloc[0]
+            
+            # --- Phase 3: Strict Metadata Validation & Filtering ---
+            c_type = str(cand.get('content_type', '')).lower()
+            if request.target_content_type:
+                # E.g. 'series' in request must match 'series' in db
+                if request.target_content_type == "series" and "series" not in c_type: continue
+                if request.target_content_type == "movie" and "movie" not in c_type: continue
+            
+            c_genres = [g.strip().lower() for g in str(cand.get('genres', '')).split('|')]
+            c_moods = [m.strip().lower() for m in str(cand.get('moods', '')).split('|')]
+            c_themes = [t.strip().lower() for t in str(cand.get('themes', '')).split('|')]
+            c_cast = [a.strip().lower() for a in str(cand.get('cast', '')).split(',')]
+            c_director = str(cand.get('director', '')).lower()
+            c_title = str(cand.get('title', ''))
+            c_rating = float(cand.get('rating', 7.0))
+            
+            # --- Phase 4: Hybrid Ranking Formula ---
+            # Score Components
+            semantic_score = max(0.0, 1.0 - (r_score / 2.0)) # Invert FAISS L2 distance (approximate)
+            if cid in exact_matches: semantic_score = 1.0
                 
-            title = ""
-            if movies_df is not None:
-                row = movies_df[movies_df['item_id'] == cid]
-                if not row.empty:
-                    title = row.iloc[0]['title']
+            genre_overlap = 0.0
+            if request.target_genres:
+                req_g = set([g.lower() for g in request.target_genres])
+                overlap = req_g.intersection(set(c_genres))
+                if not overlap and request.target_genres: continue # Strict validation drop
+                genre_overlap = len(overlap) / len(req_g) if req_g else 0.0
+                
+            mood_theme_match = 0.0
+            if request.target_moods:
+                req_m = set([m.lower() for m in request.target_moods])
+                m_overlap = req_m.intersection(set(c_moods + c_themes))
+                mood_theme_match = len(m_overlap) / len(req_m) if req_m else 0.0
+                
+            # Phase 5: Knowledge Graph Proximity (Actors/Directors)
+            kg_proximity = 0.0
+            if request.target_actors:
+                req_a = set([a.lower() for a in request.target_actors])
+                a_overlap = req_a.intersection(set(c_cast))
+                if not a_overlap and request.target_actors: continue # Strict drop
+                kg_proximity += 0.5 * (len(a_overlap) / len(req_a))
+                
+            if request.target_director:
+                if request.target_director.lower() in c_director:
+                    kg_proximity += 0.5
+                else:
+                    continue # Strict drop
                     
+            popularity_score = c_rating / 10.0
+            
+            # Netflix-style Formula
+            final_score = (0.40 * semantic_score) + (0.20 * genre_overlap) + (0.15 * kg_proximity) + (0.15 * mood_theme_match) + (0.10 * popularity_score)
+            
+            # --- Phase 6: Explainability ---
+            explanations = []
+            if cid in exact_matches:
+                explanations.append("Exact title match")
+            else:
+                if genre_overlap > 0: explanations.append(f"Matches requested genres ({', '.join(request.target_genres)})")
+                if mood_theme_match > 0: explanations.append(f"Matches requested mood/theme ({', '.join(request.target_moods)})")
+                if kg_proximity > 0: explanations.append(f"Graph Connection (Cast/Director)")
+                if semantic_score > 0.7: explanations.append("Strong semantic plot similarity")
+                if popularity_score > 0.8: explanations.append("Critically acclaimed globally")
+                
             results.append(RankedItem(
                 item_id=cid,
-                title=title,
-                retrieval_score=float(r_score),
-                ranking_score=float(r_score)
+                title=c_title,
+                retrieval_score=r_score,
+                ranking_score=final_score,
+                explanation=explanations
             ))
             
-            if len(results) == request.top_k:
-                break
-                
-        return results
+        results.sort(key=lambda r: r.ranking_score, reverse=True)
+        return results[:request.top_k]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
