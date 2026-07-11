@@ -186,6 +186,43 @@ def autocomplete(request: Request, q: str, current_user: dict = Depends(get_opti
     return []
 
 import requests
+
+TMDB_API_KEY = os.getenv("TMDB_API_KEY", "")
+
+@app.get("/trailer/{tmdb_id}")
+@limiter.limit("30/minute")
+def get_trailer(request: Request, tmdb_id: int):
+    """Fetches the official YouTube trailer from TMDB if available."""
+    if not TMDB_API_KEY:
+        return {"trailer_url": ""}
+        
+    try:
+        # Try movie first
+        resp = requests.get(f"https://api.themoviedb.org/3/movie/{tmdb_id}/videos?api_key={TMDB_API_KEY}")
+        data = resp.json()
+        if "results" not in data or not data["results"]:
+            # Try TV series
+            resp = requests.get(f"https://api.themoviedb.org/3/tv/{tmdb_id}/videos?api_key={TMDB_API_KEY}")
+            data = resp.json()
+            
+        videos = data.get("results", [])
+        if not videos:
+            return {"trailer_url": ""}
+            
+        # Prioritize official trailers on YouTube
+        trailers = [v for v in videos if v.get("site") == "YouTube" and v.get("type") == "Trailer"]
+        if not trailers:
+            trailers = [v for v in videos if v.get("site") == "YouTube" and v.get("type") == "Teaser"]
+            
+        if trailers:
+            key = trailers[0]["key"]
+            return {"trailer_url": f"https://www.youtube.com/embed/{key}"}
+            
+    except Exception as e:
+        print(f"Error fetching trailer for TMDB {tmdb_id}: {e}")
+        
+    return {"trailer_url": ""}
+
 @app.get("/movie/{item_id}")
 @limiter.limit("30/minute")
 def get_movie_details(request: Request, item_id: int, current_user: dict = Depends(get_optional_user)):

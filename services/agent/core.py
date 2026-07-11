@@ -54,7 +54,9 @@ def _get_movie_metadata(row):
         "tags": str(row.get('genres', '')).split('|'),
         "story_summary": row.get('overview', 'No summary available.'),
         "why_recommended": "Recommended by Streamora Hybrid Engine",
-        "director": row.get('director', 'Unknown')
+        "director": row.get('director', 'Unknown'),
+        "tmdb_id": int(row.get('tmdb_id', 0)) if pd.notna(row.get('tmdb_id')) else 0,
+        "trailer_url": row.get('trailer_url', '') if pd.notna(row.get('trailer_url')) else ''
     }
 
 class OrchestratorAgent:

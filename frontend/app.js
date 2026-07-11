@@ -3596,9 +3596,11 @@ function createMovieCardHTML(movie) {
 
     // Escape title to prevent breaks in onerror handler
     const escapedTitle = t.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    const tmdbId = m.tmdb_id || movie.tmdb_id || 0;
+    const tUrl = m.trailer_url || movie.trailer_url || '';
 
     return `
-    <div class="card-wrap" style="cursor: pointer;" onclick="openModal(${movie.item_id})">
+    <div class="card-wrap" style="cursor: pointer;" onclick="openModal(${movie.item_id})" onmouseenter="handleCardHover(this, ${tmdbId}, '${tUrl}')" onmouseleave="handleCardLeave(this)">
         <div class="card-3d" data-id="${movie.item_id}" tabindex="0">
             <div class="img-container">
                 <div class="img-placeholder"><div class="blur-skeleton"></div></div>
@@ -4245,7 +4247,7 @@ function renderHero(movie) {
         </div>
     `;
 
-    // Progressive Hero Backdrop Loader
+    // Progressive Hero Backdrop & Trailer Loader
     setTimeout(() => {
         const heroBg = heroSection.querySelector('.hero__bg');
         if (heroBg) {
@@ -4254,6 +4256,39 @@ function renderHero(movie) {
                 heroBg.style.backgroundImage = `url('${bg}')`;
                 heroBg.classList.remove('backdrop-loading');
                 heroBg.classList.add('backdrop-loaded');
+                
+                // --- Autoplay Hero Trailer ---
+                if (window.innerWidth >= 768 && tUrl && tUrl !== 'undefined') {
+                    setTimeout(() => {
+                        let embedUrl = tUrl;
+                        if (embedUrl.includes('youtube.com/watch?v=')) embedUrl = embedUrl.replace('watch?v=', 'embed/');
+                        const sep = embedUrl.includes('?') ? '&' : '?';
+                        embedUrl += sep + 'autoplay=1&mute=1&controls=0&modestbranding=1&rel=0&playsinline=1&showinfo=0';
+                        
+                        const iframe = document.createElement('iframe');
+                        iframe.src = embedUrl;
+                        iframe.style.position = 'absolute';
+                        iframe.style.top = '50%';
+                        iframe.style.left = '50%';
+                        iframe.style.width = '100vw';
+                        iframe.style.height = '56.25vw'; // 16:9
+                        iframe.style.minHeight = '100vh';
+                        iframe.style.minWidth = '177.77vh'; // 16:9
+                        iframe.style.transform = 'translate(-50%, -50%)';
+                        iframe.style.border = 'none';
+                        iframe.style.pointerEvents = 'none';
+                        iframe.style.zIndex = '0';
+                        iframe.style.opacity = '0';
+                        iframe.style.transition = 'opacity 2s ease';
+                        iframe.setAttribute('allow', 'autoplay; encrypted-media');
+                        
+                        iframe.onload = () => {
+                            setTimeout(() => { iframe.style.opacity = '1'; }, 500);
+                        };
+                        
+                        heroBg.appendChild(iframe);
+                    }, 2000); // 2 second delay before hero trailer starts
+                }
             };
             tempImg.onerror = () => {
                 heroBg.style.backgroundImage = 'linear-gradient(to bottom, rgba(15, 23, 42, 0.7), rgba(15, 23, 42, 1))';
@@ -5874,6 +5909,13 @@ window.openTrailerLightbox = function(url, title) {
         alert("Trailer is currently unavailable.");
         return;
     }
+    const titleEl = document.getElementById('lightbox-title');
+    const matchEl = document.getElementById('lightbox-match');
+    const yearEl = document.getElementById('lightbox-year');
+    
+    if (titleEl) titleEl.innerText = title;
+    if (matchEl) matchEl.innerText = "★ Premium Trailer";
+    if (yearEl) yearEl.innerText = "Streamora Cinematic AI";
     
     // Auto-play the YouTube video and ensure high quality
     let embedUrl = url;
@@ -5908,4 +5950,63 @@ window.closeTrailerLightbox = function() {
         wrapper.innerHTML = '';
     }
     document.body.style.overflow = '';
+};
+
+// ── Hover Trailer Logic ────────────────────────────────────────────────
+window.hoverTimers = window.hoverTimers || {};
+
+window.handleCardHover = function(cardWrap, tmdbId, localTrailerUrl) {
+    if (window.innerWidth < 768) return; // No hover autoplay on mobile
+    if (cardWrap.leaveTimer) clearTimeout(cardWrap.leaveTimer);
+    
+    cardWrap.hoverTimer = setTimeout(async () => {
+        const expandImgContainer = cardWrap.querySelector('.card-expand .img-container');
+        if (!expandImgContainer || expandImgContainer.querySelector('iframe')) return;
+        
+        let url = localTrailerUrl;
+        
+        // Fetch from TMDB if local is missing
+        if ((!url || url === 'undefined' || url === 'null') && tmdbId) {
+            try {
+                const res = await fetch('/trailer/' + tmdbId);
+                const data = await res.json();
+                if (data.trailer_url) url = data.trailer_url;
+            } catch (e) {
+                console.error("Failed to fetch trailer", e);
+            }
+        }
+        
+        if (url && url !== 'undefined' && url !== 'null') {
+            let embedUrl = url;
+            if (embedUrl.includes('youtube.com/watch?v=')) {
+                embedUrl = embedUrl.replace('watch?v=', 'embed/');
+            }
+            const sep = embedUrl.includes('?') ? '&' : '?';
+            embedUrl += sep + 'autoplay=1&mute=1&controls=0&modestbranding=1&rel=0&playsinline=1&showinfo=0';
+            
+            const iframe = document.createElement('iframe');
+            iframe.src = embedUrl;
+            iframe.style.position = 'absolute';
+            iframe.style.top = '0';
+            iframe.style.left = '0';
+            iframe.style.width = '100%';
+            iframe.style.height = '100%';
+            iframe.style.border = 'none';
+            iframe.style.zIndex = '2';
+            iframe.style.pointerEvents = 'none';
+            iframe.setAttribute('allow', 'autoplay; encrypted-media');
+            
+            expandImgContainer.appendChild(iframe);
+            cardWrap.classList.add('playing-trailer');
+        }
+    }, 800);
+};
+
+window.handleCardLeave = function(cardWrap) {
+    if (cardWrap.hoverTimer) clearTimeout(cardWrap.hoverTimer);
+    cardWrap.leaveTimer = setTimeout(() => {
+        const iframe = cardWrap.querySelector('.card-expand iframe');
+        if (iframe) iframe.remove();
+        cardWrap.classList.remove('playing-trailer');
+    }, 200);
 };
