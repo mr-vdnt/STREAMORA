@@ -12,3 +12,5 @@ bcrypt
 python-multipart
 slowapi
 python-dotenv
+
+ollama
