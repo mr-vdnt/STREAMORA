@@ -110,9 +110,6 @@ class SearchRequest(BaseModel):
 
 @app.post("/search", response_model=list[RankedItem])
 def search_semantic(request: SearchRequest):
-    if faiss_index is None or model is None:
-        raise HTTPException(status_code=503, detail="Semantic Search models not ready.")
-    
     try:
         # Phase 2: Search Modes - Exact Match Check First
         exact_matches = []
@@ -122,14 +119,13 @@ def search_semantic(request: SearchRequest):
             exact_rows = movies_df[movies_df['title'].str.lower() == query_lower]
             if exact_rows.empty:
                 exact_rows = movies_df[movies_df['title'].str.lower().str.contains(query_lower, regex=False)]
+            # If still empty and FAISS is down, fallback to overview
+            if exact_rows.empty and (faiss_index is None or model is None):
+                exact_rows = movies_df[movies_df['overview'].fillna('').str.lower().str.contains(query_lower, regex=False)]
+                
             for _, row in exact_rows.iterrows():
                 exact_matches.append(int(row['item_id']))
                 
-        # Phase 2: Semantic Search (FAISS)
-        query_emb = model.encode([request.query], convert_to_numpy=True).astype('float32')
-        search_k = 150  # Pull large candidate pool for robust re-ranking
-        distances, indices = faiss_index.search(query_emb, search_k)
-        
         candidate_ids = []
         retrieval_scores = []
         
@@ -139,15 +135,21 @@ def search_semantic(request: SearchRequest):
                 candidate_ids.append(ex_id)
                 retrieval_scores.append(0.0) # Dist 0 for perfect match
                 
-        for idx_pos, idx in enumerate(indices[0]):
-            if idx >= 0 and idx < len(faiss_id_mapping):
-                cid = faiss_id_mapping[idx]
-            else:
-                cid = int(idx + 1)
-                
-            if cid not in candidate_ids and cid not in request.exclude_ids:
-                candidate_ids.append(cid)
-                retrieval_scores.append(float(distances[0][idx_pos]))
+        # Phase 2: Semantic Search (FAISS)
+        if faiss_index is not None and model is not None:
+            query_emb = model.encode([request.query], convert_to_numpy=True).astype('float32')
+            search_k = 150  # Pull large candidate pool for robust re-ranking
+            distances, indices = faiss_index.search(query_emb, search_k)
+            
+            for idx_pos, idx in enumerate(indices[0]):
+                if idx >= 0 and idx < len(faiss_id_mapping):
+                    cid = faiss_id_mapping[idx]
+                else:
+                    cid = int(idx + 1)
+                    
+                if cid not in candidate_ids and cid not in request.exclude_ids:
+                    candidate_ids.append(cid)
+                    retrieval_scores.append(float(distances[0][idx_pos]))
                 
         results = []
         for cid, r_score in zip(candidate_ids, retrieval_scores):
