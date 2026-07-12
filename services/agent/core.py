@@ -1,23 +1,14 @@
-"""
-STREAMORA AI - Netflix-Level Orchestrator Agent
-"""
 import os
-import re
 import json
+import re
 import requests
 import pandas as pd
+from typing import List, Dict, Any, Optional
+from pydantic import BaseModel
 from services.agent.tools import get_explanation
+import ollama
 
-# --- Global Knowledge Graph / Entity Lexicon ---
 movies_df = None
-ENTITY_LEXICON = {
-    "genres": set(),
-    "moods": set(),
-    "actors": set(),
-    "directors": set(),
-    "themes": set()
-}
-
 if os.path.exists("data/raw/movies.csv"):
     movies_df = pd.read_csv("data/raw/movies.csv")
     movies_df['genres'] = movies_df['genres'].fillna('')
@@ -25,26 +16,8 @@ if os.path.exists("data/raw/movies.csv"):
     movies_df['director'] = movies_df['director'].fillna('')
     movies_df['moods'] = movies_df['moods'].fillna('')
     movies_df['themes'] = movies_df['themes'].fillna('')
-    
-    for _, row in movies_df.iterrows():
-        # Genres
-        for g in str(row['genres']).split('|'):
-            if g.strip(): ENTITY_LEXICON["genres"].add(g.strip().lower())
-        # Moods
-        for m in str(row['moods']).split('|'):
-            if m.strip(): ENTITY_LEXICON["moods"].add(m.strip().lower())
-        # Themes
-        for t in str(row['themes']).split('|'):
-            if t.strip(): ENTITY_LEXICON["themes"].add(t.strip().lower())
-        # Cast
-        for a in str(row['cast']).split(','):
-            if a.strip(): ENTITY_LEXICON["actors"].add(a.strip().lower())
-        # Director
-        for d in str(row['director']).split(','):
-            if d.strip(): ENTITY_LEXICON["directors"].add(d.strip().lower())
 
 def _get_movie_metadata(row):
-    """Helper to safely extract movie metadata for UI."""
     return {
         "title": row.get('title', 'Unknown'),
         "year": str(row.get('title', '')).split('(')[-1].strip(')') if '(' in str(row.get('title', '')) else "",
@@ -53,51 +26,60 @@ def _get_movie_metadata(row):
         "audience_type": "Adult" if row.get('is_adult') == True else "Family/General",
         "tags": str(row.get('genres', '')).split('|'),
         "story_summary": row.get('overview', 'No summary available.'),
-        "why_recommended": "Recommended by Streamora Hybrid Engine",
+        "why_recommended": "Recommended by Streamora AI",
         "director": row.get('director', 'Unknown'),
         "tmdb_id": int(row.get('tmdb_id', 0)) if pd.notna(row.get('tmdb_id')) else 0,
         "trailer_url": row.get('trailer_url', '') if pd.notna(row.get('trailer_url')) else ''
     }
 
+class ExtractionSchema(BaseModel):
+    intent: str
+    target_genres: List[str]
+    target_moods: List[str]
+    target_actors: List[str]
+    target_director: str
+    target_content_type: str
+
 class OrchestratorAgent:
     def __init__(self):
-        print("Loading NLP Intent & Entity Parser...")
+        print("Loading AI Discovery Engine (Ollama)...")
         self.conversation_memory = {}
-        print("Agent ready.")
+        self.model = 'llama3'
         
     def _extract_entities(self, query: str):
-        query_lower = query.lower()
-        
-        target_content_type = ""
-        if re.search(r'\b(movie|film|movies|films)\b', query_lower): target_content_type = "movie"
-        elif re.search(r'\b(series|show|shows|tv)\b', query_lower): target_content_type = "series"
-        elif re.search(r'\b(anime)\b', query_lower): target_content_type = "anime"
-        elif re.search(r'\b(documentary|documentaries)\b', query_lower): target_content_type = "documentary"
-
-        target_genres = [g for g in ENTITY_LEXICON["genres"] if g in query_lower]
-        target_moods = [m for m in ENTITY_LEXICON["moods"] if m in query_lower]
-        target_themes = [t for t in ENTITY_LEXICON["themes"] if t in query_lower]
-        target_actors = [a for a in ENTITY_LEXICON["actors"] if a in query_lower]
-        target_directors = [d for d in ENTITY_LEXICON["directors"] if d in query_lower]
-        
-        # Combine moods and themes
-        target_moods.extend(target_themes)
-        
-        return {
-            "target_genres": target_genres,
-            "target_moods": list(set(target_moods)),
-            "target_actors": target_actors,
-            "target_director": target_directors[0] if target_directors else "",
-            "target_content_type": target_content_type
-        }
+        prompt = f"""
+        Extract the following information from the user's movie search query: "{query}"
+        - intent: What is the user looking for? (e.g. "search", "recommendation", "similar")
+        - target_genres: List of genres (e.g. Action, Sci-Fi)
+        - target_moods: List of moods/themes (e.g. Dark, Mind-bending, Space)
+        - target_actors: List of actors mentioned
+        - target_director: Any director mentioned
+        - target_content_type: "movie", "series", "anime", or "documentary"
+        """
+        try:
+            resp = ollama.chat(
+                model=self.model,
+                messages=[{'role': 'user', 'content': prompt}],
+                format=ExtractionSchema.model_json_schema()
+            )
+            data = json.loads(resp['message']['content'])
+            return data
+        except Exception as e:
+            print(f"Extraction failed: {e}")
+            return {
+                "intent": "search",
+                "target_genres": [],
+                "target_moods": [],
+                "target_actors": [],
+                "target_director": "",
+                "target_content_type": ""
+            }
 
     def process_query(self, user_id: int, query: str, exclude_ids: list[int] = None) -> dict:
         if exclude_ids is None:
             exclude_ids = []
             
         lower_q = query.lower()
-        
-        # 1. Handle Explicit Explanations First
         if "why" in lower_q or "explain" in lower_q:
             match = re.search(r'\b\d+\b', query)
             item_id = int(match.group(0)) if match else 1
@@ -105,30 +87,29 @@ class OrchestratorAgent:
             return {
                 "query": query,
                 "intent": "explanation",
-                "response": tool_resp["data"]["explanation"] if tool_resp["status"] == "success" else "High relevance based on semantic matching."
+                "response": [],
+                "llm_response": tool_resp["data"]["explanation"] if tool_resp["status"] == "success" else "High relevance based on semantic matching.",
+                "entities": {}
             }
 
-        # 2. Query Planner & Entity Extraction
         entities = self._extract_entities(query)
         
         payload = {
             "query": query,
-            "target_genres": entities["target_genres"],
-            "target_moods": entities["target_moods"],
-            "target_actors": entities["target_actors"],
-            "target_director": entities["target_director"],
-            "target_content_type": entities["target_content_type"],
+            "target_genres": entities.get("target_genres", []),
+            "target_moods": entities.get("target_moods", []),
+            "target_actors": entities.get("target_actors", []),
+            "target_director": entities.get("target_director", ""),
+            "target_content_type": entities.get("target_content_type", ""),
             "top_k": 15,
             "exclude_ids": exclude_ids
         }
         
-        # 3. Request Hybrid Ranking Service
         response_data = []
         try:
-            resp = requests.post("http://127.0.0.1:8001/search", json=payload, timeout=5)
+            resp = requests.post("http://127.0.0.1:8001/search", json=payload, timeout=10)
             if resp.status_code == 200:
                 ranked_items = resp.json()
-                # 4. Context Builder & Grounding
                 for item in ranked_items:
                     iid = item["item_id"]
                     if movies_df is None: continue
@@ -152,13 +133,26 @@ class OrchestratorAgent:
         except Exception as e:
             print(f"Hybrid Search Failed: {e}")
 
-        # If zero matches found, DO NOT fallback to random movies.
-        # Return empty list, UI will render "No matches found" gracefully.
-        
+        # Context Builder & LLM Response
+        if not response_data:
+            llm_text = "I couldn't find anything matching that in our current catalog."
+        else:
+            context_titles = [f"- {m['title']}: {m['overview'][:100]}..." for m in response_data[:5]]
+            prompt = f"The user asked: '{query}'. Based on our hybrid search, we found these movies:\n" + "\n".join(context_titles) + "\nWrite a short, engaging 2-sentence response as a personal AI movie curator recommending these titles."
+            try:
+                resp = ollama.chat(
+                    model=self.model,
+                    messages=[{'role': 'user', 'content': prompt}]
+                )
+                llm_text = resp['message']['content']
+            except Exception as e:
+                llm_text = f"I found {len(response_data)} movies you might enjoy!"
+
         return {
             "query": query,
-            "intent": "hybrid_search",
+            "intent": entities.get("intent", "search"),
             "response": response_data,
+            "llm_response": llm_text,
             "entities": entities
         }
 

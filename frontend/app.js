@@ -2461,7 +2461,7 @@ async function handleSend() {
         const data = await resp.json();
 
         if (data.intent === 'explanation') {
-            addMsg(data.response, false);
+            addMsg(data.llm_response || data.response, false);
             contentRows.innerHTML = '';
             return;
         }
@@ -2475,14 +2475,14 @@ async function handleSend() {
 
             renderResults(movies, rowTitle);
             
-            let responseHTML = `Found ${movies.length} titles for you:<br>`;
+            let responseHTML = data.llm_response ? data.llm_response + '<br><br>' : `Found ${movies.length} titles for you:<br>`;
             movies.slice(0, 3).forEach(m => {
                 responseHTML += createBotRecommendationHTML(m);
             });
             addMsg(responseHTML, false);
         } else {
             contentRows.innerHTML = '';
-            addMsg("I couldn't find anything matching that.", false);
+            addMsg(data.llm_response || "I couldn't find anything matching that.", false);
         }
     } catch (err) {
         contentRows.innerHTML = '';

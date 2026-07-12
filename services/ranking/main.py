@@ -169,6 +169,8 @@ def search_semantic(request: SearchRequest):
             c_cast = [a.strip().lower() for a in str(cand.get('cast', '')).split(',')]
             c_director = str(cand.get('director', '')).lower()
             c_title = str(cand.get('title', ''))
+            c_poster = str(cand.get('poster_url', ''))
+            if not c_title or c_poster == 'nan' or not c_poster: continue
             c_rating = float(cand.get('rating', 7.0))
             
             # --- Phase 4: Hybrid Ranking Formula ---
@@ -180,7 +182,7 @@ def search_semantic(request: SearchRequest):
             if request.target_genres:
                 req_g = set([g.lower() for g in request.target_genres])
                 overlap = req_g.intersection(set(c_genres))
-                if not overlap and request.target_genres: continue # Strict validation drop
+                if not overlap and request.target_genres and semantic_score < 0.6: continue # Strict validation drop
                 genre_overlap = len(overlap) / len(req_g) if req_g else 0.0
                 
             mood_theme_match = 0.0
@@ -194,13 +196,13 @@ def search_semantic(request: SearchRequest):
             if request.target_actors:
                 req_a = set([a.lower() for a in request.target_actors])
                 a_overlap = req_a.intersection(set(c_cast))
-                if not a_overlap and request.target_actors: continue # Strict drop
+                if not a_overlap and request.target_actors and semantic_score < 0.6: continue # Strict drop
                 kg_proximity += 0.5 * (len(a_overlap) / len(req_a))
                 
             if request.target_director:
                 if request.target_director.lower() in c_director:
                     kg_proximity += 0.5
-                else:
+                elif semantic_score < 0.6:
                     continue # Strict drop
                     
             popularity_score = c_rating / 10.0

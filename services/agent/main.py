@@ -147,6 +147,7 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     intent: str
     response: Any
+    llm_response: str
 
 @app.post("/chat", response_model=ChatResponse)
 @limiter.limit("20/minute")
@@ -154,8 +155,9 @@ def chat_endpoint(request: Request, req: ChatRequest, current_user: dict = Depen
     user_id = current_user["id"] if current_user else 32
     result = agent.process_query(user_id, req.query, req.exclude_ids)
     return ChatResponse(
-        intent=result["intent"],
-        response=result["response"]
+        intent=result.get("intent", "search"),
+        response=result.get("response", []),
+        llm_response=result.get("llm_response", "")
     )
 
 import pandas as pd
