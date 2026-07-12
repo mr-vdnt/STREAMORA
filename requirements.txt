@@ -14,4 +14,3 @@ slowapi
 python-dotenv
 
 ollama
-sentence-transformers
