@@ -2,34 +2,52 @@ import os
 import json
 import re
 import requests
-import pandas as pd
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
 from services.agent.tools import get_explanation
 import ollama
 
-movies_df = None
+import csv
+
+movies_db = {}
 if os.path.exists("data/raw/movies.csv"):
-    movies_df = pd.read_csv("data/raw/movies.csv")
-    movies_df['genres'] = movies_df['genres'].fillna('')
-    movies_df['cast'] = movies_df['cast'].fillna('')
-    movies_df['director'] = movies_df['director'].fillna('')
-    movies_df['moods'] = movies_df['moods'].fillna('')
-    movies_df['themes'] = movies_df['themes'].fillna('')
+    with open("data/raw/movies.csv", "r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            try:
+                iid = int(row.get('item_id', 0))
+                movies_db[iid] = row
+            except ValueError:
+                pass
 
 def _get_movie_metadata(row):
+    title = row.get('title', 'Unknown')
+    
+    # Extract year if present in title (e.g. 'Inception (2010)')
+    year = ""
+    if '(' in title:
+        year = title.split('(')[-1].strip(')')
+        
+    # Rating logic
+    try:
+        rating = float(row.get('rating', 8.0))
+    except ValueError:
+        rating = 8.0
+        
+    is_adult = str(row.get('is_adult', 'False')).lower() == 'true'
+    
     return {
-        "title": row.get('title', 'Unknown'),
-        "year": str(row.get('title', '')).split('(')[-1].strip(')') if '(' in str(row.get('title', '')) else "",
-        "match_percentage": int(row.get('rating', 8.0) * 10),
+        "title": title,
+        "year": year,
+        "match_percentage": int(rating * 10),
         "runtime": f"{row.get('runtime', 120)} min",
-        "audience_type": "Adult" if row.get('is_adult') == True else "Family/General",
+        "audience_type": "Adult" if is_adult else "Family/General",
         "tags": str(row.get('genres', '')).split('|'),
         "story_summary": row.get('overview', 'No summary available.'),
         "why_recommended": "Recommended by Streamora AI",
         "director": row.get('director', 'Unknown'),
-        "tmdb_id": int(row.get('tmdb_id', 0)) if pd.notna(row.get('tmdb_id')) else 0,
-        "trailer_url": row.get('trailer_url', '') if pd.notna(row.get('trailer_url')) else ''
+        "tmdb_id": int(float(row.get('tmdb_id', 0))) if row.get('tmdb_id') else 0,
+        "trailer_url": row.get('trailer_url', '')
     }
 
 class ExtractionSchema(BaseModel):
@@ -112,10 +130,8 @@ class OrchestratorAgent:
                 ranked_items = resp.json()
                 for item in ranked_items:
                     iid = item["item_id"]
-                    if movies_df is None: continue
-                    row = movies_df[movies_df['item_id'] == iid]
-                    if row.empty: continue
-                    r = row.iloc[0]
+                    if iid not in movies_db: continue
+                    r = movies_db[iid]
                     
                     rich_meta = _get_movie_metadata(r)
                     if item.get("explanation"):

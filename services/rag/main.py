@@ -8,7 +8,7 @@ natural language explanations for recommendations.
 import os
 import sys
 import requests
-import pandas as pd
+
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
@@ -18,10 +18,19 @@ from services.rag.llm import llm_provider
 
 app = FastAPI(title="STREAMORA AI - RAG & Graph Intelligence")
 
+import csv
+
 # Load movies metadata for title lookup
-movies_df = pd.DataFrame()
+movies_db = {}
 if os.path.exists("data/raw/movies.csv"):
-    movies_df = pd.read_csv("data/raw/movies.csv")
+    with open("data/raw/movies.csv", "r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            try:
+                iid = int(row.get('item_id', 0))
+                movies_db[iid] = row.get('title', 'Unknown')
+            except ValueError:
+                pass
 
 
 class ExplainRequest(BaseModel):
@@ -53,10 +62,8 @@ def explain_recommendation(request: ExplainRequest):
     """
     # 1. Get Movie Title
     title = f"Movie {request.item_id}"
-    if not movies_df.empty:
-        row = movies_df[movies_df['item_id'] == request.item_id]
-        if not row.empty:
-            title = row.iloc[0]['title']
+    if request.item_id in movies_db:
+        title = movies_db[request.item_id]
 
     # 2. Get User Context (from Feature Store running on 8002)
     user_context = "movies"

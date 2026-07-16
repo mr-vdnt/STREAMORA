@@ -119,10 +119,23 @@ def search_semantic(request: SearchRequest):
             exact_rows = movies_df[movies_df['title'].str.lower() == query_lower]
             if exact_rows.empty:
                 exact_rows = movies_df[movies_df['title'].str.lower().str.contains(query_lower, regex=False)]
-            # If still empty and FAISS is down, fallback to overview
+            # If still empty and FAISS is down, fallback to smart keyword matching
             if exact_rows.empty and (faiss_index is None or model is None):
-                exact_rows = movies_df[movies_df['overview'].fillna('').str.lower().str.contains(query_lower, regex=False)]
+                # Remove common conversational stop words
+                stop_words = ["similar", "to", "like", "movies", "show", "me", "find", "some", "a", "an", "the", "about", "with"]
+                keywords = [w for w in query_lower.split() if w not in stop_words and len(w) > 2]
                 
+                if keywords:
+                    # Create a regex pattern that matches ANY of the keywords
+                    import re
+                    pattern = "|".join([re.escape(k) for k in keywords])
+                    
+                    # Try matching keywords against title first
+                    exact_rows = movies_df[movies_df['title'].str.lower().str.contains(pattern, regex=True, na=False)]
+                    
+                    # If still empty, match against overview
+                    if exact_rows.empty:
+                        exact_rows = movies_df[movies_df['overview'].str.lower().str.contains(pattern, regex=True, na=False)]
             for _, row in exact_rows.iterrows():
                 exact_matches.append(int(row['item_id']))
                 
