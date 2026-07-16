@@ -1,9 +1,9 @@
 import os
 import sys
 import numpy as np
-import pandas as pd
 import faiss
 import requests
+import csv
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
@@ -36,7 +36,7 @@ deepfm_optimizer = None
 deepfm_loss_fn = None
 faiss_index: faiss.Index | None = None
 faiss_id_mapping: list[int] = []
-movies_df: pd.DataFrame | None = None
+movies_db: dict = {}
 num_users: int = 0
 num_items: int = 0
 model = None
@@ -49,13 +49,26 @@ class FeedbackEvent(BaseModel):
 
 @app.on_event("startup")
 async def startup_event():
-    global two_tower, deepfm, deepfm_optimizer, faiss_index, faiss_id_mapping, movies_df, num_users, num_items, model
+    global two_tower, deepfm, deepfm_optimizer, faiss_index, faiss_id_mapping, movies_db, num_users, num_items, model
     print("Loading models and data …")
 
     # Load metadata to figure out counts
-    ratings = pd.read_csv("data/raw/ratings.csv")
-    num_users = int(ratings['user_id'].max())
-    num_items = int(ratings['item_id'].max())
+    try:
+        with open("data/raw/ratings.csv", "r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            max_u = 0
+            max_i = 0
+            for row in reader:
+                try:
+                    u = int(row['user_id'])
+                    i = int(row['item_id'])
+                    if u > max_u: max_u = u
+                    if i > max_i: max_i = i
+                except: pass
+            num_users = max_u
+            num_items = max_i
+    except Exception:
+        pass
 
     # ── Semantic Search (retrieval) ─────────────────────────────────
     semantic_index_path = "data/index/semantic_items.index"
@@ -85,7 +98,14 @@ async def startup_event():
 
     # ── Movie metadata ──────────────────────────────────────────────
     if os.path.exists("data/raw/movies.csv"):
-        movies_df = pd.read_csv("data/raw/movies.csv")
+        with open("data/raw/movies.csv", "r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                try:
+                    iid = int(row.get('item_id', 0))
+                    movies_db[iid] = row
+                except ValueError:
+                    pass
         print("  [OK] Movie metadata loaded")
 
 
@@ -113,31 +133,37 @@ def search_semantic(request: SearchRequest):
     try:
         # Phase 2: Search Modes - Exact Match Check First
         exact_matches = []
-        if movies_df is not None and len(request.query) > 2:
+        if movies_db and len(request.query) > 2:
             query_lower = request.query.lower().strip()
+            
             # Simple Exact/Fuzzy Title Match
-            exact_rows = movies_df[movies_df['title'].str.lower() == query_lower]
-            if exact_rows.empty:
-                exact_rows = movies_df[movies_df['title'].str.lower().str.contains(query_lower, regex=False)]
+            for iid, row in movies_db.items():
+                title = row.get('title', '').lower()
+                if title == query_lower or query_lower in title:
+                    exact_matches.append(iid)
+                    
             # If still empty and FAISS is down, fallback to smart keyword matching
-            if exact_rows.empty and (faiss_index is None or model is None):
+            if not exact_matches and (faiss_index is None or model is None):
                 # Remove common conversational stop words
                 stop_words = ["similar", "to", "like", "movies", "show", "me", "find", "some", "a", "an", "the", "about", "with"]
                 keywords = [w for w in query_lower.split() if w not in stop_words and len(w) > 2]
                 
                 if keywords:
-                    # Create a regex pattern that matches ANY of the keywords
                     import re
-                    pattern = "|".join([re.escape(k) for k in keywords])
+                    pattern = re.compile("|".join([re.escape(k) for k in keywords]), re.IGNORECASE)
                     
                     # Try matching keywords against title first
-                    exact_rows = movies_df[movies_df['title'].str.lower().str.contains(pattern, regex=True, na=False)]
-                    
+                    for iid, row in movies_db.items():
+                        title = row.get('title', '')
+                        if pattern.search(title):
+                            exact_matches.append(iid)
+                            
                     # If still empty, match against overview
-                    if exact_rows.empty:
-                        exact_rows = movies_df[movies_df['overview'].str.lower().str.contains(pattern, regex=True, na=False)]
-            for _, row in exact_rows.iterrows():
-                exact_matches.append(int(row['item_id']))
+                    if not exact_matches:
+                        for iid, row in movies_db.items():
+                            overview = row.get('overview', '')
+                            if pattern.search(overview):
+                                exact_matches.append(iid)
                 
         candidate_ids = []
         retrieval_scores = []
@@ -166,10 +192,8 @@ def search_semantic(request: SearchRequest):
                 
         results = []
         for cid, r_score in zip(candidate_ids, retrieval_scores):
-            if movies_df is None: continue
-            row = movies_df[movies_df['item_id'] == cid]
-            if row.empty: continue
-            cand = row.iloc[0]
+            if cid not in movies_db: continue
+            cand = movies_db[cid]
             
             # --- Phase 3: Strict Metadata Validation & Filtering ---
             c_type = str(cand.get('content_type', '')).lower()
@@ -185,8 +209,12 @@ def search_semantic(request: SearchRequest):
             c_director = str(cand.get('director', '')).lower()
             c_title = str(cand.get('title', ''))
             c_poster = str(cand.get('poster_url', ''))
-            if not c_title or c_poster == 'nan' or not c_poster: continue
-            c_rating = float(cand.get('rating', 7.0))
+            if not c_title or not c_poster or c_poster.lower() == 'nan': continue
+            
+            try:
+                c_rating = float(cand.get('rating', 7.0))
+            except ValueError:
+                c_rating = 7.0
             
             # --- Phase 4: Hybrid Ranking Formula ---
             # Score Components
