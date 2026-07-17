@@ -65,6 +65,19 @@ class OrchestratorAgent:
         self.model = 'llama3'
         
     def _extract_entities(self, query: str):
+        # FAST PATH: Bypass slow LLM extraction for conversational / simple queries
+        # The Semantic Search engine is powerful enough to handle 95% of queries without explicit metadata constraints.
+        words = query.lower().split()
+        if len(words) < 8 and not any(k in query.lower() for k in ["director", "actor", "genre", "starring"]):
+            return {
+                "intent": "search",
+                "target_genres": [],
+                "target_moods": [],
+                "target_actors": [],
+                "target_director": "",
+                "target_content_type": ""
+            }
+            
         prompt = f"""
         Extract the following information from the user's movie search query: "{query}"
         - intent: What is the user looking for? (e.g. "search", "recommendation", "similar")
@@ -125,28 +138,50 @@ class OrchestratorAgent:
         
         response_data = []
         try:
-            resp = requests.post("http://127.0.0.1:8001/search", json=payload, timeout=10)
-            if resp.status_code == 200:
-                ranked_items = resp.json()
-                for item in ranked_items:
-                    iid = item["item_id"]
-                    if iid not in movies_db: continue
-                    r = movies_db[iid]
-                    
-                    rich_meta = _get_movie_metadata(r)
-                    if item.get("explanation"):
-                        rich_meta["why_recommended"] = " • ".join(item["explanation"])
-                    
-                    response_data.append({
-                        "item_id": iid,
-                        "title": r['title'],
-                        "poster_url": r.get('poster_url', ''),
-                        "backdrop_url": r.get('backdrop_url', ''),
-                        "overview": r.get('overview', ''),
-                        "rich_metadata": rich_meta,
-                        "explanation": rich_meta["why_recommended"]
-                    })
+            from services.ranking.main import search_semantic, SearchRequest, movies_db
+            from services.agent.tmdb_live import fetch_live_tmdb_fallback
+            
+            # Construct SearchRequest explicitly
+            ranking_req = SearchRequest(
+                query=payload["query"],
+                target_genres=payload["target_genres"],
+                target_moods=payload["target_moods"],
+                target_actors=payload["target_actors"],
+                target_director=payload["target_director"],
+                target_content_type=payload["target_content_type"],
+                top_k=payload["top_k"],
+                exclude_ids=payload["exclude_ids"]
+            )
+            
+            # Direct internal function call instead of slow network requests!
+            ranked_items = search_semantic(ranking_req)
+            
+            for item in ranked_items:
+                iid = item.item_id
+                if iid not in movies_db: continue
+                r = movies_db[iid]
+                
+                rich_meta = _get_movie_metadata(r)
+                if item.explanation:
+                    rich_meta["why_recommended"] = " • ".join(item.explanation)
+                
+                response_data.append({
+                    "item_id": iid,
+                    "title": r['title'],
+                    "poster_url": r.get('poster_url', ''),
+                    "backdrop_url": r.get('backdrop_url', ''),
+                    "overview": r.get('overview', ''),
+                    "rich_metadata": rich_meta,
+                    "explanation": rich_meta.get("why_recommended", "")
+                })
+                
+            # If nothing found locally, blast TMDB live!
+            if not response_data:
+                response_data = fetch_live_tmdb_fallback(query, limit=5)
+                
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             print(f"Hybrid Search Failed: {e}")
 
         # Context Builder & LLM Response

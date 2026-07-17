@@ -24,8 +24,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../.
 
 # Import using importlib since folder names have hyphens
 import importlib
-event_bus_mod = importlib.import_module("services.event-processor.event_bus")
-feature_store_mod = importlib.import_module("services.feature-store.store")
+event_bus_mod = importlib.import_module("services.event_processor.event_bus")
+feature_store_mod = importlib.import_module("services.feature_store.store")
 
 event_bus = event_bus_mod.event_bus
 feature_store = feature_store_mod.feature_store
