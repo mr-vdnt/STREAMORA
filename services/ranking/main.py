@@ -117,6 +117,12 @@ def health():
         "ranking_ready": deepfm is not None,
     }
 
+@app.get("/autocomplete")
+def autocomplete(query: str):
+    from services.catalog.search import DeterministicSearchEngine
+    search_engine = DeterministicSearchEngine(movies_db)
+    return search_engine.autocomplete(query)
+
 
 class SearchRequest(BaseModel):
     query: str
@@ -131,48 +137,26 @@ class SearchRequest(BaseModel):
 @app.post("/search", response_model=list[RankedItem])
 def search_semantic(request: SearchRequest):
     try:
-        # Phase 2: Search Modes - Exact Match Check First
+        from services.catalog.search import DeterministicSearchEngine
+        search_engine = DeterministicSearchEngine(movies_db)
+        
+        # Phase 2: Deterministic Search Engine Pipeline
+        deterministic_results = search_engine.search(request.query, limit=20)
+        
         exact_matches = []
-        if movies_db and len(request.query) > 2:
-            query_lower = request.query.lower().strip()
-            
-            # Simple Exact/Fuzzy Title Match
-            for iid, row in movies_db.items():
-                title = row.get('title', '').lower()
-                if title == query_lower or query_lower in title:
-                    exact_matches.append(iid)
-                    
-            # If still empty and FAISS is down, fallback to smart keyword matching
-            if not exact_matches and (faiss_index is None or model is None):
-                # Remove common conversational stop words
-                stop_words = ["similar", "to", "like", "movies", "show", "me", "find", "some", "a", "an", "the", "about", "with"]
-                keywords = [w for w in query_lower.split() if w not in stop_words and len(w) > 2]
-                
-                if keywords:
-                    import re
-                    pattern = re.compile("|".join([re.escape(k) for k in keywords]), re.IGNORECASE)
-                    
-                    # Try matching keywords against title first
-                    for iid, row in movies_db.items():
-                        title = row.get('title', '')
-                        if pattern.search(title):
-                            exact_matches.append(iid)
-                            
-                    # If still empty, match against overview
-                    if not exact_matches:
-                        for iid, row in movies_db.items():
-                            overview = row.get('overview', '')
-                            if pattern.search(overview):
-                                exact_matches.append(iid)
+        for res in deterministic_results:
+            # High confidence matches (Exact, Alias, Fuzzy, Entity)
+            if res["score"] >= 50:
+                exact_matches.append(res["item_id"])
                 
         candidate_ids = []
         retrieval_scores = []
         
-        # Merge exact matches into candidates to ensure they get scored
+        # Merge deterministic matches into candidates to ensure they get scored as highest priority
         for ex_id in exact_matches:
             if ex_id not in request.exclude_ids:
                 candidate_ids.append(ex_id)
-                retrieval_scores.append(0.0) # Dist 0 for perfect match
+                retrieval_scores.append(0.0) # Dist 0 for perfect deterministic match
                 
         # Phase 2: Semantic Search (FAISS)
         if faiss_index is not None and model is not None:

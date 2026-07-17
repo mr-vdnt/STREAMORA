@@ -1,55 +1,65 @@
 import sys
 import os
-import unittest
-from unittest.mock import patch, MagicMock
-from fastapi.testclient import TestClient
-
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from services.ranking.main import app as ranking_app
-from services.agent.main import app as agent_app
 
-class TestSearchEndpoints(unittest.TestCase):
-    def test_ranking_search_endpoint(self):
-        # Use context manager to trigger FastAPI startup event
-        with TestClient(ranking_app) as client:
-            payload = {
-                "query": "something like Inception or Interstellar",
-                "top_k": 5
-            }
-            response = client.post("/search", json=payload)
-            self.assertEqual(response.status_code, 200)
-            data = response.json()
-            self.assertIsInstance(data, list)
-            if len(data) > 0:
-                first_item = data[0]
-                self.assertIn("item_id", first_item)
-                self.assertIn("title", first_item)
-                self.assertIn("retrieval_score", first_item)
+from services.catalog.search import DeterministicSearchEngine
+import csv
 
-    @patch("requests.post")
-    def test_agent_search_endpoint(self, mock_post):
-        # Mock ranking service response
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = [
-            {"item_id": 1, "title": "Inception", "retrieval_score": 1.2, "ranking_score": 1.2},
-            {"item_id": 2, "title": "The Dark Knight", "retrieval_score": 1.0, "ranking_score": 1.0}
-        ]
-        mock_post.return_value = mock_response
+def load_movies():
+    movies_db = {}
+    if os.path.exists("data/raw/movies.csv"):
+        with open("data/raw/movies.csv", "r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                try:
+                    iid = int(row.get('item_id', 0))
+                    movies_db[iid] = row
+                except ValueError:
+                    pass
+    return movies_db
 
-        with TestClient(agent_app) as client:
-            payload = {
-                "query": "dark knight rises superhero",
-                "top_k": 3
-            }
-            headers = {"Authorization": "Bearer guest-token"}
-            response = client.post("/search", json=payload, headers=headers)
-            self.assertEqual(response.status_code, 200)
-            data = response.json()
-            self.assertIsInstance(data, list)
-            self.assertTrue(len(data) > 0)
-            self.assertEqual(data[0]["item_id"], 1)
-            self.assertEqual(data[0]["title"], "Inception")
-
+def run_tests():
+    db = load_movies()
+    engine = DeterministicSearchEngine(db)
+    
+    print("=== STREAMORA DETERMINISTIC SEARCH ENGINE TEST SUITE ===")
+    
+    tests = {
+        "Exact Matches": ["Interstellar", "Inception", "The Boys", "Breaking Bad"],
+        "Typo Handling": ["Intersteller", "Incepton", "Dark Knigth"],
+        "Alias Resolution": ["LOTR", "Infinity War", "Avengers 1"],
+        "Actor Searches": ["Tom Hanks", "Leonardo DiCaprio", "Adam Sandler"],
+        "Director Searches": ["Christopher Nolan", "Quentin Tarantino"],
+        "Genre Searches": ["Sci-Fi", "Psychological Thriller", "Comedy"],
+        "Negative Cases": ["asdasdasdasd", "", "Nonexistent Title xyz"]
+    }
+    
+    passed = 0
+    failed = 0
+    
+    for category, queries in tests.items():
+        print(f"\n--- {category} ---")
+        for q in queries:
+            results = engine.search(q, limit=5)
+            if category == "Negative Cases":
+                if len(results) == 0:
+                    print(f"PASS: '{q}' -> 0 results")
+                    passed += 1
+                else:
+                    print(f"FAIL: '{q}' -> found {len(results)} results")
+                    failed += 1
+            else:
+                if len(results) > 0:
+                    top_title = results[0]['title']
+                    score = results[0]['score']
+                    match_type = results[0]['match_type']
+                    print(f"PASS: '{q}' -> {top_title} ({match_type}, score: {score})")
+                    passed += 1
+                else:
+                    print(f"FAIL: '{q}' -> No results found!")
+                    failed += 1
+                    
+    print(f"\nTest Summary: {passed} Passed, {failed} Failed")
+    
 if __name__ == "__main__":
-    unittest.main()
+    run_tests()

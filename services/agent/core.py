@@ -65,12 +65,18 @@ class OrchestratorAgent:
         self.model = 'llama3'
         
     def _extract_entities(self, query: str):
-        # FAST PATH: Bypass slow LLM extraction for conversational / simple queries
-        # The Semantic Search engine is powerful enough to handle 95% of queries without explicit metadata constraints.
-        words = query.lower().split()
-        if len(words) < 8 and not any(k in query.lower() for k in ["director", "actor", "genre", "starring"]):
+        # Phase 1.5 Fix: Proper Intent Classification instead of simplistic word count
+        lower_q = query.lower()
+        search_intents = ["like", "similar to", "recommend", "show me", "what should i watch", "movies about"]
+        
+        # If it's a casual conversation without search intents, skip LLM
+        is_casual = True
+        if any(intent in lower_q for intent in search_intents):
+            is_casual = False
+            
+        if is_casual:
             return {
-                "intent": "search",
+                "intent": "chat",
                 "target_genres": [],
                 "target_moods": [],
                 "target_actors": [],
@@ -125,6 +131,21 @@ class OrchestratorAgent:
 
         entities = self._extract_entities(query)
         
+        # If it's pure chat, bypass search engine completely
+        if entities["intent"] == "chat":
+            try:
+                resp = ollama.chat(model=self.model, messages=[{'role': 'user', 'content': query}])
+                llm_text = resp['message']['content']
+            except:
+                llm_text = "I'm your AI movie curator! Ask me for recommendations."
+            return {
+                "query": query,
+                "intent": "chat",
+                "response": [],
+                "llm_response": llm_text,
+                "entities": entities
+            }
+        
         payload = {
             "query": query,
             "target_genres": entities.get("target_genres", []),
@@ -139,7 +160,7 @@ class OrchestratorAgent:
         response_data = []
         try:
             from services.ranking.main import search_semantic, SearchRequest, movies_db
-            from services.agent.tmdb_live import fetch_live_tmdb_fallback
+            from services.catalog.ingestion import ingest_from_tmdb
             
             # Construct SearchRequest explicitly
             ranking_req = SearchRequest(
@@ -155,6 +176,14 @@ class OrchestratorAgent:
             
             # Direct internal function call instead of slow network requests!
             ranked_items = search_semantic(ranking_req)
+            
+            # If nothing found locally, blast TMDB live INGESTION!
+            if not ranked_items:
+                print("Missing locally, triggering TMDB Ingestion...")
+                new_iid = ingest_from_tmdb(query)
+                if new_iid:
+                    print(f"Ingested ID {new_iid}. Re-running search.")
+                    ranked_items = search_semantic(ranking_req)
             
             for item in ranked_items:
                 iid = item.item_id
@@ -174,10 +203,6 @@ class OrchestratorAgent:
                     "rich_metadata": rich_meta,
                     "explanation": rich_meta.get("why_recommended", "")
                 })
-                
-            # If nothing found locally, blast TMDB live!
-            if not response_data:
-                response_data = fetch_live_tmdb_fallback(query, limit=5)
                 
         except Exception as e:
             import traceback
