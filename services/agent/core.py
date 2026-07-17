@@ -137,10 +137,14 @@ class OrchestratorAgent:
                     print(f"Ingested ID {new_iid}. Re-running search.")
                     retrieval_output = hybrid_engine.generate_candidates(query_plan)
             
-            # Phase 4 outputs Candidates. Phase 5 will handle ranking.
-            # For now, we just pass the candidate pool forward formatted for the old presentation layer.
-            for candidate in retrieval_output["candidates"]:
-                iid = candidate["content_id"]
+            # PHASE 5: DECISION ENGINE & RECOMMENDATION RANKING
+            from services.ranking.decision_engine import DecisionEngine
+            decision_engine = DecisionEngine(movies_db)
+            recommendation_package = decision_engine.process(retrieval_output)
+            
+            # Formatted for Phase 6 (which is currently just a placeholder here)
+            for rec in recommendation_package.recommendations:
+                iid = rec.content_id
                 if iid not in movies_db: continue
                 r = movies_db[iid]
                 
@@ -153,7 +157,7 @@ class OrchestratorAgent:
                     "backdrop_url": r.get('backdrop_url', ''),
                     "overview": r.get('overview', ''),
                     "rich_metadata": rich_meta,
-                    "explanation": f"Generators: {', '.join([g['name'] for g in candidate['retrieval']['generators']])} (Fusion Score: {candidate['retrieval']['fusion_score']:.3f})"
+                    "explanation": f"Reason: {', '.join(rec.explainability.reason_codes)} (Score: {rec.ranking.recommendation_score:.1f}, Confidence: {rec.ranking.confidence:.2f})"
                 })
                 
         except Exception as e:
