@@ -2,6 +2,8 @@ from typing import Dict, Any, List
 from .translator import ExplanationTranslator
 from .templates import TemplateSelector
 from .generator import ResponseGenerator
+from .planner import ResponsePlanner
+from .validator import ResponseValidator
 
 class PresentationEngine:
     """Orchestrates the conversion of Phase 5 Recommendation Packages into UI-ready responses."""
@@ -11,6 +13,8 @@ class PresentationEngine:
         self.translator = ExplanationTranslator()
         self.template_selector = TemplateSelector()
         self.generator = ResponseGenerator()
+        self.planner = ResponsePlanner()
+        self.validator = ResponseValidator()
         
     def _get_movie_metadata(self, row: dict) -> dict:
         """Helper to safely extract movie metadata from DB row"""
@@ -24,17 +28,14 @@ class PresentationEngine:
             "rating": str(row.get('rating', ''))
         }
         
-    def present(self, query: str, intent: str, recommendation_package: Any) -> Dict[str, Any]:
+    def present(self, query: str, intent: str, recommendation_package: Any, profile: str = "concise") -> Dict[str, Any]:
         """
         Takes the Phase 5 output and formats it for Phase 6 presentation.
         """
         recs = recommendation_package.recommendations
-        num_results = len(recs)
         
         # 1. Format the UI Response Data
         response_data = []
-        llm_context_data = []
-        
         for rec in recs:
             iid = rec.content_id
             if iid not in self.movies_db:
@@ -58,23 +59,31 @@ class PresentationEngine:
                 "explanation": ui_explanation
             })
             
-            # We only send the top 3 to the LLM to prevent it from rambling
-            if len(llm_context_data) < 3:
-                llm_context_data.append({
-                    "title": movie.get('title', ''),
-                    "reasons": human_reasons
-                })
-                
-        # 2. Select Template Strategy
-        template = self.template_selector.select_template(query, num_results)
+        # 2. Plan Response Strategy
+        render_plan = self.planner.plan(query, intent, response_data, profile)
         
-        # 3. Generate Natural Language
-        llm_text = self.generator.generate(query, template, llm_context_data)
+        # 3. Select Template
+        template = self.template_selector.select_template(render_plan)
         
-        # 4. Return Final Package for the API
+        # 4. Generate Natural Language
+        llm_text = self.generator.generate(query, template, render_plan)
+        
+        # 5. Validate LLM Response
+        if render_plan["strategy"] != "deterministic":
+            is_valid = self.validator.validate(llm_text, render_plan)
+            if not is_valid:
+                # Fallback to deterministic intro if validation fails
+                llm_text = render_plan.get("intro", "I found some movies you might enjoy!")
+        
+        # 6. Return Final Package for the API
         return {
             "query": query,
             "intent": intent,
             "response": response_data,
-            "llm_response": llm_text
+            "llm_response": llm_text,
+            "actions": render_plan.get("actions", []),
+            "diagnostics": {
+                "strategy": render_plan["strategy"],
+                "profile": profile
+            }
         }
