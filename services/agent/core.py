@@ -142,50 +142,25 @@ class OrchestratorAgent:
             decision_engine = DecisionEngine(movies_db)
             recommendation_package = decision_engine.process(retrieval_output)
             
-            # Formatted for Phase 6 (which is currently just a placeholder here)
-            for rec in recommendation_package.recommendations:
-                iid = rec.content_id
-                if iid not in movies_db: continue
-                r = movies_db[iid]
-                
-                rich_meta = _get_movie_metadata(r)
-                
-                response_data.append({
-                    "item_id": iid,
-                    "title": r['title'],
-                    "poster_url": r.get('poster_url', ''),
-                    "backdrop_url": r.get('backdrop_url', ''),
-                    "overview": r.get('overview', ''),
-                    "rich_metadata": rich_meta,
-                    "explanation": f"Reason: {', '.join(rec.explainability.reason_codes)} (Score: {rec.ranking.recommendation_score:.1f}, Confidence: {rec.ranking.confidence:.2f})"
-                })
-                
+            # PHASE 6: CONVERSATIONAL PRESENTATION LAYER
+            from services.presentation.engine import PresentationEngine
+            presentation_engine = PresentationEngine(movies_db)
+            intent = query_plan.get("entities", {}).get("intent", "search")
+            
+            final_response = presentation_engine.present(query, intent, recommendation_package)
+            final_response["entities"] = query_plan.get("entities", {})
+            return final_response
+            
         except Exception as e:
             import traceback
             traceback.print_exc()
-            print(f"Hybrid Retrieval Failed: {e}")
-
-        # Context Builder & LLM Response
-        if not response_data:
-            llm_text = "I couldn't find anything matching that in our current catalog."
-        else:
-            context_titles = [f"- {m['title']}: {m['overview'][:100]}..." for m in response_data[:5]]
-            prompt = f"The user asked: '{query}'. Based on our hybrid search, we found these movies:\n" + "\n".join(context_titles) + "\nWrite a short, engaging 2-sentence response as a personal AI movie curator recommending these titles."
-            try:
-                resp = ollama.chat(
-                    model=self.model,
-                    messages=[{'role': 'user', 'content': prompt}]
-                )
-                llm_text = resp['message']['content']
-            except Exception as e:
-                llm_text = f"I found {len(response_data)} movies you might enjoy!"
-
-        return {
-            "query": query,
-            "intent": entities.get("intent", "search"),
-            "response": response_data,
-            "llm_response": llm_text,
-            "entities": entities
-        }
+            print(f"Pipeline Failed: {e}")
+            return {
+                "query": query,
+                "intent": "search",
+                "response": [],
+                "llm_response": "I encountered an error trying to process that request.",
+                "entities": query_plan.get("entities", {})
+            }
 
 agent = OrchestratorAgent()
