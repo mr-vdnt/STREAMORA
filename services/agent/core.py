@@ -60,57 +60,11 @@ class ExtractionSchema(BaseModel):
 
 class OrchestratorAgent:
     def __init__(self):
-        print("Loading AI Discovery Engine (Ollama)...")
+        print("Loading Query Intelligence Engine...")
         self.conversation_memory = {}
         self.model = 'llama3'
-        
-    def _extract_entities(self, query: str):
-        # Phase 1.5 Fix: Proper Intent Classification instead of simplistic word count
-        lower_q = query.lower()
-        search_intents = ["like", "similar to", "recommend", "show me", "what should i watch", "movies about"]
-        
-        # If it's a casual conversation without search intents, skip LLM
-        is_casual = True
-        if any(intent in lower_q for intent in search_intents):
-            is_casual = False
-            
-        if is_casual:
-            return {
-                "intent": "chat",
-                "target_genres": [],
-                "target_moods": [],
-                "target_actors": [],
-                "target_director": "",
-                "target_content_type": ""
-            }
-            
-        prompt = f"""
-        Extract the following information from the user's movie search query: "{query}"
-        - intent: What is the user looking for? (e.g. "search", "recommendation", "similar")
-        - target_genres: List of genres (e.g. Action, Sci-Fi)
-        - target_moods: List of moods/themes (e.g. Dark, Mind-bending, Space)
-        - target_actors: List of actors mentioned
-        - target_director: Any director mentioned
-        - target_content_type: "movie", "series", "anime", or "documentary"
-        """
-        try:
-            resp = ollama.chat(
-                model=self.model,
-                messages=[{'role': 'user', 'content': prompt}],
-                format=ExtractionSchema.model_json_schema()
-            )
-            data = json.loads(resp['message']['content'])
-            return data
-        except Exception as e:
-            print(f"Extraction failed: {e}")
-            return {
-                "intent": "search",
-                "target_genres": [],
-                "target_moods": [],
-                "target_actors": [],
-                "target_director": "",
-                "target_content_type": ""
-            }
+        from services.agent.query_intelligence import QueryIntelligenceEngine
+        self.query_engine = QueryIntelligenceEngine(movies_db)
 
     def process_query(self, user_id: int, query: str, exclude_ids: list[int] = None) -> dict:
         if exclude_ids is None:
@@ -129,10 +83,17 @@ class OrchestratorAgent:
                 "entities": {}
             }
 
-        entities = self._extract_entities(query)
+        # Use Deterministic NLP Pipeline (No LLM)
+        context = self.conversation_memory.get(user_id, {}).get("last_entities", {})
+        query_plan = self.query_engine.parse(query, context=context)
+        
+        # Save session context
+        if user_id not in self.conversation_memory:
+            self.conversation_memory[user_id] = {}
+        self.conversation_memory[user_id]["last_entities"] = query_plan["entities"]
         
         # If it's pure chat, bypass search engine completely
-        if entities["intent"] == "chat":
+        if query_plan["intent"] == "chat":
             try:
                 resp = ollama.chat(model=self.model, messages=[{'role': 'user', 'content': query}])
                 llm_text = resp['message']['content']
@@ -143,16 +104,16 @@ class OrchestratorAgent:
                 "intent": "chat",
                 "response": [],
                 "llm_response": llm_text,
-                "entities": entities
+                "entities": query_plan["entities"]
             }
         
         payload = {
             "query": query,
-            "target_genres": entities.get("target_genres", []),
-            "target_moods": entities.get("target_moods", []),
-            "target_actors": entities.get("target_actors", []),
-            "target_director": entities.get("target_director", ""),
-            "target_content_type": entities.get("target_content_type", ""),
+            "target_genres": query_plan["entities"].get("genres", []),
+            "target_moods": query_plan["entities"].get("themes", []),
+            "target_actors": query_plan["entities"].get("actors", []),
+            "target_director": query_plan["entities"]["directors"][0] if query_plan["entities"].get("directors") else "",
+            "target_content_type": "",
             "top_k": 15,
             "exclude_ids": exclude_ids
         }
