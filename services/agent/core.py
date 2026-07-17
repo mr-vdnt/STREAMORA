@@ -107,53 +107,44 @@ class OrchestratorAgent:
                 "entities": query_plan["entities"]
             }
         
-        payload = {
-            "query": query,
-            "target_genres": query_plan["entities"].get("genres", []),
-            "target_moods": query_plan["entities"].get("themes", []),
-            "target_actors": query_plan["entities"].get("actors", []),
-            "target_director": query_plan["entities"]["directors"][0] if query_plan["entities"].get("directors") else "",
-            "target_content_type": "",
-            "top_k": 15,
-            "exclude_ids": exclude_ids
-        }
-        
+        # PHASE 4: HYBRID CANDIDATE GENERATION ENGINE
         response_data = []
         try:
-            from services.ranking.main import search_semantic, SearchRequest, movies_db
+            from services.retrieval.hybrid_engine import HybridRetrievalEngine
+            from services.retrieval.registry import GeneratorRegistry
+            from services.retrieval.generators.exact import ExactSearchGenerator
+            from services.retrieval.generators.semantic import SemanticGenerator
+            from services.retrieval.generators.metadata import MetadataGenerator
+            from services.catalog.search import DeterministicSearchEngine
             from services.catalog.ingestion import ingest_from_tmdb
             
-            # Construct SearchRequest explicitly
-            ranking_req = SearchRequest(
-                query=payload["query"],
-                target_genres=payload["target_genres"],
-                target_moods=payload["target_moods"],
-                target_actors=payload["target_actors"],
-                target_director=payload["target_director"],
-                target_content_type=payload["target_content_type"],
-                top_k=payload["top_k"],
-                exclude_ids=payload["exclude_ids"]
-            )
+            # Setup Registry
+            registry = GeneratorRegistry()
+            exact_engine = DeterministicSearchEngine(movies_db)
+            registry.register(ExactSearchGenerator(exact_engine))
+            registry.register(SemanticGenerator("data/index/movies.index"))
+            registry.register(MetadataGenerator(movies_db))
             
-            # Direct internal function call instead of slow network requests!
-            ranked_items = search_semantic(ranking_req)
+            # Execute Hybrid Retrieval
+            hybrid_engine = HybridRetrievalEngine(registry, movies_db)
+            retrieval_output = hybrid_engine.generate_candidates(query_plan)
             
             # If nothing found locally, blast TMDB live INGESTION!
-            if not ranked_items:
+            if not retrieval_output["candidates"]:
                 print("Missing locally, triggering TMDB Ingestion...")
                 new_iid = ingest_from_tmdb(query)
                 if new_iid:
                     print(f"Ingested ID {new_iid}. Re-running search.")
-                    ranked_items = search_semantic(ranking_req)
+                    retrieval_output = hybrid_engine.generate_candidates(query_plan)
             
-            for item in ranked_items:
-                iid = item.item_id
+            # Phase 4 outputs Candidates. Phase 5 will handle ranking.
+            # For now, we just pass the candidate pool forward formatted for the old presentation layer.
+            for candidate in retrieval_output["candidates"]:
+                iid = candidate["content_id"]
                 if iid not in movies_db: continue
                 r = movies_db[iid]
                 
                 rich_meta = _get_movie_metadata(r)
-                if item.explanation:
-                    rich_meta["why_recommended"] = " • ".join(item.explanation)
                 
                 response_data.append({
                     "item_id": iid,
@@ -162,13 +153,13 @@ class OrchestratorAgent:
                     "backdrop_url": r.get('backdrop_url', ''),
                     "overview": r.get('overview', ''),
                     "rich_metadata": rich_meta,
-                    "explanation": rich_meta.get("why_recommended", "")
+                    "explanation": f"Generators: {', '.join([g['name'] for g in candidate['retrieval']['generators']])} (Fusion Score: {candidate['retrieval']['fusion_score']:.3f})"
                 })
                 
         except Exception as e:
             import traceback
             traceback.print_exc()
-            print(f"Hybrid Search Failed: {e}")
+            print(f"Hybrid Retrieval Failed: {e}")
 
         # Context Builder & LLM Response
         if not response_data:

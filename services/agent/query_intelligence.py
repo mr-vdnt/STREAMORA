@@ -216,6 +216,44 @@ class QueryIntelligenceEngine:
             
         return "semantic_recommendation" # Default fallback for vague queries
 
+    def _generate_fingerprint(self, intent: str, entities: dict, filters: dict) -> str:
+        parts = []
+        if intent == "recommendation": parts.append("REC")
+        elif intent == "search": parts.append("SEARCH")
+        elif intent == "trending": parts.append("TREND")
+        elif intent == "explain": parts.append("EXPL")
+        else: parts.append("CHAT")
+        
+        if entities.get("reference_title"): parts.append("REF")
+        if entities.get("actors"): parts.append("ACT")
+        if entities.get("directors"): parts.append("DIR")
+        if entities.get("genres"): parts.append("GEN")
+        if entities.get("themes"): parts.append("THEME")
+        
+        if filters.get("year_min") or filters.get("year_max"): parts.append("YEAR")
+        if filters.get("runtime_max"): parts.append("RUN")
+        
+        return "_".join(parts) if parts else "UNKNOWN"
+
+    def _determine_priority(self, entities: dict) -> list[str]:
+        priority = []
+        if entities.get("reference_title"): priority.append("reference_movie")
+        if entities.get("directors"): priority.append("director")
+        if entities.get("actors"): priority.append("actor")
+        if entities.get("genres"): priority.append("genre")
+        if entities.get("themes"): priority.append("theme")
+        return priority
+
+    def _validate_constraints(self, filters: dict):
+        if "year_min" in filters:
+            filters["year_min"] = max(1888, filters["year_min"])
+        if "year_max" in filters:
+            filters["year_max"] = min(2050, filters["year_max"])
+            if "year_min" in filters and filters["year_min"] > filters["year_max"]:
+                filters.pop("year_min")
+        if "runtime_max" in filters:
+            filters["runtime_max"] = max(10, filters["runtime_max"])
+
     def parse(self, query: str, context: dict = None) -> dict:
         """
         Main pipeline entrypoint.
@@ -245,14 +283,22 @@ class QueryIntelligenceEngine:
             if not entities["genres"] and context.get("genres"):
                 entities["genres"] = context["genres"]
                 
-        # 7. Build Constraints
+        # 7. Build and Validate Constraints
         filters = self._build_constraints(norm_query, neg_query)
+        self._validate_constraints(filters)
         
-        # 8. Query Plan
+        # 8. Query Plan, Priority, and Fingerprint
         plan = self._determine_query_plan(intent, entities, filters)
+        priority = self._determine_priority(entities)
+        fingerprint = self._generate_fingerprint(intent, entities, filters)
         
-        # 9. Return Contract
+        # Pseudo-confidence for Phase 4 debugging
+        confidence = {}
+        for p in priority: confidence[p] = 1.0
+        
+        # 9. Return V1.0 Contract
         return {
+            "schema_version": "1.0",
             "intent": intent,
             "reference_title": entities["reference_title"],
             "entities": {
@@ -263,5 +309,10 @@ class QueryIntelligenceEngine:
                 "temporal": entities["temporal"]
             },
             "filters": filters,
-            "query_plan": plan
+            "priority": priority,
+            "query_plan": plan,
+            "fingerprint": fingerprint,
+            "debug": {
+                "entity_confidence": confidence
+            }
         }
