@@ -5000,7 +5000,6 @@ function toggleSave(id) {
     window.toggleFavorite(id);
 }
 
-document.addEventListener('keydown', (e) => {
 window.closeModalInternal = function(pushState = false) {
     modalOverlay.classList.remove('active');
     document.body.style.overflow = '';
