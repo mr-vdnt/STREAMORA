@@ -5,10 +5,14 @@ class PersonalizationGenerator(CandidateGenerator):
     """Retrieves candidates based on the user's strong preferences."""
     
     def __init__(self, db_connector: Any, personalization_adapter: Any):
-        super().__init__(db_connector)
+        self.db = db_connector
         self.adapter = personalization_adapter
         
-    def generate(self, query_contract: dict) -> List[Dict[str, Any]]:
+    @property
+    def name(self) -> str:
+        return "PersonalizationGenerator"
+        
+    def retrieve(self, query_contract: dict) -> List[Dict[str, Any]]:
         # The query contract should contain the user_id
         user_id = query_contract.get("user_id")
         if not user_id:

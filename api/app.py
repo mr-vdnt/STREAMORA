@@ -3,15 +3,20 @@ from api.routes import health, recommendations
 from services.platform.startup import startup_event, shutdown_event
 import time
 
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await startup_event()
+    yield
+    await shutdown_event()
+
 app = FastAPI(
     title="Streamora Recommendation API",
     description="Core backend API for Streamora's recommendation engine.",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
-
-# Register Events
-app.add_event_handler("startup", startup_event)
-app.add_event_handler("shutdown", shutdown_event)
 
 # Register Routers
 app.include_router(health.router, prefix="/health", tags=["Health"])

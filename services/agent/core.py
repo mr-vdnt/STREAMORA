@@ -122,8 +122,14 @@ class OrchestratorAgent:
             from services.user_intelligence.adapter import PersonalizationAdapter
             from services.content_intelligence.adapter import ContentIntelligenceAdapter
             
+            # Use global profile_store to maintain state between requests
+            global profile_store
+            if 'profile_store' not in globals():
+                from services.user_intelligence.storage import InMemoryProfileStore
+                profile_store = InMemoryProfileStore()
+            
             # Setup Adapters
-            user_adapter = PersonalizationAdapter()
+            user_adapter = PersonalizationAdapter(store=profile_store)
             content_adapter = ContentIntelligenceAdapter(movies_db)
             
             # Setup Registry
