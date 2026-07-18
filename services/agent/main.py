@@ -160,32 +160,76 @@ def chat_endpoint(request: Request, req: ChatRequest, current_user: dict = Depen
         llm_response=result.get("llm_response", "")
     )
 
-import pandas as pd
+from services.repository.movie_repository import MovieRepository
+
 @app.get("/autocomplete")
 @limiter.limit("60/minute")
 def autocomplete(request: Request, q: str, current_user: dict = Depends(get_optional_user)):
-    """Real-time autocomplete endpoint matching movie titles."""
+    """Real-time autocomplete endpoint matching titles."""
     if len(q) < 2:
         return []
     try:
-        if os.path.exists("data/raw/movies.csv"):
-            df = pd.read_csv("data/raw/movies.csv")
-            matches = df[df['title'].str.contains(q, case=False, na=False)].head(6)
-            results = []
-            for _, row in matches.iterrows():
+        repo = MovieRepository()
+        movies_db = repo.get_all()
+        q_lower = q.lower()
+        results = []
+        for iid, row in movies_db.items():
+            if q_lower in str(row.get("title", "")).lower():
                 results.append({
-                    "item_id": int(row["item_id"]),
-                    "title": str(row["title"]),
+                    "item_id": iid,
+                    "title": str(row.get("title", "")),
                     "poster_url": str(row.get("poster_url", "")),
                     "content_type": str(row.get("content_type", "movie")),
                     "genres": str(row.get("genres", "")).split("|")[:2],
                     "rating": float(row.get("rating", 7.0)),
                     "director": str(row.get("director", ""))
                 })
-            return results
+                if len(results) >= 6:
+                    break
+        return results
     except Exception as e:
         print("Autocomplete error:", e)
     return []
+
+from services.discovery.catalog_service import CatalogService, DiscoveryQuery
+
+_catalog_service = None
+def get_catalog_service():
+    global _catalog_service
+    if _catalog_service is None:
+        _catalog_service = CatalogService()
+    return _catalog_service
+
+@app.get("/categories")
+@limiter.limit("60/minute")
+def get_categories(request: Request, current_user: dict = Depends(get_optional_user)):
+    """Returns normalized genres available in the DB."""
+    return get_catalog_service().get_categories()
+
+@app.get("/discover")
+@limiter.limit("60/minute")
+def discover(
+    request: Request,
+    genre: str = None,
+    year: int = None,
+    language: str = None,
+    type: str = None,
+    sort: str = "popularity",
+    page: int = 1,
+    limit: int = 20,
+    current_user: dict = Depends(get_optional_user)
+):
+    """Deterministic discovery via CatalogService."""
+    query = DiscoveryQuery(
+        genre=genre,
+        year=year,
+        language=language,
+        type=type,
+        sort=sort,
+        page=page,
+        limit=limit
+    )
+    return get_catalog_service().discover(query)
 
 import requests
 
@@ -225,62 +269,75 @@ def get_trailer(request: Request, tmdb_id: int):
         
     return {"trailer_url": ""}
 
-@app.get("/movie/{item_id}")
-@limiter.limit("30/minute")
-def get_movie_details(request: Request, item_id: int, current_user: dict = Depends(get_optional_user)):
-    """Aggregates all 19 fields of rich metadata and similar movies for the Cinematic Modal."""
-    user_id = current_user["id"] if current_user else 32
-    try:
-        # Load local ground-truth for strict ID validation
-        expected_title = None
-        expected_poster = None
-        if os.path.exists("data/raw/movies.csv"):
-            df = pd.read_csv("data/raw/movies.csv")
-            row = df[df['item_id'] == item_id]
-            if not row.empty:
-                expected_title = row.iloc[0]['title']
-                expected_poster = row.iloc[0].get('poster_url', '')
+from services.content_intelligence.adapter import ContentIntelligenceAdapter
 
-        rag_resp = requests.post("http://127.0.0.1:8003/explain", json={"user_id": user_id, "item_id": item_id}, timeout=10)
-        metadata = {}
-        if rag_resp.status_code == 200:
-            metadata = rag_resp.json().get("rich_metadata", {})
+# Initialize Graph Adapter globally
+_content_adapter = None
+
+def get_content_adapter():
+    global _content_adapter
+    if _content_adapter is None:
+        repo = MovieRepository()
+        _content_adapter = ContentIntelligenceAdapter(repo.get_all())
+    return _content_adapter
+
+@app.get("/api/item/{content_type}/{item_id}")
+@limiter.limit("30/minute")
+def get_item_details(request: Request, content_type: str, item_id: int, current_user: dict = Depends(get_optional_user)):
+    """Aggregates rich metadata and similar items in a single request."""
+    try:
+        repo = MovieRepository()
+        movie = repo.get_by_id(item_id)
+        if not movie:
+            return {"error": "Item not found"}
             
-        # STRICT IDENTITY VALIDATION
-        # 1. Enforce ID mapping
-        metadata["item_id"] = item_id 
+        adapter = get_content_adapter()
+        similar_candidates = adapter.get_similar_candidates([item_id], limit=10)
         
-        # 2. Reject if RAG hallucinated or drifted identity
-        if expected_title and metadata.get("title") and metadata["title"] != expected_title:
-            return {"error": f"Identity mismatch: Requested ID {item_id} ({expected_title}), but got '{metadata.get('title')}'"}
-            
-        if expected_poster and metadata.get("poster_url") and metadata["poster_url"] != expected_poster:
-            return {"error": f"Identity mismatch: Poster URL drift detected for ID {item_id}"}
-        
-        sim_resp = requests.post("http://127.0.0.1:8001/similar", json={"item_id": item_id, "top_k": 10}, timeout=10)
         similar_movies = []
-        if sim_resp.status_code == 200:
-            similar_items = sim_resp.json()
-            if os.path.exists("data/raw/movies.csv"):
-                # We already loaded df above, but just in case
-                if 'df' not in locals():
-                    df = pd.read_csv("data/raw/movies.csv")
-                for sim in similar_items:
-                    sid = sim["item_id"]
-                    sm_row = df[df['item_id'] == sid]
-                    if not sm_row.empty:
-                        sm = sm_row.iloc[0]
-                        similar_movies.append({
-                            "item_id": sid,
-                            "title": sm['title'],
-                            "poster_url": sm.get('poster_url', ''),
-                            "score": int(max(70, 99 - (sim.get('retrieval_score', 0) * 10))),
-                            "explanation": sim.get("explanation", [])
-                        })
-                        
-        metadata["similar_movies"] = similar_movies
-        return metadata
+        for cand in similar_candidates:
+            cid = cand["content_id"]
+            sm = repo.get_by_id(cid)
+            if sm:
+                score = cand["score"]
+                # Determine explanation
+                explanation_str = adapter.get_explanation_context(item_id, cid)
+                explanation = [explanation_str] if explanation_str else ["Similar theme or style"]
+                
+                similar_movies.append({
+                    "item_id": cid,
+                    "title": sm['title'],
+                    "poster_url": sm.get('poster_url', ''),
+                    "score": int(max(70, 99 - ((1.0 - score) * 100))),
+                    "explanation": explanation
+                })
+        
+        # Build comprehensive payload
+        payload = {
+            "movie": {
+                "item_id": item_id,
+                "title": str(movie.get('title', '')),
+                "poster_url": str(movie.get('poster_url', '')),
+                "backdrop_url": str(movie.get('backdrop_url', '')),
+                "overview": str(movie.get('overview', '')),
+                "year": str(movie.get('year', '')),
+                "rating": float(movie.get('rating', 8.0)),
+                "runtime": str(movie.get('runtime', '120 min')),
+                "director": str(movie.get('director', 'Unknown')),
+                "genres": str(movie.get('genres', '')).split('|'),
+                "themes": str(movie.get('themes', '')).split('|'),
+                "content_type": content_type
+            },
+            "similar": similar_movies,
+            "graph": {},
+            "recommendations": [],
+            "explanations": {},
+            "diagnostics": adapter.get_graph_statistics()
+        }
+        return payload
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return {"error": str(e)}
 
 class SearchRequest(BaseModel):
@@ -290,41 +347,18 @@ class SearchRequest(BaseModel):
 @app.post("/search")
 @limiter.limit("30/minute")
 def search_endpoint(request: Request, req: SearchRequest, current_user: dict = Depends(get_optional_user)):
-    """Semantic query search utilizing SentenceTransformer + FAISS."""
+    """Semantic query search bypassing legacy internal HTTP calls."""
     try:
-        resp = requests.post("http://127.0.0.1:8001/search", json={"query": req.query, "top_k": req.top_k}, timeout=10)
-        if resp.status_code == 200:
-            similar_items = resp.json()
-            results = []
-            if os.path.exists("data/raw/movies.csv"):
-                df = pd.read_csv("data/raw/movies.csv")
-                for sim in similar_items:
-                    sid = sim["item_id"]
-                    row = df[df['item_id'] == sid]
-                    if not row.empty:
-                        r = row.iloc[0]
-                        results.append({
-                            "item_id": sid,
-                            "title": str(r['title']),
-                            "poster_url": str(r.get('poster_url', '')),
-                            "backdrop_url": str(r.get('backdrop_url', '')),
-                            "overview": str(r.get('overview', '')),
-                            "rich_metadata": {
-                                "title": str(r['title']),
-                                "year": str(r.get('year', '2024')),
-                                "match_percentage": int(max(70, 99 - (sim.get('retrieval_score', 0) * 10))),
-                                "rating": float(r.get('rating', 8.0)),
-                                "runtime": str(r.get('runtime', '120 min')),
-                                "director": str(r.get('director', 'Unknown Director')),
-                                "genres": str(r.get('genres', '')).split('|'),
-                                "themes": str(r.get('themes', '')).split('|'),
-                                "moods": str(r.get('moods', '')).split('|')
-                            }
-                        })
-            return results
-        return {"error": f"Ranking API returned {resp.status_code}"}
+        # Instead of calling legacy services, use core agent directly
+        user_id = current_user["id"] if current_user else 32
+        result = agent.process_query(user_id, req.query)
+        
+        # The result from process_query is the hybrid retrieved items already mapped for presentation
+        items = result.get("response", [])
+        return items
     except Exception as e:
-        return {"error": str(e)}
+        print("Search error:", e)
+        return []
 
 class EventRequest(BaseModel):
     event_type: str

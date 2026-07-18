@@ -2169,6 +2169,9 @@ function initApp() {
     });
 
     navigateTo('home');
+    if (window.initRouter) {
+        window.initRouter();
+    }
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -2331,7 +2334,7 @@ searchInput.addEventListener('input', () => {
                 const genresText = m.genres.join(', ');
                 const typeText = m.content_type === 'series' ? 'TV Series' : m.content_type.charAt(0).toUpperCase() + m.content_type.slice(1);
                 return `
-                    <div class="search-hit" onclick="openModal(${m.item_id}); closeSearch();" style="display: flex; align-items: center; gap: 16px; padding: 10px 16px;">
+                    <div class="search-hit" onclick="navigateToMovie(${m.item_id}); closeSearch();" style="display: flex; align-items: center; gap: 16px; padding: 10px 16px;">
                         <img src="${m.poster_url}" alt="${m.title}" style="width: 45px; height: 65px; object-fit: cover; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);">
                         <div style="flex: 1;">
                             <div class="search-hit__title" style="font-size: 1.05rem; margin-bottom: 2px;">${m.title}</div>
@@ -2415,7 +2418,7 @@ function createBotRecommendationHTML(movie) {
     const reason = m.why_recommended || 'Highly matched to your interest and viewing behavior.';
     
     return `
-        <div class="chat-rec-card" onclick="openModal(${movie.item_id})" style="display: flex; gap: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: var(--r-md); padding: 10px; margin-top: 10px; cursor: pointer; transition: transform var(--t-fast); align-items: flex-start;">
+        <div class="chat-rec-card" onclick="navigateToMovie(${movie.item_id})" style="display: flex; gap: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: var(--r-md); padding: 10px; margin-top: 10px; cursor: pointer; transition: transform var(--t-fast); align-items: flex-start;">
             <img src="${poster}" alt="${title}" style="width: 70px; aspect-ratio: 2/3; object-fit: cover; border-radius: var(--r-sm); border: 1px solid rgba(255,255,255,0.1); flex-shrink: 0;">
             <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px;">
                 <div style="font-weight: 700; color: white; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left;">${title}</div>
@@ -3494,13 +3497,17 @@ window.filterCategoriesList = function(val) {
 
 function selectCategory(name) {
     selectedCategory = name;
-    loadSingleCategoryPage(name);
+    if (window.navigateToCategory) {
+        window.navigateToCategory(name);
+    } else {
+        loadSingleCategoryPage(name);
+    }
 }
 
 async function loadSingleCategoryPage(categoryName) {
     contentRows.innerHTML = `
         <div class="category-detail-header" style="padding: 80px 24px 24px; display: flex; align-items: center; gap: 16px;">
-            <button class="back-btn" onclick="selectedCategory = null; loadCategoriesTab();" 
+            <button class="back-btn" onclick="navigateHome();" 
                     style="display: flex; align-items: center; gap: 8px; color: var(--text-primary); background: var(--glass-bg-2); border: 1px solid var(--glass-border); padding: 8px 16px; border-radius: var(--r-pill); font-size: 0.9rem; font-weight: 600; cursor: pointer;">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
                 Back
@@ -3521,14 +3528,10 @@ async function loadSingleCategoryPage(categoryName) {
         movies = [...window.ragCache[`category_${categoryName}`]];
     } else {
         try {
-            const resp = await authFetch('/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query: categoryName, exclude_ids: [] })
-            });
+            const resp = await authFetch(`/discover?genre=${encodeURIComponent(categoryName)}`);
             if (resp.ok) {
                 const data = await resp.json();
-                movies = Array.isArray(data.response) ? data.response : (data.response && data.response.value);
+                movies = Array.isArray(data.results) ? data.results : [];
                 if (movies && movies.length > 0) {
                     window.ragCache = window.ragCache || {};
                     window.ragCache[`category_${categoryName}`] = movies;
@@ -3600,7 +3603,7 @@ function createMovieCardHTML(movie) {
     const tUrl = m.trailer_url || movie.trailer_url || '';
 
     return `
-    <div class="card-wrap" style="cursor: pointer;" onclick="openModal(${movie.item_id})" onmouseenter="handleCardHover(this, ${tmdbId}, '${tUrl}')" onmouseleave="handleCardLeave(this)">
+    <div class="card-wrap" style="cursor: pointer;" onclick="navigateToMovie(${movie.item_id})" onmouseenter="handleCardHover(this, ${tmdbId}, '${tUrl}')" onmouseleave="handleCardLeave(this)">
         <div class="card-3d" data-id="${movie.item_id}" tabindex="0">
             <div class="img-container">
                 <div class="img-placeholder"><div class="blur-skeleton"></div></div>
@@ -3638,7 +3641,7 @@ function createMovieCardHTML(movie) {
                 </div>
                 ` : ''}
                 <div class="card-expand__btns">
-                    <button class="card-expand__btn card-expand__btn--play" onclick="event.stopPropagation(); openModal(${movie.item_id})" aria-label="Play">
+                    <button class="card-expand__btn card-expand__btn--play" onclick="event.stopPropagation(); navigateToMovie(${movie.item_id})" aria-label="Play">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                     </button>
                     <button class="card-expand__btn" onclick="event.stopPropagation(); toggleSave(${movie.item_id}); this.setAttribute('aria-label', isInMyList(${movie.item_id}) ? 'Remove from list' : 'Add to list'); this.querySelector('svg').innerHTML = isInMyList(${movie.item_id}) ? '<line x1=&quot;5&quot; y1=&quot;12&quot; x2=&quot;19&quot; y2=&quot;12&quot;/>' : '<line x1=&quot;12&quot; y1=&quot;5&quot; x2=&quot;12&quot; y2=&quot;19&quot;/><line x1=&quot;5&quot; y1=&quot;12&quot; x2=&quot;19&quot; y2=&quot;12&quot;/>';" aria-label="${saved ? 'Remove from list' : 'Add to list'}">
@@ -3872,7 +3875,7 @@ window.renderSearchEmptyState = function() {
                     const m = movie.rich_metadata || {};
                     const score = m.match_percentage || 92;
                     return `
-                        <div onclick="openModal(${movie.item_id})" style="cursor: pointer; transition: transform var(--t-fast);" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
+                        <div onclick="navigateToMovie(${movie.item_id})" style="cursor: pointer; transition: transform var(--t-fast);" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
                             <div style="position: relative; border-radius: var(--r-sm); overflow: hidden; aspect-ratio: 2/3; border: 1px solid var(--glass-border);">
                                 <img src="${movie.poster_url}" alt="${movie.title}" style="width: 100%; height: 100%; object-fit: cover;">
                                 <div style="position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.7); color: var(--match-green); font-size: 0.75rem; font-weight: 700; padding: 2px 6px; border-radius: 4px;">${score}%</div>
@@ -3893,7 +3896,7 @@ window.renderSearchEmptyState = function() {
                     const m = movie.rich_metadata || {};
                     const score = m.match_percentage || 88;
                     return `
-                        <div onclick="openModal(${movie.item_id})" style="cursor: pointer; transition: transform var(--t-fast);" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
+                        <div onclick="navigateToMovie(${movie.item_id})" style="cursor: pointer; transition: transform var(--t-fast);" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
                             <div style="position: relative; border-radius: var(--r-sm); overflow: hidden; aspect-ratio: 2/3; border: 1px solid var(--glass-border);">
                                 <img src="${movie.poster_url}" alt="${movie.title}" style="width: 100%; height: 100%; object-fit: cover;">
                                 <div style="position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.7); color: var(--match-green); font-size: 0.75rem; font-weight: 700; padding: 2px 6px; border-radius: 4px;">${score}%</div>
@@ -3935,13 +3938,13 @@ window.handleLiveSearch = function() {
     
     if (matchedMovies.length > 0) {
         html += `<div style="text-align: left; padding: 4px 8px;"><strong style="color:var(--streamora-cyan); font-size:0.8rem; text-transform:uppercase;">Movies</strong>`;
-        html += matchedMovies.map(m => `<div style="padding:6px 12px; cursor:pointer;" onclick="openModal(${m.item_id})">🎬 ${m.title}</div>`).join('');
+        html += matchedMovies.map(m => `<div style="padding:6px 12px; cursor:pointer;" onclick="navigateToMovie(${m.item_id})">🎬 ${m.title}</div>`).join('');
         html += `</div>`;
     }
     
     if (matchedSeries.length > 0) {
         html += `<div style="text-align: left; padding: 4px 8px;"><strong style="color:var(--streamora-cyan); font-size:0.8rem; text-transform:uppercase;">Series</strong>`;
-        html += matchedSeries.map(m => `<div style="padding:6px 12px; cursor:pointer;" onclick="openModal(${m.item_id})">📺 ${m.title}</div>`).join('');
+        html += matchedSeries.map(m => `<div style="padding:6px 12px; cursor:pointer;" onclick="navigateToMovie(${m.item_id})">📺 ${m.title}</div>`).join('');
         html += `</div>`;
     }
     
@@ -4079,7 +4082,7 @@ window.executeSearchPageQuery = async function(query) {
                     const runtime = m.runtime || '120 min';
                     
                     return `
-                        <div onclick="openModal(${movie.item_id})" style="cursor:pointer; background:rgba(255,255,255,0.02); border:1px solid var(--glass-border); border-radius:var(--r-md); overflow:hidden; transition:transform var(--t-fast); text-align: left;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                        <div onclick="navigateToMovie(${movie.item_id})" style="cursor:pointer; background:rgba(255,255,255,0.02); border:1px solid var(--glass-border); border-radius:var(--r-md); overflow:hidden; transition:transform var(--t-fast); text-align: left;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
                             <div style="position:relative; aspect-ratio:2/3;">
                                 <img src="${poster}" alt="${movie.title}" style="width:100%; height:100%; object-fit:cover;">
                                 <div style="position:absolute; top:8px; left:8px; background:rgba(0,0,0,0.8); color:var(--match-green); font-size:0.75rem; font-weight:700; padding:3px 6px; border-radius:4px;">${score}% Match</div>
@@ -4187,7 +4190,7 @@ function renderHero(movie) {
                         <span class="hero__match" style="margin-bottom: 0; box-shadow: 0 4px 12px rgba(6,182,212,0.25);">★ ${score}% Streamora Match</span>
                         <span style="color: #f5c518; font-weight: 700; font-size: 0.95rem; background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: var(--r-sm); border: 1px solid rgba(255,255,255,0.1);">IMDb ${rating}</span>
                     </div>
-                    <h1 class="hero__title" onclick="openModal(${movie.item_id})" style="cursor: pointer;">${title}</h1>
+                    <h1 class="hero__title" onclick="navigateToMovie(${movie.item_id})" style="cursor: pointer;">${title}</h1>
                     <div class="hero__meta" style="justify-content: flex-start;">
                         ${m.year ? `<span>${m.year}</span><span class="hero__meta-dot"></span>` : ''}
                         ${m.runtime ? `<span>${m.runtime}</span><span class="hero__meta-dot"></span>` : ''}
@@ -4206,10 +4209,10 @@ function renderHero(movie) {
                     </div>
                     
                     <div class="hero__btns" style="justify-content: flex-start; width: 100%;">
-                        <button class="hero-btn hero-btn--play" onclick="event.stopPropagation(); if (${tUrlEscaped}) { window.openTrailerLightbox(${tUrlEscaped}, '${title.replace(/'/g, "\\'")}'); } else { openModal(${movie.item_id}); }" style="cursor: pointer;">
+                        <button class="hero-btn hero-btn--play" onclick="event.stopPropagation(); if (${tUrlEscaped}) { window.openTrailerLightbox(${tUrlEscaped}, '${title.replace(/'/g, "\\'")}'); } else { navigateToMovie(${movie.item_id}); }" style="cursor: pointer;">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Watch Trailer
                         </button>
-                        <button class="hero-btn hero-btn--info" onclick="event.stopPropagation(); openModal(${movie.item_id})" style="cursor: pointer;">
+                        <button class="hero-btn hero-btn--info" onclick="event.stopPropagation(); navigateToMovie(${movie.item_id})" style="cursor: pointer;">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg> View Details
                         </button>
                         
@@ -4231,7 +4234,7 @@ function renderHero(movie) {
                 
                 <!-- Right Column: Poster with 3D Hover & Play Overlay -->
                 <div class="hero__right">
-                    <div class="hero__poster-wrapper" onclick="event.stopPropagation(); if (${tUrlEscaped}) { window.openTrailerLightbox(${tUrlEscaped}, '${title.replace(/'/g, "\\'")}'); } else { openModal(${movie.item_id}); }">
+                    <div class="hero__poster-wrapper" onclick="event.stopPropagation(); if (${tUrlEscaped}) { window.openTrailerLightbox(${tUrlEscaped}, '${title.replace(/'/g, "\\'")}'); } else { navigateToMovie(${movie.item_id}); }">
                         <div class="img-container" style="border-radius: var(--r-md); aspect-ratio: 2/3; height: auto;">
                             <div class="img-placeholder"><div class="blur-skeleton"></div></div>
                             <img src="${poster}" alt="${title}" loading="lazy" onload="window.imageLoaded(this)" onerror="window.imageLoadError(this, '${title.replace(/'/g, "\\'")}')">
@@ -4350,7 +4353,7 @@ function appendRow(title, movies) {
                     </div>
                     ` : ''}
                     <div class="card-expand__btns">
-                        <button class="card-expand__btn card-expand__btn--play" onclick="event.stopPropagation(); if (${tUrlEscaped}) { window.openTrailerLightbox(${tUrlEscaped}, '${t.replace(/'/g, "\\'")}'); } else { openModal(${movie.item_id}); }" aria-label="Play">
+                        <button class="card-expand__btn card-expand__btn--play" onclick="event.stopPropagation(); if (${tUrlEscaped}) { window.openTrailerLightbox(${tUrlEscaped}, '${t.replace(/'/g, "\\'")}'); } else { navigateToMovie(${movie.item_id}); }" aria-label="Play">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                         </button>
                         <button class="card-expand__btn" onclick="event.stopPropagation(); toggleSave(${movie.item_id}); this.setAttribute('aria-label', isInMyList(${movie.item_id}) ? 'Remove from list' : 'Add to list'); this.querySelector('svg').innerHTML = isInMyList(${movie.item_id}) ? '<line x1=&quot;5&quot; y1=&quot;12&quot; x2=&quot;19&quot; y2=&quot;12&quot;/>' : '<line x1=&quot;12&quot; y1=&quot;5&quot; x2=&quot;12&quot; y2=&quot;19&quot;/><line x1=&quot;5&quot; y1=&quot;12&quot; x2=&quot;19&quot; y2=&quot;12&quot;/>';" aria-label="${saved ? 'Remove from list' : 'Add to list'}">
@@ -4424,13 +4427,13 @@ function attachTilt(card) {
 
     card.addEventListener('click', () => {
         const id = parseInt(card.dataset.id);
-        if (id) openModal(id);
+        if (id) navigateToMovie(id);
     });
 
     card.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             const id = parseInt(card.dataset.id);
-            if (id) openModal(id);
+            if (id) navigateToMovie(id);
         }
     });
 }
@@ -4763,7 +4766,7 @@ function renderModalData(m, id) {
                 const typeLabel = isSeries(sm) ? 'TV Series' : 'Movie';
 
                 return `
-                    <div class="sim-card" tabindex="0" onclick="openModal(${sm.item_id})" aria-label="${sm.title}, ${typeLabel}, Match ${r.score} percent, Rating ${rating}">
+                    <div class="sim-card" tabindex="0" onclick="navigateToMovie(${sm.item_id})" aria-label="${sm.title}, ${typeLabel}, Match ${r.score} percent, Rating ${rating}">
                         <img src="${poster}" alt="" class="sim-poster" loading="lazy" onerror="this.src='${placeholder(sm.title)}'">
                         <div class="sim-title">${sm.title}</div>
                         <div class="sim-meta-row" style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; margin-top:2px;">
@@ -4834,122 +4837,41 @@ function renderModalData(m, id) {
     if (cinematicModal) {
         setTimeout(() => {
             cinematicModal.classList.remove('transitioning');
-            const savedScroll = window.modalHistoryScrollPositions[window.modalHistoryIndex];
-            if (savedScroll !== undefined) {
-                cinematicModal.scrollTop = savedScroll;
-            } else {
-                cinematicModal.scrollTop = 0;
-            }
+            cinematicModal.scrollTop = 0;
         }, 50);
     }
 }
 
-// ── Modal History & Exploration Stack ──────────────────────────────────
-window.modalHistory = [];
-window.modalHistoryIndex = -1;
+// ── Modal UI Logic (History managed by navigation.js) ──────────────────────────────────
 window.modalMovieTitleCache = {};
 
-window.updateModalNavButtons = function() {
-    const backBtn = document.getElementById('modal-back-btn');
-    const forwardBtn = document.getElementById('modal-forward-btn');
-    if (backBtn) {
-        backBtn.disabled = window.modalHistoryIndex <= 0;
-    }
-    if (forwardBtn) {
-        forwardBtn.disabled = window.modalHistoryIndex >= window.modalHistory.length - 1;
-    }
-};
-
-window.updateBreadcrumbs = function() {
-    const breadcrumbsContainer = document.getElementById('modal-breadcrumbs');
-    if (!breadcrumbsContainer) return;
-    
-    if (!window.modalHistory || window.modalHistory.length <= 1) {
-        breadcrumbsContainer.style.display = 'none';
-        return;
-    }
-    
-    breadcrumbsContainer.style.display = 'flex';
-    
-    const trail = window.modalHistory.map((histId, idx) => {
-        const cachedTitle = window.modalMovieTitleCache[histId];
-        const item = globalMovies.find(m => m.item_id === histId) || FALLBACK_MOVIES.find(m => m.item_id === histId);
-        const title = cachedTitle || (item ? (item.title || item.rich_metadata?.title) : 'Loading...');
-        
-        const isActive = idx === window.modalHistoryIndex;
-        if (isActive) {
-            return `<span style="color: var(--streamora-cyan); font-weight: 600;">${title}</span>`;
-        } else {
-            return `<span style="cursor: pointer; text-decoration: none;" onclick="navigateModalHistory(${idx})">${title}</span>`;
-        }
-    }).join('<span style="color: rgba(255,255,255,0.2); margin: 0 4px;">&gt;</span>');
-    
-    breadcrumbsContainer.innerHTML = trail;
-};
-
-window.modalHistoryScrollPositions = {};
-
-window.navigateModalHistory = function(index) {
-    if (index >= 0 && index < window.modalHistory.length) {
-        // Save current scroll position before leaving
-        const cinematicModal = document.querySelector('.cinematic-modal');
-        if (cinematicModal && window.modalHistoryIndex >= 0) {
-            window.modalHistoryScrollPositions[window.modalHistoryIndex] = cinematicModal.scrollTop;
-        }
-
-        window.modalHistoryIndex = index;
-        const id = window.modalHistory[index];
-        openModalInternal(id, false);
-    }
-};
-
 window.modalHistoryBack = function() {
-    if (window.modalHistoryIndex > 0) {
-        window.navigateModalHistory(window.modalHistoryIndex - 1);
-    }
+    history.back();
 };
 
 window.modalHistoryForward = function() {
-    if (window.modalHistoryIndex < window.modalHistory.length - 1) {
-        window.navigateModalHistory(window.modalHistoryIndex + 1);
-    }
+    history.forward();
 };
 
-async function openModalInternal(id, appendToHistory = true) {
+async function openModal(id, type = 'movie', pushState = false) {
+    if (window.modalIsDragging) return;
+    
     if (window.DEBUG_MODE) {
         console.log(`[Diagnostic] Requested ID: ${id}`);
     }
     window.activeModalRequest = id;
-
-    // Save current scroll position before leaving
-    const cinematicModal = document.querySelector('.cinematic-modal');
-    if (cinematicModal && window.modalHistoryIndex >= 0) {
-        window.modalHistoryScrollPositions[window.modalHistoryIndex] = cinematicModal.scrollTop;
-    }
-
-    if (appendToHistory) {
-        const isModalAlreadyOpen = modalOverlay.classList.contains('active');
-        if (!isModalAlreadyOpen) {
-            window.modalHistory = [id];
-            window.modalHistoryIndex = 0;
-            window.modalHistoryScrollPositions = {}; // reset scroll positions on new open
-        } else {
-            if (window.modalHistory[window.modalHistoryIndex] !== id) {
-                // Truncate forward history
-                window.modalHistory = window.modalHistory.slice(0, window.modalHistoryIndex + 1);
-                window.modalHistory.push(id);
-                window.modalHistoryIndex = window.modalHistory.length - 1;
-            }
-        }
-    }
+    
+    // Ingest click event
+    authFetch('/events/ingest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event_type: "click", item_id: id })
+    }).catch(e => console.error("Event ingest failed:", e));
 
     modalOverlay.classList.add('active');
     document.body.style.overflow = 'hidden';
 
-    // Update navigation controls
-    window.updateModalNavButtons();
-    window.updateBreadcrumbs();
-
+    const cinematicModal = document.querySelector('.cinematic-modal');
     // Trigger transition fade-out
     if (cinematicModal) {
         cinematicModal.classList.add('transitioning');
@@ -4966,17 +4888,19 @@ async function openModalInternal(id, appendToHistory = true) {
     document.getElementById('modal-similar').innerHTML = '';
 
     try {
-        const resp = await authFetch(`/movie/${id}`);
+        const resp = await authFetch(`/api/item/${type}/${id}`);
         let m;
         if (resp.ok) {
-            m = await resp.json();
+            const data = await resp.json();
+            m = data.movie;
+            m.similar_movies = data.similar || [];
         }
         if (window.activeModalRequest !== id) {
             if (window.DEBUG_MODE) console.error(`[Diagnostic] Race condition prevented! Requested ID: ${window.activeModalRequest} | Retrieved ID: ${id}. Aborting render.`);
             return;
         }
-        if (!m || m.error) {
-            throw new Error((m && m.error) || 'Failed to fetch details');
+        if (!m) {
+            throw new Error('Failed to fetch details');
         }
         
         // Ensure the ID returned from the backend matches the requested ID
@@ -5030,17 +4954,6 @@ async function openModalInternal(id, appendToHistory = true) {
             document.getElementById('modal-synopsis').textContent = 'Could not fetch data.';
         }
     }
-}
-
-async function openModal(id) {
-    if (window.modalIsDragging) return;
-    authFetch('/events/ingest', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ event_type: "click", item_id: id })
-    }).catch(e => console.error("Event ingest failed:", e));
-    
-    openModalInternal(id, true);
 }
 
 window.toggleFavorite = function(id) {
@@ -5107,22 +5020,28 @@ function toggleSave(id) {
 }
 
 document.addEventListener('keydown', (e) => {
+window.closeModalInternal = function(pushState = false) {
+    modalOverlay.classList.remove('active');
+    document.body.style.overflow = '';
+    if (pushState) {
+        navigateHome();
+    }
+};
+
+window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-        modalOverlay.classList.remove('active');
-        document.body.style.overflow = '';
+        closeModalInternal(true);
         closeSearch();
         aiPanel.classList.remove('open');
     }
 });
 
 closeModalBtn.addEventListener('click', () => {
-    modalOverlay.classList.remove('active');
-    document.body.style.overflow = '';
+    navigateHome();
 });
 modalOverlay.addEventListener('click', (e) => {
     if (e.target === modalOverlay) {
-        modalOverlay.classList.remove('active');
-        document.body.style.overflow = '';
+        navigateHome();
     }
 });
 
@@ -5607,7 +5526,7 @@ window.loadMoreModalSimilar = function() {
                 const typeLabel = isSeries(sm) ? 'TV Series' : 'Movie';
                 
                 const cardHtml = `
-                    <div class="sim-card" tabindex="0" onclick="openModal(${sm.item_id})" aria-label="${sm.title}, ${typeLabel}, Match ${r.score} percent, Rating ${rating}">
+                    <div class="sim-card" tabindex="0" onclick="navigateToMovie(${sm.item_id})" aria-label="${sm.title}, ${typeLabel}, Match ${r.score} percent, Rating ${rating}">
                         <img src="${poster}" alt="" class="sim-poster" loading="lazy" onerror="this.src='${placeholder(sm.title)}'">
                         <div class="sim-title">${sm.title}</div>
                         <div class="sim-meta-row" style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; margin-top:2px;">
@@ -5893,7 +5812,7 @@ hoverPortal.addEventListener('click', (e) => {
     if (activeSourceCard) {
         const id = activeSourceCard.dataset.id || activeSourceCard.getAttribute('onclick')?.match(/\d+/)?.[0];
         if (id) {
-            openModal(id);
+            navigateToMovie(id);
             closePortalCard();
         }
     }

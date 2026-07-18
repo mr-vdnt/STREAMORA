@@ -7,18 +7,10 @@ from pydantic import BaseModel
 from services.agent.tools import get_explanation
 import ollama
 
-import csv
+from services.repository.movie_repository import MovieRepository
 
-movies_db = {}
-if os.path.exists("data/raw/movies.csv"):
-    with open("data/raw/movies.csv", "r", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            try:
-                iid = int(row.get('item_id', 0))
-                movies_db[iid] = row
-            except ValueError:
-                pass
+repo = MovieRepository()
+movies_db = repo.get_all()
 
 def _get_movie_metadata(row):
     title = row.get('title', 'Unknown')

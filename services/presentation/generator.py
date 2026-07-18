@@ -2,9 +2,9 @@ import ollama
 from typing import Dict, Any
 
 class ResponseGenerator:
-    """Generates the natural language response strictly following templates, or bypasses LLM if deterministic."""
+    """Generates natural language responses using an LLM according to a defined plan and template."""
     
-    def __init__(self, model_name: str = "llama3.2:latest"):
+    def __init__(self, model_name: str = "llama3"):
         self.model = model_name
         
     def generate(self, query: str, template: dict, render_plan: Dict[str, Any]) -> str:
