@@ -58,8 +58,13 @@ class HybridRetrievalEngine:
         # 2. Generator Selection / Planner (simple logic for now)
         active_generators = self.registry.get_all()
         
-        # 3. Execution
-        for gen in active_generators:
+        # 3. Execution (Parallel)
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        from services.platform.config.settings import settings
+        
+        max_workers = settings.MAX_GENERATOR_WORKERS
+        
+        def run_gen(gen):
             gen_start = time.time()
             try:
                 raw_candidates = gen.retrieve(query_contract)
@@ -75,14 +80,20 @@ class HybridRetrievalEngine:
                 if self._passes_hard_filters(cid, filters):
                     valid_candidates.append(c)
                     
-            all_candidates_by_generator[gen.name] = valid_candidates
-            
             gen_latency = int((time.time() - gen_start) * 1000)
-            diagnostics.append({
-                "generator": gen.name,
-                "latency_ms": gen_latency,
-                "candidate_count": len(valid_candidates)
-            })
+            return gen.name, valid_candidates, gen_latency
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_gen = {executor.submit(run_gen, gen): gen for gen in active_generators}
+            for future in as_completed(future_to_gen):
+                gen_name, valid_candidates, gen_latency = future.result()
+                all_candidates_by_generator[gen_name] = valid_candidates
+                diagnostics.append({
+                    "generator": gen_name,
+                    "latency_ms": gen_latency,
+                    "candidate_count": len(valid_candidates)
+                })
+        
             
         # 4. RRF Merging (k=60)
         K = 60

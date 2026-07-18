@@ -11,8 +11,10 @@ class CandidateNormalizer:
 class FeatureExtractor:
     """Extracts atomic features for a candidate."""
     
-    def __init__(self, movies_db: dict):
+    def __init__(self, movies_db: dict, user_adapter=None, content_adapter=None):
         self.movies_db = movies_db
+        self.user_adapter = user_adapter
+        self.content_adapter = content_adapter
         
     def extract(self, candidate_dict: dict, query_contract: dict) -> FeatureVector:
         cid = candidate_dict["content_id"]
@@ -64,14 +66,33 @@ class FeatureExtractor:
         
         # 6. Franchise & Collection logic (Simulated for Phase 5)
         franchise = movie.get("franchise")
-        if franchise and query_contract.get("reference_title"):
-            # Check if reference movie has the same franchise
+        ref_id = None
+        if query_contract.get("reference_title"):
             ref_title = query_contract["reference_title"].lower()
-            for m in self.movies_db.values():
+            for iid, m in self.movies_db.items():
                 if str(m.get("title", "")).lower() == ref_title:
+                    ref_id = iid
                     ref_franchise = m.get("franchise")
-                    if ref_franchise and ref_franchise == franchise:
+                    if franchise and ref_franchise and ref_franchise == franchise:
                         fv.franchise_match = True
                     break
                     
+        # Phase 7: Personalization Features
+        if self.user_adapter and "user_id" in query_contract:
+            user_id = query_contract["user_id"]
+            # Extract basic affinity (mock implementation based on what's available in adapter)
+            # We would typically call get_ranking_signals here.
+            # To avoid tight coupling we use a placeholder or adapter call:
+            signals = self.user_adapter.get_ranking_signals(user_id, {"director": movie_directors[0] if movie_directors else ""})
+            if hasattr(signals, 'director_affinity'):
+                fv.personalization_score = signals.director_affinity
+                
+        # Phase 8: Content Intelligence / Graph Features
+        if self.content_adapter and ref_id is not None:
+            graph_features = self.content_adapter.get_relationship_features(ref_id, cid)
+            fv.graph_similarity = graph_features.get("graph_similarity", 0.0)
+            fv.shared_theme_score = graph_features.get("shared_theme_score", 0.0)
+            fv.shared_actor_score = graph_features.get("shared_actor_score", 0.0)
+            fv.shared_director_score = graph_features.get("shared_director_score", 0.0)
+            
         return fv

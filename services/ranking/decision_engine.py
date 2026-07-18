@@ -10,10 +10,10 @@ from .explainability import ExplainabilityEngine
 from .diversity import DiversityOptimizer
 
 class DecisionEngine:
-    def __init__(self, movies_db: dict):
+    def __init__(self, movies_db: dict, user_adapter=None, content_adapter=None):
         self.movies_db = movies_db
         self.rule_engine = BusinessRuleEngine(movies_db)
-        self.extractor = FeatureExtractor(movies_db)
+        self.extractor = FeatureExtractor(movies_db, user_adapter, content_adapter)
         self.scorer = ScoringEngine()
         self.confidence_estimator = ConfidenceEstimator()
         self.explainability_engine = ExplainabilityEngine()

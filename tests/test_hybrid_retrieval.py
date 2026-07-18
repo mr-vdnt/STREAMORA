@@ -26,11 +26,21 @@ def load_movies():
 
 def run_tests():
     db = load_movies()
+    from services.retrieval.generators.personalization import PersonalizationGenerator
+    from services.retrieval.generators.knowledge_graph import KnowledgeGraphGenerator
+    from services.user_intelligence.adapter import PersonalizationAdapter
+    from services.content_intelligence.adapter import ContentIntelligenceAdapter
+    
     registry = GeneratorRegistry()
     exact_engine = DeterministicSearchEngine(db)
+    user_adapter = PersonalizationAdapter()
+    content_adapter = ContentIntelligenceAdapter(db)
+    
     registry.register(ExactSearchGenerator(exact_engine))
     registry.register(SemanticGenerator("data/index/movies.index"))
     registry.register(MetadataGenerator(db))
+    registry.register(PersonalizationGenerator(db, user_adapter))
+    registry.register(KnowledgeGraphGenerator(db, content_adapter))
     
     hybrid = HybridRetrievalEngine(registry, db)
     

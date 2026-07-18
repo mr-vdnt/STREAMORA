@@ -115,8 +115,16 @@ class OrchestratorAgent:
             from services.retrieval.generators.exact import ExactSearchGenerator
             from services.retrieval.generators.semantic import SemanticGenerator
             from services.retrieval.generators.metadata import MetadataGenerator
+            from services.retrieval.generators.personalization import PersonalizationGenerator
+            from services.retrieval.generators.knowledge_graph import KnowledgeGraphGenerator
             from services.catalog.search import DeterministicSearchEngine
             from services.catalog.ingestion import ingest_from_tmdb
+            from services.user_intelligence.adapter import PersonalizationAdapter
+            from services.content_intelligence.adapter import ContentIntelligenceAdapter
+            
+            # Setup Adapters
+            user_adapter = PersonalizationAdapter()
+            content_adapter = ContentIntelligenceAdapter(movies_db)
             
             # Setup Registry
             registry = GeneratorRegistry()
@@ -124,6 +132,8 @@ class OrchestratorAgent:
             registry.register(ExactSearchGenerator(exact_engine))
             registry.register(SemanticGenerator("data/index/movies.index"))
             registry.register(MetadataGenerator(movies_db))
+            registry.register(PersonalizationGenerator(movies_db, user_adapter))
+            registry.register(KnowledgeGraphGenerator(movies_db, content_adapter))
             
             # Execute Hybrid Retrieval
             hybrid_engine = HybridRetrievalEngine(registry, movies_db)
@@ -139,15 +149,15 @@ class OrchestratorAgent:
             
             # PHASE 5: DECISION ENGINE & RECOMMENDATION RANKING
             from services.ranking.decision_engine import DecisionEngine
-            decision_engine = DecisionEngine(movies_db)
+            decision_engine = DecisionEngine(movies_db, user_adapter, content_adapter)
             recommendation_package = decision_engine.process(retrieval_output)
             
             # PHASE 6: CONVERSATIONAL PRESENTATION LAYER
             from services.presentation.engine import PresentationEngine
-            presentation_engine = PresentationEngine(movies_db)
+            presentation_engine = PresentationEngine(movies_db, user_adapter, content_adapter)
             intent = query_plan.get("entities", {}).get("intent", "search")
             
-            final_response = presentation_engine.present(query, intent, recommendation_package)
+            final_response = presentation_engine.present(query, intent, recommendation_package, user_id="anonymous", query_contract=query_plan)
             final_response["entities"] = query_plan.get("entities", {})
             return final_response
             

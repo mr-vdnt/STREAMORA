@@ -36,4 +36,10 @@ class ScoringEngine:
         # Assuming maximum personal affinity is around 1.0, give it a modest weight (e.g. 5 points out of 100)
         final_score += fv.personalization_score * 5.0
         
+        # Phase 8: Content Intelligence / Graph Features
+        final_score += fv.graph_similarity * self.weights.get("graph_similarity", 5.0)
+        final_score += fv.shared_theme_score * self.weights.get("shared_theme_score", 3.0)
+        final_score += fv.shared_actor_score * self.weights.get("shared_actor_score", 3.0)
+        final_score += fv.shared_director_score * self.weights.get("shared_director_score", 4.0)
+        
         return final_score

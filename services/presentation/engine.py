@@ -8,9 +8,10 @@ from .validator import ResponseValidator
 class PresentationEngine:
     """Orchestrates the conversion of Phase 5 Recommendation Packages into UI-ready responses."""
     
-    def __init__(self, movies_db: dict, personalization_adapter=None):
+    def __init__(self, movies_db: dict, personalization_adapter=None, content_adapter=None):
         self.movies_db = movies_db
         self.adapter = personalization_adapter
+        self.content_adapter = content_adapter
         self.translator = ExplanationTranslator()
         self.template_selector = TemplateSelector()
         self.generator = ResponseGenerator()
@@ -29,11 +30,21 @@ class PresentationEngine:
             "rating": str(row.get('rating', ''))
         }
         
-    def present(self, query: str, intent: str, recommendation_package: Any, user_id: str = "anonymous") -> Dict[str, Any]:
+    def present(self, query: str, intent: str, recommendation_package: Any, user_id: str = "anonymous", query_contract: dict = None) -> Dict[str, Any]:
         """
         Takes the Phase 5 output and formats it for Phase 6 presentation.
         """
         recs = recommendation_package.recommendations
+        query_contract = query_contract or {}
+        
+        # Get Reference ID for graph explanations
+        ref_id = None
+        if query_contract.get("reference_title"):
+            ref_title = query_contract["reference_title"].lower()
+            for iid, m in self.movies_db.items():
+                if str(m.get("title", "")).lower() == ref_title:
+                    ref_id = iid
+                    break
         
         # 1. Format the UI Response Data
         response_data = []
@@ -48,7 +59,15 @@ class PresentationEngine:
             # Translate structured reasons to natural text
             human_reasons = self.translator.translate(rec.explainability.reason_codes)
             
-            ui_explanation = f"Reason: {human_reasons} (Score: {rec.ranking.recommendation_score:.1f}, Confidence: {rec.ranking.confidence:.2f})"
+            # Phase 8: Deterministic Graph Explanations
+            graph_explanation = ""
+            if self.content_adapter and ref_id is not None and ref_id != iid:
+                graph_explanation = self.content_adapter.get_explanation_context(ref_id, iid)
+                
+            if graph_explanation:
+                ui_explanation = f"Reason: {human_reasons}.{graph_explanation} (Score: {rec.ranking.recommendation_score:.1f}, Confidence: {rec.ranking.confidence:.2f})"
+            else:
+                ui_explanation = f"Reason: {human_reasons} (Score: {rec.ranking.recommendation_score:.1f}, Confidence: {rec.ranking.confidence:.2f})"
             
             response_data.append({
                 "item_id": iid,

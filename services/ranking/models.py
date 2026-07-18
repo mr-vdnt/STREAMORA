@@ -16,6 +16,14 @@ class FeatureVector(BaseModel):
     runtime_similarity: float = 0.0
     release_year_distance: int = 100
     personalization_score: float = 0.0
+    
+    # Phase 8: Content Intelligence / Graph Features
+    graph_similarity: float = 0.0
+    graph_distance: int = 100
+    shared_theme_score: float = 0.0
+    shared_actor_score: float = 0.0
+    shared_director_score: float = 0.0
+    shared_keyword_score: float = 0.0
 
 class Explainability(BaseModel):
     reason_codes: List[str] = Field(default_factory=list)
