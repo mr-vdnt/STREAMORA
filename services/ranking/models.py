@@ -15,6 +15,7 @@ class FeatureVector(BaseModel):
     collection_match: bool = False
     runtime_similarity: float = 0.0
     release_year_distance: int = 100
+    personalization_score: float = 0.0
 
 class Explainability(BaseModel):
     reason_codes: List[str] = Field(default_factory=list)

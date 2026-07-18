@@ -8,8 +8,9 @@ from .validator import ResponseValidator
 class PresentationEngine:
     """Orchestrates the conversion of Phase 5 Recommendation Packages into UI-ready responses."""
     
-    def __init__(self, movies_db: dict):
+    def __init__(self, movies_db: dict, personalization_adapter=None):
         self.movies_db = movies_db
+        self.adapter = personalization_adapter
         self.translator = ExplanationTranslator()
         self.template_selector = TemplateSelector()
         self.generator = ResponseGenerator()
@@ -28,7 +29,7 @@ class PresentationEngine:
             "rating": str(row.get('rating', ''))
         }
         
-    def present(self, query: str, intent: str, recommendation_package: Any, profile: str = "concise") -> Dict[str, Any]:
+    def present(self, query: str, intent: str, recommendation_package: Any, user_id: str = "anonymous") -> Dict[str, Any]:
         """
         Takes the Phase 5 output and formats it for Phase 6 presentation.
         """
@@ -59,8 +60,13 @@ class PresentationEngine:
                 "explanation": ui_explanation
             })
             
-        # 2. Plan Response Strategy
-        render_plan = self.planner.plan(query, intent, response_data, profile)
+        # 2. Get Presentation Profile (Phase 7 Personalization)
+        profile_str = "concise"
+        if self.adapter:
+            profile_str = self.adapter.get_presentation_profile(user_id)
+            
+        # 3. Plan Response Strategy
+        render_plan = self.planner.plan(query, intent, response_data, profile_str)
         
         # 3. Select Template
         template = self.template_selector.select_template(render_plan)
@@ -84,6 +90,6 @@ class PresentationEngine:
             "actions": render_plan.get("actions", []),
             "diagnostics": {
                 "strategy": render_plan["strategy"],
-                "profile": profile
+                "profile": profile_str
             }
         }
