@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  streamora-api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - STREAMORA_ENV=production
+      - MAX_GENERATOR_WORKERS=5
+      - ENABLE_CACHE=True
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
