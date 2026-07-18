@@ -3033,74 +3033,55 @@ async function loadHomePage() {
 
     window.shownItems = []; 
 
-    const isMovie = window.currentFormat === 'movie';
-    const isSeriesVal = window.currentFormat === 'series';
+    const format = window.currentFormat;
+    let endpoint = '/home';
+    if (format === 'movie') endpoint = '/movies';
+    else if (format === 'series') endpoint = '/series';
 
-    // Hero banner and Top Picks Row
-    let topPicksQuery = 'Top Picks For You';
-    let topPicksTitle = 'Top Picks For You';
-    if (isMovie) {
-        topPicksQuery = 'Top Rated Movies';
-        topPicksTitle = 'Top Movies';
-    } else if (isSeriesVal) {
-        topPicksQuery = 'Top Rated TV Shows';
-        topPicksTitle = 'Today\'s Featured Series';
-    }
-    await fetchAndRender(topPicksQuery, topPicksTitle, true);
-
-    // Continue Watching Row (if user has viewed history)
-    const history = JSON.parse(localStorage.getItem('streamora_history') || '[]');
-    const filteredHistory = history.filter(m => {
-        return window.currentFormat === 'all' || 
-               (isMovie && !window.isSeries(m)) ||
-               (isSeriesVal && window.isSeries(m));
-    });
-    if (filteredHistory.length > 0) {
-        appendRow(isSeriesVal ? 'Continue Watching Series' : 'Continue Watching', filteredHistory);
-    }
-
-    // Because You Watched dynamic recommendation row
-    if (filteredHistory.length > 0) {
-        const seed = filteredHistory[0];
-        const recs = window.getSimilarRecommendations(seed)
-            .map(r => r.movie)
-            .filter(m => {
-                return window.currentFormat === 'all' || 
-                       (isMovie && !window.isSeries(m)) ||
-                       (isSeriesVal && window.isSeries(m));
-            });
-        if (recs && recs.length > 0) {
-            appendRow(`Because You Watched ${seed.title}`, recs.slice(0, 10));
+    try {
+        const resp = await authFetch(endpoint);
+        if (resp.ok) {
+            const data = await resp.json();
+            
+            // Remove skeletons
+            const skels = document.querySelectorAll('.skeleton-row');
+            skels.forEach(s => s.remove());
+            
+            // Register movies to global pool and shown items
+            const registerMovies = (items) => {
+                if (!items) return;
+                items.forEach(m => {
+                    if (!window.shownItems.includes(m.item_id)) {
+                        window.shownItems.push(m.item_id);
+                    }
+                    if (!globalMovies.find(gm => gm.item_id === m.item_id)) {
+                        globalMovies.push(m);
+                    }
+                });
+            };
+            
+            if (data.hero) {
+                registerMovies([data.hero]);
+                renderHero(data.hero);
+            }
+            
+            if (data.sections && data.sections.length > 0) {
+                data.sections.forEach((sec, i) => {
+                    if (sec.items && sec.items.length > 0) {
+                        registerMovies(sec.items);
+                        // Delay rendering to avoid blocking main thread
+                        setTimeout(() => {
+                            appendRow(sec.title, sec.items);
+                        }, i * 50);
+                    }
+                });
+            }
+        } else {
+            console.warn("Failed to load home page sections.");
         }
+    } catch (e) {
+        console.error("Home loading error:", e);
     }
-
-    let trendingQuery = 'Trending Now';
-    let trendingTitle = isMovie ? 'Trending Movies' : (isSeriesVal ? 'Trending Series' : 'Trending Now');
-    await fetchAndRender(trendingQuery, trendingTitle, false);
-
-    let scifiQuery = 'Mind-Bending Sci-Fi';
-    let scifiTitle = isMovie ? 'Sci-Fi Movies' : (isSeriesVal ? 'Sci-Fi TV Shows' : 'Mind-Bending Sci-Fi');
-    await fetchAndRender(scifiQuery, scifiTitle, false);
-
-    // Curated rows pulling from FAISS index with specific semantic queries
-    setTimeout(() => fetchAndRender('Award Winners', 'Award Winners', false), 50);
-    setTimeout(() => fetchAndRender('Anime', 'Top Rated Anime', false), 100);
-    setTimeout(() => fetchAndRender('True Events', 'Based on True Events', false), 150);
-
-    const genres = [
-        { q: 'Action', title: isMovie ? 'Action Movies' : (isSeriesVal ? 'Action Series' : 'Action Thrillers') },
-        { q: 'Comedy', title: isMovie ? 'Comedy Movies' : (isSeriesVal ? 'Comedy Series' : 'Comedy Classics') },
-        { q: 'Horror', title: isMovie ? 'Horror Movies' : (isSeriesVal ? 'Horror Series' : 'Horror & Supernatural') },
-        { q: 'Drama', title: isMovie ? 'Drama Movies' : (isSeriesVal ? 'Drama Series' : 'Dramatic Masterpieces') },
-        { q: 'Romance', title: isMovie ? 'Romance Movies' : (isSeriesVal ? 'Romance Series' : 'Romance & Love Stories') },
-        { q: 'Thriller', title: isMovie ? 'Thriller Movies' : (isSeriesVal ? 'Thriller Series' : 'High-Stakes Thrillers') },
-        { q: 'Anime', title: isMovie ? 'Animation Movies' : (isSeriesVal ? 'Anime Series' : 'Anime & Animation') },
-        { q: 'Hidden Gems', title: isMovie ? 'Hidden Gem Movies' : (isSeriesVal ? 'Hidden Gem Series' : 'Hidden Gems') }
-    ];
-
-    genres.forEach((g, i) => {
-        setTimeout(() => fetchAndRender(g.q, g.title, false), 200 + (i * 50));
-    });
 }
 
 // ── Category Page ─────────────────────────────────────────────────────

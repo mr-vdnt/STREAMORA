@@ -26,6 +26,7 @@ from services.agent.core import agent
 from services.security.auth import get_current_user, create_access_token, verify_password, get_user, ACCESS_TOKEN_EXPIRE_MINUTES, timedelta, get_optional_user, hash_password
 from services.security.user_data import init_db, create_user, get_watchlist, save_watchlist, get_history, save_history, update_user_profile
 from services.security.audit import log_event
+from services.discovery.home_service import HomeService
 
 load_dotenv(os.path.join(os.path.dirname(__file__), '../../.env'))
 
@@ -197,8 +198,37 @@ _catalog_service = None
 def get_catalog_service():
     global _catalog_service
     if _catalog_service is None:
+        from services.discovery.catalog_service import CatalogService
         _catalog_service = CatalogService()
     return _catalog_service
+
+_home_service = None
+def get_home_service():
+    global _home_service
+    if _home_service is None:
+        _home_service = HomeService()
+    return _home_service
+
+@app.get("/home")
+@limiter.limit("60/minute")
+def get_home(request: Request, current_user: dict = Depends(get_optional_user)):
+    """Unified Discovery endpoint for the Homepage."""
+    user_id = current_user["id"] if current_user else 32
+    return get_home_service().get_home_payload(format="all", user_id=user_id)
+
+@app.get("/movies")
+@limiter.limit("60/minute")
+def get_movies_home(request: Request, current_user: dict = Depends(get_optional_user)):
+    """Unified Discovery endpoint for the Movies page."""
+    user_id = current_user["id"] if current_user else 32
+    return get_home_service().get_home_payload(format="movie", user_id=user_id)
+
+@app.get("/series")
+@limiter.limit("60/minute")
+def get_series_home(request: Request, current_user: dict = Depends(get_optional_user)):
+    """Unified Discovery endpoint for the TV Shows page."""
+    user_id = current_user["id"] if current_user else 32
+    return get_home_service().get_home_payload(format="series", user_id=user_id)
 
 @app.get("/categories")
 @limiter.limit("60/minute")
