@@ -4849,12 +4849,15 @@ async function openModal(id, type = 'movie', pushState = false) {
         body: JSON.stringify({ event_type: "click", item_id: id })
     }).catch(e => console.error("Event ingest failed:", e));
 
+    window.lastActiveElement = document.activeElement;
     modalOverlay.classList.add('active');
+    document.body.classList.add('modal-open');
     document.body.style.overflow = 'hidden';
 
     const cinematicModal = document.querySelector('.cinematic-modal');
-    // Trigger transition fade-out
     if (cinematicModal) {
+        cinematicModal.focus();
+        // Trigger transition fade-out
         cinematicModal.classList.add('transitioning');
         cinematicModal.scrollTop = 0;
     }
@@ -5002,28 +5005,43 @@ function toggleSave(id) {
 
 window.closeModalInternal = function(pushState = false) {
     modalOverlay.classList.remove('active');
+    document.body.classList.remove('modal-open');
     document.body.style.overflow = '';
+    
+    if (window.lastActiveElement) {
+        window.lastActiveElement.focus();
+        window.lastActiveElement = null;
+    }
+    
     if (pushState) {
+        navigateHome();
+    }
+};
+
+window.closeModal = function() {
+    if (window.history.state && window.history.state.page === 'movie') {
+        history.back();
+    } else {
         navigateHome();
     }
 };
 
 window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-        closeModalInternal(true);
-        closeSearch();
-        aiPanel.classList.remove('open');
+        if (modalOverlay.classList.contains('active')) {
+            window.closeModal();
+        } else {
+            closeSearch();
+            const aiPanel = document.getElementById('ai-panel');
+            if (aiPanel) aiPanel.classList.remove('open');
+        }
     }
 });
 
 closeModalBtn.addEventListener('click', () => {
-    navigateHome();
+    window.closeModal();
 });
-modalOverlay.addEventListener('click', (e) => {
-    if (e.target === modalOverlay) {
-        navigateHome();
-    }
-});
+
 
 // ══════════════════════════════════════════════════════════════════════
 //  UTILITIES
