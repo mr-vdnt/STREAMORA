@@ -25,12 +25,12 @@ function handleRoute(path) {
     if (path.startsWith(ROUTES.MOVIE)) {
         const id = path.replace(ROUTES.MOVIE, '');
         if (id) {
-            openModal(parseInt(id, 10), 'movie', false); // false = do not push state again
+            window.modalManager.open(parseInt(id, 10), 'movie', false); // false = do not push state again
         }
     } else if (path.startsWith(ROUTES.TV)) {
         const id = path.replace(ROUTES.TV, '');
         if (id) {
-            openModal(parseInt(id, 10), 'tv', false);
+            window.modalManager.open(parseInt(id, 10), 'tv', false);
         }
     } else if (path.startsWith(ROUTES.CATEGORY)) {
         const id = path.replace(ROUTES.CATEGORY, '');
@@ -42,7 +42,7 @@ function handleRoute(path) {
             }
         }
     } else if (path === ROUTES.HOME || path === '') {
-        closeModalInternal(false);
+        window.modalManager.closeInternal(false);
         if (window.selectedCategory) {
             window.selectedCategory = null;
             if (window.loadCategoriesTab) window.loadCategoriesTab();
@@ -67,7 +67,7 @@ function navigateToItem(type, id) {
         history.pushState({ type, id }, '', route);
     }
     
-    openModal(id, type, false);
+    window.modalManager.open(id, type, false);
 }
 
 /**
@@ -77,7 +77,7 @@ function navigateHome() {
     if (window.location.pathname !== ROUTES.HOME) {
         history.pushState(null, '', ROUTES.HOME);
     }
-    closeModalInternal(false);
+    window.modalManager.closeInternal(false);
     if (window.selectedCategory) {
         window.selectedCategory = null;
         if (window.loadCategoriesTab) window.loadCategoriesTab();

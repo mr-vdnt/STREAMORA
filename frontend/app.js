@@ -4834,33 +4834,9 @@ window.modalHistoryForward = function() {
     history.forward();
 };
 
-async function openModal(id, type = 'movie', pushState = false) {
-    if (window.modalIsDragging) return;
-    
-    if (window.DEBUG_MODE) {
-        console.log(`[Diagnostic] Requested ID: ${id}`);
-    }
-    window.activeModalRequest = id;
-    
-    // Ingest click event
-    authFetch('/events/ingest', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ event_type: "click", item_id: id })
-    }).catch(e => console.error("Event ingest failed:", e));
+window.fetchModalContent = async function(id, type = 'movie', pushState = false) {
+    // Note: ModalManager.open() handles the overlay, focus, body lock, and event ingest.
 
-    window.lastActiveElement = document.activeElement;
-    modalOverlay.classList.add('active');
-    document.body.classList.add('modal-open');
-    document.body.style.overflow = 'hidden';
-
-    const cinematicModal = document.querySelector('.cinematic-modal');
-    if (cinematicModal) {
-        cinematicModal.focus();
-        // Trigger transition fade-out
-        cinematicModal.classList.add('transitioning');
-        cinematicModal.scrollTop = 0;
-    }
 
     // Set loading skeletons/placeholders in modal
     document.getElementById('modal-title').textContent = 'Loading...';
@@ -5003,44 +4979,8 @@ function toggleSave(id) {
     window.toggleFavorite(id);
 }
 
-window.closeModalInternal = function(pushState = false) {
-    modalOverlay.classList.remove('active');
-    document.body.classList.remove('modal-open');
-    document.body.style.overflow = '';
-    
-    if (window.lastActiveElement) {
-        window.lastActiveElement.focus();
-        window.lastActiveElement = null;
-    }
-    
-    if (pushState) {
-        navigateHome();
-    }
-};
+// Modal closing logic is now handled by ModalManager (frontend/modal/manager.js)
 
-window.closeModal = function() {
-    if (window.history.state && window.history.state.page === 'movie') {
-        history.back();
-    } else {
-        navigateHome();
-    }
-};
-
-window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        if (modalOverlay.classList.contains('active')) {
-            window.closeModal();
-        } else {
-            closeSearch();
-            const aiPanel = document.getElementById('ai-panel');
-            if (aiPanel) aiPanel.classList.remove('open');
-        }
-    }
-});
-
-closeModalBtn.addEventListener('click', () => {
-    window.closeModal();
-});
 
 
 // ══════════════════════════════════════════════════════════════════════
