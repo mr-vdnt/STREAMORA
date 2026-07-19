@@ -13,6 +13,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         self.public_paths = public_paths or [
             r"^/$",
             r"^/health$",
+            r"^/health/.*",
             r"^/metrics$",
             r"^/token$",
             r"^/register$",
@@ -21,7 +22,10 @@ class AuthMiddleware(BaseHTTPMiddleware):
             r"^/css/.*",
             r"^/js/.*",
             r"^/img/.*",
-            r"^/assets/.*"
+            r"^/assets/.*",
+            r"^/.*\.css$",
+            r"^/.*\.js$",
+            r"^/modal/.*"
         ]
         import os
         origins_str = os.getenv("ALLOWED_ORIGINS", "http://127.0.0.1:10000")

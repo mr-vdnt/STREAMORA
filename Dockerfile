@@ -50,7 +50,7 @@ USER streamora
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
-  CMD curl -f http://localhost:8000/health/live || exit 1
+  CMD curl -f http://localhost:${PORT:-8000}/health/live || exit 1
 
 # Run with Gunicorn using Uvicorn workers
-CMD ["gunicorn", "services.agent.main:app", "--workers", "4", "--worker-class", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000"]
+CMD sh -c "gunicorn services.agent.main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-8000}"
