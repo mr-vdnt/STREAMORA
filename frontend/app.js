@@ -1827,7 +1827,7 @@ window.lastAIIsHome = false;
 let globalMovies = [];
 let myList = JSON.parse(localStorage.getItem('streamora_mylist') || '[]');
 let currentPage = 'home';
-let token = localStorage.getItem('streamora_jwt') || null;
+let token = null; // No longer used, handled by HttpOnly cookie
 let userProfile = JSON.parse(localStorage.getItem('streamora_profile')) || null;
 let userId = userProfile ? userProfile.id : null;
 let isGuest = false;
@@ -1835,14 +1835,25 @@ let isAuthModeLogin = true;
 
 async function authFetch(url, options = {}) {
     options.headers = options.headers || {};
-    if (token) {
-        options.headers['Authorization'] = `Bearer ${token}`;
-    }
-    const res = await fetch(url, options);
-    if (res.status === 401 && !isGuest) {
-        localStorage.removeItem('streamora_jwt');
+    options.credentials = 'include'; // Ensure cookies are sent
+    
+    let res = await fetch(url, options);
+    
+    // Attempt token refresh if 401 Unauthorized
+    if (res.status === 401 && !isGuest && url !== '/auth/refresh') {
+        const refreshRes = await fetch('/auth/refresh', { method: 'POST', credentials: 'include' });
+        if (refreshRes.ok) {
+            // Retry original request
+            res = await fetch(url, options);
+        } else {
+            // Refresh failed, force logout
+            localStorage.removeItem('streamora_profile');
+            userProfile = null;
+            userId = null;
+            showAuthScreen();
+        }
+    } else if (res.status === 401 && !isGuest) {
         localStorage.removeItem('streamora_profile');
-        token = null;
         userProfile = null;
         userId = null;
         showAuthScreen();
@@ -1900,6 +1911,7 @@ window.submitAuth = async function() {
             const regRes = await fetch('/register', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
+                credentials: 'include',
                 body: JSON.stringify({username, email, password, display_name: displayName})
             });
             
@@ -1916,6 +1928,7 @@ window.submitAuth = async function() {
         
         const res = await fetch('/token', {
             method: 'POST',
+            credentials: 'include',
             body: formData
         });
         
@@ -1925,7 +1938,7 @@ window.submitAuth = async function() {
         }
         
         const data = await res.json();
-        token = data.access_token;
+        
         userProfile = {
             id: data.user_id,
             username: username,
@@ -1936,7 +1949,7 @@ window.submitAuth = async function() {
         userId = data.user_id;
         isGuest = false;
         
-        localStorage.setItem('streamora_jwt', token);
+        localStorage.setItem('streamora_profile', JSON.stringify(userProfile));
         localStorage.setItem('streamora_profile', JSON.stringify(userProfile));
         
         // Sync watchlist from backend
@@ -5314,13 +5327,17 @@ window.submitFeedback = function() {
     closeDrawerModalDirect();
 };
 
-window.performLogOut = function() {
+window.performLogOut = async function() {
     closeDrawerModalDirect();
+    try {
+        await fetch('/logout', { method: 'POST', credentials: 'include' });
+    } catch (e) {
+        console.error("Logout failed:", e);
+    }
     token = null;
     userId = null;
     userProfile = null;
     isGuest = false;
-    localStorage.removeItem('streamora_jwt');
     localStorage.removeItem('streamora_profile');
     showAuthScreen();
 };

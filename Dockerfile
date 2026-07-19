@@ -1,24 +1,56 @@
-# Use an official Python runtime as a parent image
-FROM python:3.11-slim
+# ==========================================
+# BUILD STAGE
+# ==========================================
+FROM python:3.11-slim as builder
 
-# Set the working directory in the container
 WORKDIR /app
 
-# Copy the requirements file into the container
-COPY requirements.txt .
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install dependencies
+# Install python dependencies in a virtualenv
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the current directory contents into the container
-COPY . .
+# ==========================================
+# RUNTIME STAGE
+# ==========================================
+FROM python:3.11-slim
 
-# Expose the port the app runs on
-EXPOSE 8000
+# Create a non-root user
+RUN groupadd -r streamora && useradd -r -g streamora streamora
 
-# Define environment variables
+WORKDIR /app
+
+# Install runtime dependencies (e.g., curl for healthchecks)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy virtualenv from builder
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copy application code
+COPY --chown=streamora:streamora . .
+
+# Set environment variables
 ENV STREAMORA_ENV=production
 ENV PYTHONPATH=/app
+ENV PORT=8000
 
-# Command to run the application
-CMD ["uvicorn", "api.app:app", "--host", "0.0.0.0", "--port", "8000"]
+# Switch to non-root user
+USER streamora
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
+  CMD curl -f http://localhost:8000/health/live || exit 1
+
+# Run with Gunicorn using Uvicorn workers
+CMD ["gunicorn", "services.agent.main:app", "--workers", "4", "--worker-class", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000"]

@@ -29,39 +29,79 @@ mimetypes.add_type('text/css', '.css')
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from services.agent.core import agent
-from services.security.auth import get_current_user, create_access_token, verify_password, get_user, ACCESS_TOKEN_EXPIRE_MINUTES, timedelta, get_optional_user, hash_password
-from services.security.user_data import init_db, create_user, get_watchlist, save_watchlist, get_history, save_history, update_user_profile
-from services.security.audit import log_event
+from services.security.user_data import init_db, get_watchlist, save_watchlist, get_history, save_history, update_user_profile
 from services.discovery.home_service import HomeService
+from services.agent.limiter import limiter
+from services.auth.middleware import AuthMiddleware
+from services.auth.permissions import get_current_user, get_optional_user
+from services.auth.auth_service import router as auth_router
 
 load_dotenv(os.path.join(os.path.dirname(__file__), '../../.env'))
 
-app = FastAPI(title="STREAMORA AI - Secure Orchestrator Agent")
+import asyncio
+from contextlib import asynccontextmanager
 
-# Rate Limiting
-limiter = Limiter(key_func=get_remote_address)
+def validate_dependencies():
+    """Startup dependency validation."""
+    print("[System] Validating dependencies...")
+    try:
+        # Check Database
+        conn = get_db_connection()
+        conn.execute("SELECT 1 FROM users LIMIT 1")
+        conn.close()
+        print("[System] Database connection OK.")
+    except Exception as e:
+        print(f"[System] CRITICAL: Database connection failed: {e}")
+        sys.exit(1)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup validation
+    validate_dependencies()
+    
+    # Initialize DB (if not already done)
+    init_db()
+
+    # Warmup LLM in background
+    if settings.environment != "test":
+        import ollama
+        print("[System] Initiating LLM warmup...")
+        def run_warmup():
+            try:
+                ollama.chat(
+                    model='llama3.2',
+                    messages=[{'role': 'user', 'content': 'warmup'}],
+                    keep_alive="1h"
+                )
+                print("[System] LLM warm-up complete. Model is resident in memory.")
+            except Exception as e:
+                print(f"[System] LLM warm-up failed: {e}")
+        
+        # Do not block startup for warmup
+        asyncio.get_event_loop().run_in_executor(None, run_warmup)
+    else:
+        print("[System] Skipping LLM warmup in test environment.")
+    
+    yield
+    
+    # Graceful Shutdown
+    print("[System] Initiating graceful shutdown...")
+    # Add any specific cleanup here (e.g. closing Redis connections later)
+    print("[System] Shutdown complete.")
+
+app = FastAPI(title="STREAMORA AI - Secure Orchestrator Agent", lifespan=lifespan)
+
+# Telemetry & Structured Logging
+from services.platform.telemetry import setup_telemetry
+setup_telemetry(app)
+
+# Prometheus Instrumentation
+from prometheus_fastapi_instrumentator import Instrumentator
+Instrumentator().instrument(app).expose(app)
+
+# Rate Limiting is imported from services.agent.limiter
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-
-import asyncio
-
-@app.on_event("startup")
-async def warmup_llm():
-    """Lightweight background task to load the LLM into memory and keep it resident."""
-    import ollama
-    print("[System] Initiating LLM warmup...")
-    def run_warmup():
-        try:
-            ollama.chat(
-                model='llama3.2',
-                messages=[{'role': 'user', 'content': 'warmup'}],
-                keep_alive="1h"
-            )
-            print("[System] LLM warm-up complete. Model is resident in memory.")
-        except Exception as e:
-            print(f"[System] LLM warm-up failed: {e}")
-    
-    asyncio.get_event_loop().run_in_executor(None, run_warmup)
 
 # CORS Lockdown
 allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "http://127.0.0.1:10000")
@@ -75,6 +115,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.add_middleware(AuthMiddleware)
+app.include_router(auth_router)
+
 # Security Headers Middleware
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
@@ -85,23 +128,7 @@ async def add_security_headers(request: Request, call_next):
     response.headers["Content-Security-Policy"] = "default-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; img-src 'self' data: https:;"
     return response
 
-# --- AUTHENTICATION ---
-class RegisterRequest(BaseModel):
-    username: str
-    email: str
-    password: str
-    display_name: str
-
-@app.post("/register")
-@limiter.limit("5/minute")
-def register_user(request: Request, req: RegisterRequest):
-    if len(req.password) < 6:
-        return JSONResponse(status_code=400, content={"detail": "Password must be at least 6 characters"})
-    user_id = create_user(req.username, req.email, hash_password(req.password), req.display_name)
-    if not user_id:
-        return JSONResponse(status_code=400, content={"detail": "Username or email already exists"})
-    return {"status": "success", "user_id": user_id}
-
+# --- USER PROFILE & WATCHLIST ENDPOINTS ---
 @app.get("/me")
 def get_me(current_user: dict = Depends(get_current_user)):
     user_data = dict(current_user)
@@ -137,36 +164,25 @@ def update_my_history(items: list, current_user: dict = Depends(get_current_user
     save_history(current_user["id"], items)
     return {"status": "success"}
 
-@app.post("/token")
-@limiter.limit("10/minute")
-async def login_for_access_token(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
-    user = get_user(form_data.username)
-    
-    # Auto-register if user doesn't exist (seamless recovery for wiped DB)
-    if not user:
-        create_user(form_data.username, f"{form_data.username}@streamora.ai", hash_password(form_data.password), form_data.username)
-        user = get_user(form_data.username)
-
-    if not user or not verify_password(form_data.password, user["hashed_password"]):
-        log_event(who=form_data.username, what="LOGIN_FAILED", where="/token", details="Invalid credentials")
-        return JSONResponse(status_code=401, content={"detail": "Incorrect username or password"})
-    
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user["username"], "role": user["role"], "user_id": user["id"]},
-        expires_delta=access_token_expires
-    )
-    log_event(who=user["username"], what="LOGIN_SUCCESS", where="/token", details=f"Role: {user['role']}")
-    return {
-        "access_token": access_token, 
-        "token_type": "bearer", 
-        "user_id": user["id"], 
-        "role": user["role"],
-        "display_name": user["display_name"],
-        "email": user["email"]
-    }
-
 # --- SECURED ENDPOINTS ---
+
+# --- HEALTH PROBES ---
+@app.get("/health/live", tags=["Health"])
+def liveness_probe():
+    """Liveness probe: returns 200 OK if the service is running."""
+    return {"status": "ok", "service": "streamora-orchestrator"}
+
+@app.get("/health/ready", tags=["Health"])
+def readiness_probe():
+    """Readiness probe: checks if dependencies (like DB) are available."""
+    try:
+        conn = get_db_connection()
+        conn.execute("SELECT 1")
+        conn.close()
+        return {"status": "ready"}
+    except Exception as e:
+        return JSONResponse(status_code=503, content={"status": "not ready", "detail": str(e)})
+
 class ChatRequest(BaseModel):
     query: str
     exclude_ids: list[int] = []

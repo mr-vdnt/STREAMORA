@@ -19,3 +19,12 @@ sentence-transformers
 thefuzz==0.22.1
 rapidfuzz==3.14.5
 nltk
+
+pydantic-settings
+gunicorn
+prometheus-fastapi-instrumentator
+python-json-logger
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-instrumentation-fastapi
+locust
