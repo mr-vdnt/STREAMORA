@@ -2456,36 +2456,87 @@ async function handleSend() {
     showSkeletonRows();
 
     try {
-        const resp = await fetch('/chat', {
+        const resp = await fetch('/chat/stream', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: currentUserId, query })
+            body: JSON.stringify({ user_id: currentUserId, query, exclude_ids: [] })
         });
-        const data = await resp.json();
+        
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+        let buffer = "";
+        
+        let movies = [];
+        let botMsgDiv = null;
+        let responseHTML = "";
 
-        if (data.intent === 'explanation') {
-            addMsg(data.llm_response || data.response, false);
-            contentRows.innerHTML = '';
-            return;
-        }
-
-        let movies = Array.isArray(data.response) ? data.response : (data.response && data.response.value);
-        if (movies && movies.length > 0) {
-            let rowTitle = 'Streamora Recommendations';
-            if (data.intent === 'trending') rowTitle = 'Trending Now';
-            else if (data.intent === 'similar_movies') rowTitle = 'Because You Searched';
-            else if (data.intent === 'genre_search') rowTitle = 'Genre Discovery';
-
-            renderResults(movies, rowTitle);
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
             
-            let responseHTML = data.llm_response ? data.llm_response + '<br><br>' : `Found ${movies.length} titles for you:<br>`;
-            movies.slice(0, 3).forEach(m => {
-                responseHTML += createBotRecommendationHTML(m);
-            });
-            addMsg(responseHTML, false);
-        } else {
-            contentRows.innerHTML = '';
-            addMsg(data.llm_response || "I couldn't find anything matching that.", false);
+            buffer += decoder.decode(value, { stream: true });
+            let lines = buffer.split("\n\n");
+            buffer = lines.pop(); // Keep the last incomplete chunk
+            
+            for (let line of lines) {
+                if (line.startsWith("data: ")) {
+                    const dataStr = line.substring(6);
+                    try {
+                        const event = JSON.parse(dataStr);
+                        
+                        if (event.type === "data") {
+                            const payload = JSON.parse(event.value);
+                            if (payload.intent !== 'explanation') {
+                                movies = Array.isArray(payload.response) ? payload.response : (payload.response && payload.response.value);
+                                if (movies && movies.length > 0) {
+                                    let rowTitle = 'Streamora Recommendations';
+                                    if (payload.intent === 'trending') rowTitle = 'Trending Now';
+                                    else if (payload.intent === 'similar_movies') rowTitle = 'Because You Searched';
+                                    else if (payload.intent === 'genre_search') rowTitle = 'Genre Discovery';
+                                    
+                                    renderResults(movies, rowTitle);
+                                    
+                                    responseHTML = `Found ${movies.length} titles for you:<br>`;
+                                    movies.slice(0, 3).forEach(m => {
+                                        responseHTML += createBotRecommendationHTML(m);
+                                    });
+                                } else {
+                                    contentRows.innerHTML = '';
+                                }
+                            } else {
+                                contentRows.innerHTML = '';
+                            }
+                        } else if (event.type === "token") {
+                            if (!botMsgDiv) {
+                                botMsgDiv = document.createElement('div');
+                                botMsgDiv.className = 'ai-msg ai-msg--bot';
+                                chatHistory.appendChild(botMsgDiv);
+                            }
+                            
+                            // Simple text to HTML newline conversion
+                            const textChunk = event.value.replace(/\n/g, '<br>');
+                            
+                            if (movies && movies.length > 0) {
+                                if (!botMsgDiv.querySelector('.text-content')) {
+                                    botMsgDiv.innerHTML = `<span class="text-content"></span><br><br><div class="cards-content">${responseHTML}</div>`;
+                                }
+                                botMsgDiv.querySelector('.text-content').innerHTML += textChunk;
+                            } else {
+                                botMsgDiv.innerHTML += textChunk;
+                            }
+                            chatHistory.scrollTop = chatHistory.scrollHeight;
+                        } else if (event.type === "metric") {
+                            console.log(`[Streamora AI Metric] ${event.key}: ${event.value}`);
+                        }
+                    } catch (e) {
+                        console.error("Parse error on stream chunk", e, dataStr);
+                    }
+                }
+            }
+        }
+        
+        if (!botMsgDiv) {
+            addMsg("I couldn't find anything matching that.", false);
         }
     } catch (err) {
         contentRows.innerHTML = '';

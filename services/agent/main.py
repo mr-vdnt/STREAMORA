@@ -14,7 +14,7 @@ STARTUP_MS = 0
 from typing import Any
 from fastapi import FastAPI, Depends, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
@@ -42,6 +42,26 @@ app = FastAPI(title="STREAMORA AI - Secure Orchestrator Agent")
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+import asyncio
+
+@app.on_event("startup")
+async def warmup_llm():
+    """Lightweight background task to load the LLM into memory and keep it resident."""
+    import ollama
+    print("[System] Initiating LLM warmup...")
+    def run_warmup():
+        try:
+            ollama.chat(
+                model='llama3.2',
+                messages=[{'role': 'user', 'content': 'warmup'}],
+                keep_alive="1h"
+            )
+            print("[System] LLM warm-up complete. Model is resident in memory.")
+        except Exception as e:
+            print(f"[System] LLM warm-up failed: {e}")
+    
+    asyncio.get_event_loop().run_in_executor(None, run_warmup)
 
 # CORS Lockdown
 allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "http://127.0.0.1:10000")
@@ -204,6 +224,32 @@ def chat_endpoint(request: Request, req: ChatRequest, current_user: dict = Depen
         )
     finally:
         active_requests -= 1
+
+@app.post("/chat/stream")
+@limiter.limit("20/minute")
+def chat_stream_endpoint(request: Request, req: ChatRequest, current_user: dict = Depends(get_optional_user)):
+    global active_requests
+    req_id = f"req_{uuid.uuid4().hex[:8]}"
+    print(f"[{req_id}] Chat stream request started: '{req.query}'")
+    
+    active_requests += 1
+    
+    user_id = current_user["id"] if current_user else 32
+    
+    def event_generator():
+        import json
+        try:
+            for event in agent.process_query_stream(user_id, req.query, req.exclude_ids, req_id=req_id):
+                yield f"data: {json.dumps(event)}\n\n"
+        except Exception as e:
+            print(f"[{req_id}] Chat stream error: {e}")
+            yield f"data: {json.dumps({'type': 'token', 'value': 'An error occurred during streaming.'})}\n\n"
+        finally:
+            global active_requests
+            active_requests -= 1
+            print(f"[{req_id}] Chat stream request completed")
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 from services.repository.movie_repository import MovieRepository
 

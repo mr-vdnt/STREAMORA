@@ -115,3 +115,76 @@ class PresentationEngine:
                 "llm_generation_ms": llm_ms
             }
         }
+
+    def present_stream(self, query: str, intent: str, recommendation_package: Any, user_id: str = "anonymous", query_contract: dict = None):
+        """
+        Takes the Phase 5 output and formats it as a stream for Phase 6 presentation.
+        Yields an initial payload with structured JSON data, then yields token events.
+        """
+        recs = recommendation_package.recommendations
+        query_contract = query_contract or {}
+        
+        # Get Reference ID for graph explanations
+        ref_id = None
+        if query_contract.get("reference_title"):
+            ref_title = query_contract["reference_title"].lower()
+            for iid, m in self.movies_db.items():
+                if str(m.get("title", "")).lower() == ref_title:
+                    ref_id = iid
+                    break
+        
+        # 1. Format the UI Response Data
+        response_data = []
+        for rec in recs:
+            iid = rec.content_id
+            if iid not in self.movies_db:
+                continue
+                
+            movie = self.movies_db[iid]
+            rich_meta = self._get_movie_metadata(movie)
+            human_reasons = self.translator.translate(rec.explainability.reason_codes)
+            
+            graph_explanation = ""
+            if self.content_adapter and ref_id is not None and ref_id != iid:
+                graph_explanation = self.content_adapter.get_explanation_context(ref_id, iid)
+                
+            if graph_explanation:
+                ui_explanation = f"Reason: {human_reasons}.{graph_explanation} (Score: {rec.ranking.recommendation_score:.1f}, Confidence: {rec.ranking.confidence:.2f})"
+            else:
+                ui_explanation = f"Reason: {human_reasons} (Score: {rec.ranking.recommendation_score:.1f}, Confidence: {rec.ranking.confidence:.2f})"
+            
+            response_data.append({
+                "item_id": iid,
+                "title": movie.get('title', ''),
+                "poster_url": movie.get('poster_url', ''),
+                "backdrop_url": movie.get('backdrop_url', ''),
+                "overview": movie.get('overview', ''),
+                "rich_metadata": rich_meta,
+                "explanation": ui_explanation
+            })
+            
+        profile_str = "concise"
+        if self.adapter:
+            profile_str = self.adapter.get_presentation_profile(user_id)
+            
+        render_plan = self.planner.plan(query, intent, response_data, profile_str)
+        template = self.template_selector.select_template(render_plan)
+        
+        # Yield the initial structured JSON so UI can render immediately
+        import json
+        initial_data = {
+            "type": "data",
+            "query": query,
+            "intent": intent,
+            "response": response_data,
+            "actions": render_plan.get("actions", []),
+            "diagnostics": {
+                "strategy": render_plan["strategy"],
+                "profile": profile_str
+            }
+        }
+        yield {"type": "data", "value": json.dumps(initial_data)}
+        
+        # Yield LLM tokens and metrics
+        for event in self.generator.generate_stream(query, template, render_plan):
+            yield event

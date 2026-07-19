@@ -4,6 +4,7 @@ import string
 import nltk
 from nltk.tokenize import word_tokenize
 from nltk.stem import WordNetLemmatizer
+import functools
 
 # Ensure NLTK dependencies are available
 try:
@@ -33,18 +34,19 @@ class QueryIntelligenceEngine:
         for iid, row in movies_db.items():
             title = str(row.get('title', '')).lower()
             if title:
-                self.known_titles[title] = row.get('title', '')
+                norm_title = re.sub(r'[^\w\s-]', '', title).strip()
+                self.known_titles[norm_title] = row.get('title', '')
                 
             for actor in str(row.get('cast', '')).split(','):
-                a = actor.strip().lower()
+                a = re.sub(r'[^\w\s-]', '', actor.strip().lower()).strip()
                 if a: self.known_actors.add(a)
                 
             for director in str(row.get('director', '')).split(','):
-                d = director.strip().lower()
+                d = re.sub(r'[^\w\s-]', '', director.strip().lower()).strip()
                 if d: self.known_directors.add(d)
                 
             for genre in str(row.get('genres', '')).split('|'):
-                g = genre.strip().lower()
+                g = re.sub(r'[^\w\s-]', '', genre.strip().lower()).strip()
                 if g: self.known_genres.add(g)
 
         # Build Synonym Dictionaries
@@ -114,7 +116,7 @@ class QueryIntelligenceEngine:
         return query, ""
 
     def _extract_entities(self, text: str) -> dict:
-        """Sliding window entity extraction across known sets."""
+        """Sliding window entity extraction using O(1) dictionary lookups."""
         entities = {
             "actors": [],
             "directors": [],
@@ -126,46 +128,46 @@ class QueryIntelligenceEngine:
         
         if not text:
             return entities
+            
+        words = text.split()
+        
+        def generate_ngrams(words, max_n=6):
+            # Yields (gram, start_idx, end_idx) descending by length
+            for n in range(max_n, 0, -1):
+                for i in range(len(words) - n + 1):
+                    if all(w is not None for w in words[i:i+n]):
+                        yield " ".join(words[i:i+n]), i, i+n
 
-        # 1. Extract exact titles (Multi-word search requires greedy matching)
-        # Sort known titles by length descending so we match "The Lord of the Rings" before "The Lord"
-        sorted_titles = sorted(self.known_titles.keys(), key=lambda x: len(x), reverse=True)
-        text_for_titles = text
-        for t in sorted_titles:
-            if re.search(r'\b' + re.escape(t) + r'\b', text_for_titles):
-                entities["reference_title"] = self.known_titles[t]
-                # Blank it out so we don't double extract parts of the title
-                text_for_titles = re.sub(r'\b' + re.escape(t) + r'\b', '', text_for_titles)
+        # 1. Extract exact titles
+        for gram, i, j in generate_ngrams(words, max_n=6):
+            if gram in self.known_titles:
+                entities["reference_title"] = self.known_titles[gram]
+                for k in range(i, j): words[k] = None
                 break # Only grab the first primary reference title
 
-        # 2. Extract Multi-word entities (Actors, Directors)
-        text_for_entities = text_for_titles
-        for a in sorted(self.known_actors, key=lambda x: len(x), reverse=True):
-            if re.search(r'\b' + re.escape(a) + r'\b', text_for_entities):
-                entities["actors"].append(a.title())
-                text_for_entities = re.sub(r'\b' + re.escape(a) + r'\b', '', text_for_entities)
+        # 2. Extract Actors & Directors
+        for gram, i, j in generate_ngrams(words, max_n=4):
+            if gram in self.known_actors:
+                entities["actors"].append(gram.title())
+                for k in range(i, j): words[k] = None
+            elif gram in self.known_directors:
+                entities["directors"].append(gram.title())
+                for k in range(i, j): words[k] = None
+
+        # 3. Extract Aliases, Genres, Moods, Temporal
+        for gram, i, j in generate_ngrams(words, max_n=3):
+            if gram in self.dictionaries["genre_aliases"]:
+                entities["genres"].append(self.dictionaries["genre_aliases"][gram].title())
+                for k in range(i, j): words[k] = None
                 
-        for d in sorted(self.known_directors, key=lambda x: len(x), reverse=True):
-            if re.search(r'\b' + re.escape(d) + r'\b', text_for_entities):
-                entities["directors"].append(d.title())
-                text_for_entities = re.sub(r'\b' + re.escape(d) + r'\b', '', text_for_entities)
-
-        # 3. Extract single-word properties (Genres, Moods, Temporal) via tokens
-        tokens = word_tokenize(text_for_entities)
-        
-        # Check aliases first
-        for alias, real_genre in self.dictionaries["genre_aliases"].items():
-            if alias in text_for_entities:
-                entities["genres"].append(real_genre.title())
-                text_for_entities = text_for_entities.replace(alias, "")
-
-        for t in tokens:
-            if t in self.known_genres:
-                entities["genres"].append(t.title())
-            if t in self.dictionaries["moods"]:
-                entities["themes"].append(t)
-            if t in self.dictionaries["temporal_modifiers"]:
-                entities["temporal"].append(self.dictionaries["temporal_modifiers"][t])
+        for w in words:
+            if w is None: continue
+            if w in self.known_genres:
+                entities["genres"].append(w.title())
+            if w in self.dictionaries["moods"]:
+                entities["themes"].append(w)
+            if w in self.dictionaries["temporal_modifiers"]:
+                entities["temporal"].append(self.dictionaries["temporal_modifiers"][w])
 
         # Deduplicate
         entities["genres"] = list(set(entities["genres"]))
@@ -252,52 +254,26 @@ class QueryIntelligenceEngine:
             if "year_min" in filters and filters["year_min"] > filters["year_max"]:
                 filters.pop("year_min")
         if "runtime_max" in filters:
-            filters["runtime_max"] = max(10, filters["runtime_max"])
+            if "year_min" in filters and filters["year_min"] > filters["year_max"]: filters.pop("year_min")
+        if "runtime_max" in filters: filters["runtime_max"] = max(10, filters["runtime_max"])
 
-    def parse(self, query: str, context: dict = None) -> dict:
-        """
-        Main pipeline entrypoint.
-        Translates query into structured JSON object.
-        """
-        # 1. Normalize
+    @functools.lru_cache(maxsize=1024)
+    def _parse_cached(self, query: str) -> str:
         norm_query = self._normalize(query)
-        
-        # 2. Tokenize & Lemmatize
         tokens = self._tokenize_and_lemmatize(norm_query)
-        
-        # 3. Detect Intent
         intent = self._extract_intent(tokens)
-        
-        # 4. Split Exclusions
         pos_query, neg_query = self._parse_negative_filters(norm_query)
-        
-        # 5. Extract Entities
         entities = self._extract_entities(pos_query)
-        
-        # 6. Session Context Merge
-        if context:
-            if not entities["directors"] and context.get("directors"):
-                entities["directors"] = context["directors"]
-            if not entities["actors"] and context.get("actors"):
-                entities["actors"] = context["actors"]
-            if not entities["genres"] and context.get("genres"):
-                entities["genres"] = context["genres"]
-                
-        # 7. Build and Validate Constraints
         filters = self._build_constraints(norm_query, neg_query)
         self._validate_constraints(filters)
-        
-        # 8. Query Plan, Priority, and Fingerprint
         plan = self._determine_query_plan(intent, entities, filters)
         priority = self._determine_priority(entities)
         fingerprint = self._generate_fingerprint(intent, entities, filters)
         
-        # Pseudo-confidence for Phase 4 debugging
         confidence = {}
         for p in priority: confidence[p] = 1.0
         
-        # 9. Return V1.0 Contract
-        return {
+        result = {
             "schema_version": "1.0",
             "intent": intent,
             "reference_title": entities["reference_title"],
@@ -316,3 +292,23 @@ class QueryIntelligenceEngine:
                 "entity_confidence": confidence
             }
         }
+        return json.dumps(result)
+
+    def parse(self, query: str, context: dict = None) -> dict:
+        """
+        Main pipeline entrypoint.
+        Translates query into structured JSON object using LRU cache.
+        """
+        cached_str = self._parse_cached(query)
+        result = json.loads(cached_str)
+        
+        if context:
+            entities = result["entities"]
+            if not entities["directors"] and context.get("directors"):
+                entities["directors"] = context["directors"]
+            if not entities["actors"] and context.get("actors"):
+                entities["actors"] = context["actors"]
+            if not entities["genres"] and context.get("genres"):
+                entities["genres"] = context["genres"]
+                
+        return result
