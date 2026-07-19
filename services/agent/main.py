@@ -521,6 +521,24 @@ def health_deep():
         "microservices": status_report
     }
 
+@app.get("/metrics")
+def metrics():
+    """Diagnostics and metrics endpoint for production monitoring."""
+    from services.agent.core import agent
+    llm_loaded = agent._query_engine is not None
+    uptime_seconds = int(time.time() - APP_START_TIME)
+    
+    return {
+        "startup_ms": STARTUP_MS,
+        "repository_loaded": True,
+        "cache_hits": 0,    # Placeholder for future metrics
+        "cache_misses": 0,  # Placeholder for future metrics
+        "active_requests": 0, # Placeholder for future metrics
+        "llm_loaded": llm_loaded,
+        "query_engine_loaded": llm_loaded,
+        "uptime_seconds": uptime_seconds
+    }
+
 # Mount frontend directory at root
 frontend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../frontend'))
 app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
