@@ -52,11 +52,17 @@ class ExtractionSchema(BaseModel):
 
 class OrchestratorAgent:
     def __init__(self):
-        print("Loading Query Intelligence Engine...")
         self.conversation_memory = {}
         self.model = 'llama3'
-        from services.agent.query_intelligence import QueryIntelligenceEngine
-        self.query_engine = QueryIntelligenceEngine(movies_db)
+        self._query_engine = None
+
+    @property
+    def query_engine(self):
+        if self._query_engine is None:
+            print("Lazy Loading Query Intelligence Engine...")
+            from services.agent.query_intelligence import QueryIntelligenceEngine
+            self._query_engine = QueryIntelligenceEngine(movies_db)
+        return self._query_engine
 
     def process_query(self, user_id: int, query: str, exclude_ids: list[int] = None) -> dict:
         if exclude_ids is None:

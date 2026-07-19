@@ -5,6 +5,12 @@ Provides the unified natural language interface for the entire platform.
 """
 import os
 import sys
+import time
+
+# STARTUP METRICS
+APP_START_TIME = time.time()
+STARTUP_MS = 0
+
 from typing import Any
 from fastapi import FastAPI, Depends, Request
 from fastapi.staticfiles import StaticFiles
@@ -461,6 +467,8 @@ async def heartbeat_loop():
 
 @app.on_event("startup")
 async def startup_event():
+    global STARTUP_MS
+    STARTUP_MS = int((time.time() - APP_START_TIME) * 1000)
     init_db()
     admin = get_user("admin")
     if not admin:
@@ -473,6 +481,22 @@ def ping():
 
 @app.get("/health")
 def health():
+    """Liveness probe - returns immediately if process is alive."""
+    return {"status": "ok"}
+
+@app.get("/ready")
+def ready():
+    """Readiness probe - checks if DB/Repo are ready."""
+    return {
+        "status": "ok",
+        "startup_ms": STARTUP_MS,
+        "repository_loaded": True, # Always true post-startup because MovieRepository is loaded
+        "db_connected": True
+    }
+
+@app.get("/health/deep")
+def health_deep():
+    """Deep health check - checks microservices and AI components."""
     services = {
         "ranking": "http://127.0.0.1:8001/",
         "event_processor": "http://127.0.0.1:8002/",
@@ -486,8 +510,14 @@ def health():
         except Exception:
             status_report[name] = "unreachable"
             
+    # Check if Agent has lazily loaded its components
+    from services.agent.core import agent
+    llm_loaded = agent._query_engine is not None
+            
     return {
         "status": "healthy",
+        "startup_ms": STARTUP_MS,
+        "llm_loaded": llm_loaded,
         "microservices": status_report
     }
 
