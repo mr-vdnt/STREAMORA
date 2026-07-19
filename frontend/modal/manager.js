@@ -2,7 +2,7 @@
 
 class ModalManager {
     constructor() {
-        this.overlay = document.getElementById('modal-overlay');
+        this.overlay = document.getElementById('movie-detail-modal');
         this.container = document.querySelector('.cinematic-modal');
         this.closeBtn = document.getElementById('close-modal-btn');
         this.isOpen = false;
@@ -48,6 +48,10 @@ class ModalManager {
 
         if (window.ModalAnimation) {
             window.ModalAnimation.onOpen(this.overlay, this.container);
+        }
+
+        if (window.fetchModalContent) {
+            window.fetchModalContent(id, type, pushState);
         }
     }
 
