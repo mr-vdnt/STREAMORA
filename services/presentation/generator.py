@@ -13,7 +13,7 @@ class ResponseGenerator:
         """
         # 1. Deterministic Bypass
         if render_plan.get("strategy") == "deterministic":
-            return render_plan.get("intro", "Here are your results.")
+            return render_plan.get("intro", "Here are your results."), 0
             
         # 2. LLM Generation
         system_prompt = template["system_prompt"]
@@ -28,6 +28,8 @@ class ResponseGenerator:
         user_prompt = f"User Query: '{query}'\n\nProvided Movies to Recommend:\n{context_str}\n\nPlease generate the response now following your system instructions."
         
         try:
+            import time
+            t0 = time.time()
             resp = ollama.chat(
                 model=self.model,
                 messages=[
@@ -35,7 +37,8 @@ class ResponseGenerator:
                     {'role': 'user', 'content': user_prompt}
                 ]
             )
-            return resp['message']['content'].strip()
+            t1 = time.time()
+            return resp['message']['content'].strip(), int((t1 - t0) * 1000)
         except Exception as e:
             print(f"LLM Generation failed: {e}")
-            return render_plan.get("intro", "I found some movies you might enjoy!")
+            return render_plan.get("intro", "I found some movies you might enjoy!"), 0

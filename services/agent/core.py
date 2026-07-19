@@ -64,7 +64,10 @@ class OrchestratorAgent:
             self._query_engine = QueryIntelligenceEngine(movies_db)
         return self._query_engine
 
-    def process_query(self, user_id: int, query: str, exclude_ids: list[int] = None) -> dict:
+    def process_query(self, user_id: int, query: str, exclude_ids: list[int] = None, req_id: str = None) -> dict:
+        import time
+        t_start = time.time()
+        
         if exclude_ids is None:
             exclude_ids = []
             
@@ -82,8 +85,10 @@ class OrchestratorAgent:
             }
 
         # Use Deterministic NLP Pipeline (No LLM)
+        t_parse_start = time.time()
         context = self.conversation_memory.get(user_id, {}).get("last_entities", {})
         query_plan = self.query_engine.parse(query, context=context)
+        t_parse_end = time.time()
         
         # Save session context
         if user_id not in self.conversation_memory:
@@ -92,17 +97,23 @@ class OrchestratorAgent:
         
         # If it's pure chat, bypass search engine completely
         if query_plan["intent"] == "chat":
+            t_llm_start = time.time()
             try:
                 resp = ollama.chat(model=self.model, messages=[{'role': 'user', 'content': query}])
                 llm_text = resp['message']['content']
             except:
                 llm_text = "I'm your AI movie curator! Ask me for recommendations."
+            t_llm_end = time.time()
             return {
                 "query": query,
                 "intent": "chat",
                 "response": [],
                 "llm_response": llm_text,
-                "entities": query_plan["entities"]
+                "entities": query_plan["entities"],
+                "metrics": {
+                    "query_parse_ms": int((t_parse_end - t_parse_start) * 1000),
+                    "llm_generation_ms": int((t_llm_end - t_llm_start) * 1000)
+                }
             }
         
         # PHASE 4: HYBRID CANDIDATE GENERATION ENGINE
@@ -140,8 +151,10 @@ class OrchestratorAgent:
             registry.register(KnowledgeGraphGenerator(movies_db, content_adapter))
             
             # Execute Hybrid Retrieval
+            t_retrieval_start = time.time()
             hybrid_engine = HybridRetrievalEngine(registry, movies_db)
             retrieval_output = hybrid_engine.generate_candidates(query_plan)
+            t_retrieval_end = time.time()
             
             # If nothing found locally, blast TMDB live INGESTION!
             if not retrieval_output["candidates"]:
@@ -152,17 +165,37 @@ class OrchestratorAgent:
                     retrieval_output = hybrid_engine.generate_candidates(query_plan)
             
             # PHASE 5: DECISION ENGINE & RECOMMENDATION RANKING
+            t_ranking_start = time.time()
             from services.ranking.decision_engine import DecisionEngine
             decision_engine = DecisionEngine(movies_db, user_adapter, content_adapter)
             recommendation_package = decision_engine.process(retrieval_output)
+            t_ranking_end = time.time()
             
             # PHASE 6: CONVERSATIONAL PRESENTATION LAYER
+            t_presentation_start = time.time()
             from services.presentation.engine import PresentationEngine
             presentation_engine = PresentationEngine(movies_db, user_adapter, content_adapter)
             intent = query_plan.get("entities", {}).get("intent", "search")
             
             final_response = presentation_engine.present(query, intent, recommendation_package, user_id="anonymous", query_contract=query_plan)
+            t_presentation_end = time.time()
+            
             final_response["entities"] = query_plan.get("entities", {})
+            
+            # Reconstruct metrics
+            query_parse_ms = int((t_parse_end - t_parse_start) * 1000)
+            retrieval_ms = int((t_retrieval_end - t_retrieval_start) * 1000)
+            ranking_ms = int((t_ranking_end - t_ranking_start) * 1000)
+            presentation_ms = int((t_presentation_end - t_presentation_start) * 1000)
+            
+            # llm_generation_ms is set inside presentation_engine.present() and stored in final_response["metrics"]
+            metrics = final_response.get("metrics", {})
+            metrics["query_parse_ms"] = query_parse_ms
+            metrics["retrieval_ms"] = retrieval_ms
+            metrics["ranking_ms"] = ranking_ms
+            metrics["presentation_ms"] = presentation_ms
+            final_response["metrics"] = metrics
+            
             return final_response
             
         except Exception as e:

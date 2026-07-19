@@ -155,17 +155,55 @@ class ChatResponse(BaseModel):
     intent: str
     response: Any
     llm_response: str
+    metrics: dict = {}
+    req_id: str = ""
+
+import uuid
+
+# Global Metrics Trackers
+active_requests = 0
+chat_latencies = []
+slow_requests = 0
 
 @app.post("/chat", response_model=ChatResponse)
 @limiter.limit("20/minute")
 def chat_endpoint(request: Request, req: ChatRequest, current_user: dict = Depends(get_optional_user)):
-    user_id = current_user["id"] if current_user else 32
-    result = agent.process_query(user_id, req.query, req.exclude_ids)
-    return ChatResponse(
-        intent=result.get("intent", "search"),
-        response=result.get("response", []),
-        llm_response=result.get("llm_response", "")
-    )
+    global active_requests, chat_latencies, slow_requests
+    
+    t0 = time.time()
+    req_id = f"req_{uuid.uuid4().hex[:8]}"
+    print(f"[{req_id}] Chat request started: '{req.query}'")
+    
+    active_requests += 1
+    
+    try:
+        user_id = current_user["id"] if current_user else 32
+        result = agent.process_query(user_id, req.query, req.exclude_ids, req_id=req_id)
+        
+        t1 = time.time()
+        total_ms = int((t1 - t0) * 1000)
+        
+        chat_latencies.append(total_ms)
+        if len(chat_latencies) > 100:
+            chat_latencies.pop(0)
+            
+        if total_ms > 2000:
+            slow_requests += 1
+            
+        metrics = result.get("metrics", {})
+        metrics["total_ms"] = total_ms
+        
+        print(f"[{req_id}] Chat request completed in {total_ms}ms")
+        
+        return ChatResponse(
+            intent=result.get("intent", "search"),
+            response=result.get("response", []),
+            llm_response=result.get("llm_response", ""),
+            metrics=metrics,
+            req_id=req_id
+        )
+    finally:
+        active_requests -= 1
 
 from services.repository.movie_repository import MovieRepository
 
@@ -528,15 +566,28 @@ def metrics():
     llm_loaded = agent._query_engine is not None
     uptime_seconds = int(time.time() - APP_START_TIME)
     
+    try:
+        import psutil
+        memory_mb = int(psutil.Process(os.getpid()).memory_info().rss / 1024 / 1024)
+        cpu_percent = psutil.cpu_percent()
+    except ImportError:
+        memory_mb = -1
+        cpu_percent = -1
+
+    avg_chat_ms = int(sum(chat_latencies) / len(chat_latencies)) if chat_latencies else 0
+
     return {
+        "status": "healthy",
         "startup_ms": STARTUP_MS,
         "repository_loaded": True,
-        "cache_hits": 0,    # Placeholder for future metrics
-        "cache_misses": 0,  # Placeholder for future metrics
-        "active_requests": 0, # Placeholder for future metrics
         "llm_loaded": llm_loaded,
         "query_engine_loaded": llm_loaded,
-        "uptime_seconds": uptime_seconds
+        "uptime_seconds": uptime_seconds,
+        "active_requests": active_requests,
+        "average_chat_ms": avg_chat_ms,
+        "slow_requests": slow_requests,
+        "memory_mb": memory_mb,
+        "cpu_percent": cpu_percent
     }
 
 # Mount frontend directory at root

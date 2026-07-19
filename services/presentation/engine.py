@@ -91,7 +91,7 @@ class PresentationEngine:
         template = self.template_selector.select_template(render_plan)
         
         # 4. Generate Natural Language
-        llm_text = self.generator.generate(query, template, render_plan)
+        llm_text, llm_ms = self.generator.generate(query, template, render_plan)
         
         # 5. Validate LLM Response
         if render_plan["strategy"] != "deterministic":
@@ -110,5 +110,8 @@ class PresentationEngine:
             "diagnostics": {
                 "strategy": render_plan["strategy"],
                 "profile": profile_str
+            },
+            "metrics": {
+                "llm_generation_ms": llm_ms
             }
         }
