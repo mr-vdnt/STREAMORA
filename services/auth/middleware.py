@@ -28,8 +28,11 @@ class AuthMiddleware(BaseHTTPMiddleware):
             r"^/modal/.*"
         ]
         import os
-        origins_str = os.getenv("ALLOWED_ORIGINS", "http://127.0.0.1:10000")
+        origins_str = os.getenv("ALLOWED_ORIGINS", "http://127.0.0.1:10000,http://localhost:8000,http://127.0.0.1:8000,http://localhost:3000")
         self.allowed_origins = [o.strip() for o in origins_str.split(",")]
+        render_url = os.getenv("RENDER_EXTERNAL_URL")
+        if render_url:
+            self.allowed_origins.append(render_url.rstrip("/"))
 
     async def dispatch(self, request: Request, call_next):
         # CSRF Protection: Verify Origin for state-changing methods

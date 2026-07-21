@@ -104,8 +104,11 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS Lockdown
-allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "http://127.0.0.1:10000")
+allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "http://127.0.0.1:10000,http://localhost:8000,http://127.0.0.1:8000,http://localhost:3000")
 allowed_origins = [origin.strip() for origin in allowed_origins_str.split(",")]
+render_url = os.getenv("RENDER_EXTERNAL_URL")
+if render_url:
+    allowed_origins.append(render_url.rstrip("/"))
 
 app.add_middleware(
     CORSMiddleware,
