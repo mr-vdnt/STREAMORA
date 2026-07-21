@@ -6,7 +6,6 @@ class FreshnessScorer(BaseScorer):
     def default_weight(self) -> float:
         return 0.10
 
-    def score(self, movie: Dict[str, Any], context: Dict[str, Any]
     def score(self, movie: Dict[str, Any], context: Dict[str, Any] = None) -> float:
         return self._calculate_freshness(str(movie.get('year', '')))
 

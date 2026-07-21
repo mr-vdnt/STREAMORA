@@ -3098,10 +3098,8 @@ async function loadHomePage() {
 
     window.shownItems = []; 
 
-    const format = window.currentFormat;
-    let endpoint = '/home';
-    if (format === 'movie') endpoint = '/movies';
-    else if (format === 'series') endpoint = '/series';
+    const format = window.currentFormat || 'all';
+    let endpoint = `/api/v2/home?format=${format}`;
 
     try {
         const resp = await authFetch(endpoint);

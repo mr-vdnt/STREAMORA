@@ -9,7 +9,7 @@ class ShelfEngine:
         
     def _filter_and_rank(self, items, weights, limit=15, filter_func=None):
         filtered = [item for item in items if filter_func is None or filter_func(item)]
-        custom_ranker = RecommendationEngine(weights=weights)
+        custom_ranker = RecommendationEngine(custom_weights=weights)
         ranked = custom_ranker.rank_items(filtered)
         return ranked[:limit]
         
