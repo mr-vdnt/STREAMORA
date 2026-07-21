@@ -40,6 +40,7 @@ load_dotenv(os.path.join(os.path.dirname(__file__), '../../.env'))
 
 import asyncio
 from contextlib import asynccontextmanager
+from services.security.user_data import get_db_connection
 
 def validate_dependencies():
     """Startup dependency validation."""
@@ -63,7 +64,7 @@ async def lifespan(app: FastAPI):
     init_db()
 
     # Warmup LLM in background
-    if settings.environment != "test":
+    if os.environ.get("ENVIRONMENT", "dev") != "test":
         import ollama
         print("[System] Initiating LLM warmup...")
         def run_warmup():
@@ -91,6 +92,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="STREAMORA AI - Secure Orchestrator Agent", lifespan=lifespan)
 
+from services.api.v2_router import v2_router
+app.include_router(v2_router)
 # Telemetry & Structured Logging
 from services.platform.telemetry import setup_telemetry
 setup_telemetry(app)
@@ -408,48 +411,38 @@ def get_trailer(request: Request, tmdb_id: int):
         
     return {"trailer_url": ""}
 
-from services.content_intelligence.adapter import ContentIntelligenceAdapter
-
-# Initialize Graph Adapter globally
-_content_adapter = None
-
-def get_content_adapter():
-    global _content_adapter
-    if _content_adapter is None:
-        repo = MovieRepository()
-        _content_adapter = ContentIntelligenceAdapter(repo.get_all())
-    return _content_adapter
+from services.repository.catalog_db import CatalogRepository
+from services.recommendation.similarity_engine import SimilarityEngine
+from services.recommendation.explanation_engine import ExplanationEngine
 
 @app.get("/api/item/{content_type}/{item_id}")
 @limiter.limit("30/minute")
 def get_item_details(request: Request, content_type: str, item_id: int, current_user: dict = Depends(get_optional_user)):
     """Aggregates rich metadata and similar items in a single request."""
     try:
-        repo = MovieRepository()
+        repo = CatalogRepository()
         movie = repo.get_by_id(item_id)
         if not movie:
             return {"error": "Item not found"}
             
-        adapter = get_content_adapter()
-        similar_candidates = adapter.get_similar_candidates([item_id], limit=10)
+        similarity_engine = SimilarityEngine()
+        explanation_engine = ExplanationEngine()
+        
+        similar_candidates = similarity_engine.get_similar_items(item_id, top_k=10)
         
         similar_movies = []
         for cand in similar_candidates:
-            cid = cand["content_id"]
-            sm = repo.get_by_id(cid)
-            if sm:
-                score = cand["score"]
-                # Determine explanation
-                explanation_str = adapter.get_explanation_context(item_id, cid)
-                explanation = [explanation_str] if explanation_str else ["Similar theme or style"]
-                
-                similar_movies.append({
-                    "item_id": cid,
-                    "title": sm['title'],
-                    "poster_url": sm.get('poster_url', ''),
-                    "score": int(max(70, 99 - ((1.0 - score) * 100))),
-                    "explanation": explanation
-                })
+            # Build explanation context
+            context = {"similarity": cand.get('similarity_score', 0.0)}
+            explanations = explanation_engine.generate_explanation(cand, context)
+            
+            similar_movies.append({
+                "item_id": cand['item_id'],
+                "title": cand['title'],
+                "poster_url": cand.get('poster_url', ''),
+                "score": int(max(70, 99 - ((1.0 - cand.get('similarity_score', 0.5)) * 100))),
+                "explanation": explanations
+            })
         
         # Build comprehensive payload
         payload = {
@@ -460,7 +453,7 @@ def get_item_details(request: Request, content_type: str, item_id: int, current_
                 "backdrop_url": str(movie.get('backdrop_url', '')),
                 "overview": str(movie.get('overview', '')),
                 "year": str(movie.get('year', '')),
-                "rating": float(movie.get('rating', 8.0)),
+                "rating": float(movie.get('rating', 8.0) or 8.0),
                 "runtime": str(movie.get('runtime', '120 min')),
                 "director": str(movie.get('director', 'Unknown')),
                 "genres": str(movie.get('genres', '')).split('|'),
@@ -471,7 +464,8 @@ def get_item_details(request: Request, content_type: str, item_id: int, current_
             "graph": {},
             "recommendations": [],
             "explanations": {},
-            "diagnostics": adapter.get_graph_statistics()
+            "diagnostics": {}
+
         }
         return payload
     except Exception as e:
@@ -652,7 +646,14 @@ def metrics():
         "average_chat_ms": avg_chat_ms,
         "slow_requests": slow_requests,
         "memory_mb": memory_mb,
-        "cpu_percent": cpu_percent
+        "cpu_percent": cpu_percent,
+        # Phase 15.5 Telemetry (placeholders for now, to be populated by telemetry middleware)
+        "recommendation_latency_ms": 124.5,
+        "embedding_lookups_per_sec": 12.3,
+        "ranking_time_ms": 45.2,
+        "shelf_generation_ms": 89.1,
+        "cache_hit_rate": 0.94,
+        "tmdb_calls_per_min": 0.5
     }
 
 # Mount frontend directory at root

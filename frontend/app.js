@@ -4785,71 +4785,86 @@ function renderModalData(m, id) {
         });
     }
 
-    const simContainer = document.getElementById('modal-similar');
-    if (simContainer) {
-        // Initialize state for infinite recommendation traversal
-        window.modalRenderedIds = new Set([parseInt(id)]);
-        window.modalPendingRecs = [];
-        window.modalExpandedSeedIds = new Set([parseInt(id)]);
-
-        const recs = getSimilarRecommendations(seedMovie);
-        if (recs && recs.length > 0) {
-            window.modalPendingRecs = [...recs];
+    const shelvesContainer = document.getElementById('modal-recommendation-shelves');
+    if (shelvesContainer) {
+        shelvesContainer.innerHTML = '';
+        
+        let shelves = [];
+        if (m.recommendation_shelves && m.recommendation_shelves.length > 0) {
+            shelves = m.recommendation_shelves;
         }
+        
+        if (shelves.length === 0) {
+            shelvesContainer.innerHTML = '<p>No recommendations available.</p>';
+        } else {
+            shelves.forEach((shelf, index) => {
+                const shelfId = `modal-shelf-${index}`;
+                
+                const shelfHtml = `
+                    <div style="margin-bottom: 24px;">
+                        <h3 style="font-size: 1.1rem; margin-bottom: 12px; font-weight: 600;">${shelf.title}</h3>
+                        <div class="modal-similar-container" id="${shelfId}-container" style="position: relative;">
+                            <button class="carousel-arrow carousel-arrow--left" onclick="scrollCarousel(this, -1); event.stopPropagation();" aria-label="Scroll left" style="display: none;">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                            </button>
+                            <div class="modal-similar-row" id="${shelfId}" style="display: flex; gap: 12px; overflow-x: auto; scroll-behavior: smooth; padding-bottom: 10px; scrollbar-width: none;">
+                                ${shelf.items.map(sm => {
+                                    const poster = sm.poster_url || placeholder(sm.title);
+                                    const rating = sm.rating || '7.5';
+                                    const year = sm.year || '2022';
+                                    const genresList = (typeof sm.genres === 'string' ? sm.genres.split('|') : (sm.genres || ['Drama'])).slice(0, 2).join(' • ');
+                                    const typeLabel = (sm.content_type || 'movie').toLowerCase() === 'movie' ? 'Movie' : 'TV Series';
+                                    
+                                    // Bullet point explanations UI
+                                    const expl = Array.isArray(sm.explanation) ? sm.explanation : (sm.why_recommended ? [sm.why_recommended] : []);
+                                    let explHtml = '';
+                                    if (expl.length > 0) {
+                                        explHtml = `<ul style="margin: 0; padding-left: 16px; font-size: 0.7rem; color: var(--text-muted); text-align: left; margin-top: 4px;">` +
+                                            expl.map(tag => `<li>${tag}</li>`).join('') +
+                                            `</ul>`;
+                                    }
 
-        // Take the first 10 items
-        const initialBatch = window.modalPendingRecs.splice(0, 10);
-        if (initialBatch.length > 0) {
-            simContainer.innerHTML = initialBatch.map(r => {
-                const sm = r.movie;
-                window.modalRenderedIds.add(parseInt(sm.item_id));
-                const poster = sm.poster_url || placeholder(sm.title);
-                const meta = sm.rich_metadata || {};
-                const rating = meta.rating || '7.5';
-                const year = meta.year || '2022';
-                const genresList = (meta.genres || meta.tags || ['Drama']).slice(0, 2).join(' • ');
-                const typeLabel = isSeries(sm) ? 'TV Series' : 'Movie';
-
-                return `
-                    <div class="sim-card" tabindex="0" onclick="navigateToMovie(${sm.item_id})" aria-label="${sm.title}, ${typeLabel}, Match ${r.score} percent, Rating ${rating}">
-                        <img src="${poster}" alt="" class="sim-poster" loading="lazy" onerror="this.src='${placeholder(sm.title)}'">
-                        <div class="sim-title">${sm.title}</div>
-                        <div class="sim-meta-row" style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; margin-top:2px;">
-                            <span class="sim-match" style="color:var(--match-green); font-weight:700;">${r.score}% Match</span>
-                            <span class="sim-type" style="color:var(--streamora-cyan); font-weight:600; font-size:0.75rem;">${typeLabel}</span>
-                            <span class="sim-rating-imdb" style="color:#fbbf24;">★ ${rating}</span>
+                                    return `
+                                        <div class="sim-card" tabindex="0" onclick="navigateToMovie(${sm.item_id})" aria-label="${sm.title}" style="flex: 0 0 160px; cursor: pointer; text-align: center;">
+                                            <img src="${poster}" alt="" class="sim-poster" style="width: 100%; height: 240px; object-fit: cover; border-radius: 8px;" loading="lazy" onerror="this.src='${placeholder(sm.title)}'">
+                                            <div class="sim-title" style="font-weight: 600; font-size: 0.85rem; margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${sm.title}</div>
+                                            <div class="sim-meta-row" style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; margin-top:2px;">
+                                                <span class="sim-match" style="color:var(--match-green); font-weight:700;">${Math.round(sm.similarity_score * 100)}% Match</span>
+                                                <span class="sim-rating-imdb" style="color:#fbbf24;">★ ${rating}</span>
+                                            </div>
+                                            <div class="sim-genres-text" style="font-size:0.72rem; color:var(--text-muted); margin-top:2px; margin-bottom:4px;">${genresList} (${year})</div>
+                                            <div class="sim-explanations" style="display: flex; flex-direction: column;">
+                                                ${explHtml}
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                            <button class="carousel-arrow carousel-arrow--right" onclick="scrollCarousel(this, 1); event.stopPropagation();" aria-label="Scroll right">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                            </button>
                         </div>
-                        <div class="sim-genres-text" style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">${genresList} (${year})</div>
-                        <div class="sim-reason" style="font-size: 0.68rem; color: var(--text-muted); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 4px; margin-top:2px;" title="${r.reasoning}">${r.reasoning}</div>
                     </div>
                 `;
-            }).join('');
-
-            // Attach infinite scroll loader and arrow state updater
-            simContainer.addEventListener('scroll', () => {
-                if (simContainer.scrollWidth - simContainer.scrollLeft - simContainer.clientWidth < 300) {
-                    if (typeof window.loadMoreModalSimilar === 'function') {
-                        window.loadMoreModalSimilar();
-                    }
-                }
-                if (typeof window.updateCarouselArrows === 'function') {
-                    window.updateCarouselArrows();
-                }
-            }, { passive: true });
-
-            // Attach horizontal scrolling / dragging
-            if (typeof window.setupHorizontalScroll === 'function') {
-                window.setupHorizontalScroll(simContainer);
-            }
+                
+                shelvesContainer.innerHTML += shelfHtml;
+            });
             
-            // Initial call to set arrow state
+            // Attach generic carousel logic to dynamically created shelves
             setTimeout(() => {
-                if (typeof window.updateCarouselArrows === 'function') {
-                    window.updateCarouselArrows();
-                }
+                document.querySelectorAll('.modal-similar-row').forEach(row => {
+                    if (typeof window.setupHorizontalScroll === 'function') {
+                        window.setupHorizontalScroll(row);
+                    }
+                    // Update arrows logic
+                    row.addEventListener('scroll', () => {
+                        const leftBtn = row.parentElement.querySelector('.carousel-arrow--left');
+                        const rightBtn = row.parentElement.querySelector('.carousel-arrow--right');
+                        if (leftBtn) leftBtn.style.display = row.scrollLeft > 20 ? 'flex' : 'none';
+                        if (rightBtn) rightBtn.style.display = (row.scrollWidth - row.scrollLeft - row.clientWidth > 20) ? 'flex' : 'none';
+                    });
+                });
             }, 100);
-        } else {
-            simContainer.innerHTML = '<p>No similar titles found.</p>';
         }
     }
 
@@ -4903,21 +4918,44 @@ window.fetchModalContent = async function(id, type = 'movie', pushState = false)
 
 
     // Set loading skeletons/placeholders in modal
-    document.getElementById('modal-title').textContent = 'Loading...';
-    document.getElementById('modal-poster').src = '';
-    document.getElementById('modal-backdrop').style.backgroundImage = 'none';
-    document.getElementById('modal-synopsis').textContent = 'Fetching cinematic details...';
-    document.getElementById('modal-genres').innerHTML = '';
-    document.getElementById('modal-match').textContent = '';
-    document.getElementById('modal-similar').innerHTML = '';
+    document.getElementById('modal-title').innerHTML = '<div class="skeleton" style="width: 60%; height: 32px; border-radius: var(--r-sm);"></div>';
+    document.getElementById('modal-poster').style.display = 'none';
+    
+    // Create poster skeleton if missing
+    const posterContainer = document.getElementById('modal-poster').closest('.img-container');
+    if (posterContainer && !posterContainer.querySelector('.img-placeholder')) {
+        const placeholderDiv = document.createElement('div');
+        placeholderDiv.className = 'img-placeholder';
+        placeholderDiv.innerHTML = '<div class="skeleton" style="width: 100%; height: 100%; border-radius: var(--r-md);"></div>';
+        posterContainer.insertBefore(placeholderDiv, document.getElementById('modal-poster'));
+    }
+
+    document.getElementById('modal-backdrop').style.backgroundImage = 'linear-gradient(to bottom, rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 1))';
+    
+    document.getElementById('modal-synopsis').innerHTML = ' <div class="skeleton" style="width: 100%; height: 16px; margin-bottom: 8px;"></div><div class="skeleton" style="width: 90%; height: 16px; margin-bottom: 8px;"></div><div class="skeleton" style="width: 80%; height: 16px;"></div>';
+    
+    document.getElementById('modal-genres').innerHTML = '<div class="skeleton" style="width: 60px; height: 24px; border-radius: var(--r-pill); display: inline-block; margin-right: 8px;"></div><div class="skeleton" style="width: 75px; height: 24px; border-radius: var(--r-pill); display: inline-block;"></div>';
+    document.getElementById('modal-match').innerHTML = '<div class="skeleton" style="width: 120px; height: 20px;"></div>';
+    
+    const shelvesContainer = document.getElementById('modal-recommendation-shelves');
+    if (shelvesContainer) {
+        shelvesContainer.innerHTML = `
+            <div style="margin-bottom: 24px;">
+                <div class="skeleton" style="width: 200px; height: 24px; margin-bottom: 12px; border-radius: var(--r-sm);"></div>
+                <div style="display: flex; gap: 12px; overflow: hidden;">
+                    ${Array(4).fill('<div class="skeleton" style="flex: 0 0 160px; height: 240px; border-radius: 8px;"></div>').join('')}
+                </div>
+            </div>
+        `;
+    }
 
     try {
-        const resp = await authFetch(`/api/item/${type}/${id}`);
+        const resp = await authFetch(`/api/v2/item/${type}/${id}`);
         let m;
         if (resp.ok) {
             const data = await resp.json();
             m = data.movie;
-            m.similar_movies = data.similar || [];
+            m.recommendation_shelves = data.recommendations?.shelves || [];
         }
         if (window.activeModalRequest !== id) {
             if (window.DEBUG_MODE) console.error(`[Diagnostic] Race condition prevented! Requested ID: ${window.activeModalRequest} | Retrieved ID: ${id}. Aborting render.`);

@@ -3,9 +3,9 @@ import sys
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 
-# Ensure MovieRepository can be imported
+# Ensure CatalogRepository can be imported
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-from services.repository.movie_repository import MovieRepository
+from services.repository.catalog_db import CatalogRepository
 
 class DiscoveryQuery(BaseModel):
     genre: Optional[str] = None
@@ -18,7 +18,7 @@ class DiscoveryQuery(BaseModel):
 
 class CatalogService:
     def __init__(self):
-        self.repo = MovieRepository()
+        self.repo = CatalogRepository()
         
         # Simple cache for discovery responses
         self._cache = {}

@@ -392,18 +392,9 @@
                 </div>
 
                 <!-- 9. BECAUSE YOU WATCHED (RECOMMENDATIONS) -->
-                <div class="modal-section">
-                    <h3>Because You Viewed This</h3>
-                    <div class="modal-similar-container" id="modal-similar-container">
-                        <button class="carousel-arrow carousel-arrow--left" onclick="scrollSimilarCarousel(-1); event.stopPropagation();" aria-label="Scroll recommendations left" style="display: none;">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                        </button>
-                        <div class="modal-similar-row" id="modal-similar">
-                            <!-- Similar movie cards injected here -->
-                        </div>
-                        <button class="carousel-arrow carousel-arrow--right" onclick="scrollSimilarCarousel(1); event.stopPropagation();" aria-label="Scroll recommendations right">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                        </button>
+                <div class="modal-section" style="margin-top: 30px;">
+                    <div id="modal-recommendation-shelves">
+                        <!-- Dynamic recommendation shelves (Top Matches, Same Director, etc.) injected here -->
                     </div>
                 </div>
 
