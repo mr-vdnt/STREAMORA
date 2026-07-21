@@ -1917,24 +1917,25 @@ window.submitAuth = async function() {
             
             if (!regRes.ok) {
                 const data = await regRes.json();
-                throw new Error(data.detail || 'Registration failed');
+                let errDetail = data.detail || 'Registration failed';
+                if (typeof errDetail === 'object') errDetail = JSON.stringify(errDetail);
+                throw new Error(errDetail);
             }
         }
         
         // Login (always done, either explicitly or after signup)
-        const formData = new FormData();
-        formData.append('username', username);
-        formData.append('password', password);
-        
         const res = await fetch('/token', {
             method: 'POST',
+            headers: {'Content-Type': 'application/json'},
             credentials: 'include',
-            body: formData
+            body: JSON.stringify({username, password})
         });
         
         if (!res.ok) {
             const data = await res.json();
-            throw new Error(data.detail || 'Login failed');
+            let errDetail = data.detail || 'Login failed';
+            if (typeof errDetail === 'object') errDetail = JSON.stringify(errDetail);
+            throw new Error(errDetail);
         }
         
         const data = await res.json();
