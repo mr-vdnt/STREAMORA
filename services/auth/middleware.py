@@ -25,7 +25,14 @@ class AuthMiddleware(BaseHTTPMiddleware):
             r"^/assets/.*",
             r"^/.*\.css$",
             r"^/.*\.js$",
-            r"^/modal/.*"
+            r"^/modal/.*",
+            r"^/api/v2/home.*$",
+            r"^/api/v2/item/.*$",
+            r"^/home$",
+            r"^/movies$",
+            r"^/series$",
+            r"^/categories$",
+            r"^/search$"
         ]
         import os
         origins_str = os.getenv("ALLOWED_ORIGINS", "http://127.0.0.1:10000,http://localhost:8000,http://127.0.0.1:8000,http://localhost:3000")
