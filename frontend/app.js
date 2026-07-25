@@ -3549,86 +3549,43 @@ function selectCategory(name) {
 }
 
 async function loadSingleCategoryPage(categoryName) {
-    contentRows.innerHTML = `
-        <div class="category-detail-header" style="padding: 80px 24px 24px; display: flex; align-items: center; gap: 16px;">
-            <button class="back-btn" onclick="navigateHome();" 
-                    style="display: flex; align-items: center; gap: 8px; color: var(--text-primary); background: var(--glass-bg-2); border: 1px solid var(--glass-border); padding: 8px 16px; border-radius: var(--r-pill); font-size: 0.9rem; font-weight: 600; cursor: pointer;">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-                Back
-            </button>
-            <h1 class="category-detail-title" style="font-size: 2.2rem; font-weight: 800; color: var(--text-primary); margin: 0;">${categoryName}</h1>
-        </div>
-        <div id="category-grid-results" class="movies-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 20px; padding: 0 24px 40px;">
-        </div>
-    `;
-    
-    const gridResults = document.getElementById('category-grid-results');
-    gridResults.innerHTML = Array(12).fill(0).map(() => `
-        <div class="card-wrap skeleton" style="height: 220px; border-radius: var(--r-md); aspect-ratio: 2/3; width: 100%;"></div>
-    `).join('');
-    
-    let movies = [];
-    if (window.ragCache && window.ragCache[`category_${categoryName}`]) {
-        movies = [...window.ragCache[`category_${categoryName}`]];
-    } else {
-        try {
-            const resp = await authFetch(`/discover?genre=${encodeURIComponent(categoryName)}`);
-            if (resp.ok) {
-                const data = await resp.json();
-                movies = Array.isArray(data.results) ? data.results : [];
-                if (movies && movies.length > 0) {
-                    window.ragCache = window.ragCache || {};
-                    window.ragCache[`category_${categoryName}`] = movies;
-                }
-            }
-        } catch(e) {
-            console.warn(`Category detail API error, utilizing fallbacks for '${categoryName}':`, e);
-        }
-    }
-    
-    if (!movies || !Array.isArray(movies) || movies.length === 0) {
-        const catLower = categoryName.toLowerCase();
-        movies = FALLBACK_MOVIES.filter(m => {
-            return m.rich_metadata.genres.some(g => g.toLowerCase().includes(catLower) || catLower.includes(g.toLowerCase())) ||
-                   m.title.toLowerCase().includes(catLower) ||
-                   m.overview.toLowerCase().includes(catLower);
-        });
-        
-        if (movies.length === 0) {
-            movies = FALLBACK_MOVIES.slice(0, 6);
-        }
-    }
+    heroSection.innerHTML = '';
+    heroSection.style.display = 'none';
+    contentRows.innerHTML = '';
+    showSkeletonRows();
 
-    // Apply Movies/Series Heuristic Filtering!
-    let filtered = movies;
-    if (currentFormat === 'movie') {
-        filtered = movies.filter(m => !isSeries(m));
-    } else if (currentFormat === 'series') {
-        filtered = movies.filter(m => isSeries(m));
-    }
-    
-    // If the filtered list is empty, let's load generic fallback items of that type
-    if (filtered.length === 0) {
-        filtered = FALLBACK_MOVIES.filter(m => {
-            return currentFormat === 'all' || 
-                   (currentFormat === 'movie' && !isSeries(m)) || 
-                   (currentFormat === 'series' && isSeries(m));
-        }).slice(0, 6);
-    }
-    movies = filtered;
-    
-    if (movies && movies.length > 0) {
-        gridResults.innerHTML = '';
-        globalMovies = [...globalMovies, ...movies];
-        movies.forEach(movie => {
-            const card = document.createElement('div');
-            card.innerHTML = createMovieCardHTML(movie);
-            const card3d = card.querySelector('.card-3d');
-            if (card3d) attachTilt(card3d);
-            gridResults.appendChild(card.firstElementChild);
-        });
-    } else {
-        gridResults.innerHTML = `<div class="no-results" style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 40px;">No titles found for ${categoryName}.</div>`;
+    window.shownItems = []; 
+    let endpoint = `/api/v2/genre/${encodeURIComponent(categoryName)}`;
+
+    try {
+        const resp = await authFetch(endpoint);
+        if (resp.ok) {
+            const data = await resp.json();
+            
+            // Remove skeletons
+            const skels = document.querySelectorAll('.skeleton-row');
+            skels.forEach(s => s.remove());
+            
+            if (data.hero) {
+                registerMovies([data.hero]);
+                renderHero(data.hero);
+            }
+            
+            if (data.sections && data.sections.length > 0) {
+                data.sections.forEach(sec => {
+                    if (sec.items && sec.items.length > 0) {
+                        registerMovies(sec.items);
+                        appendRow(sec.title, sec.items);
+                    }
+                });
+            } else {
+                contentRows.innerHTML = `<div class="no-results" style="text-align: center; color: var(--text-muted); padding: 40px;">No titles found for ${categoryName}.</div>`;
+            }
+        } else {
+            console.warn(`Category detail API error, falling back`);
+        }
+    } catch(e) {
+        console.warn(`Category detail API error:`, e);
     }
 }
 

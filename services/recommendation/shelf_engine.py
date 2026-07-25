@@ -1,19 +1,60 @@
+from typing import List, Dict, Any
 from services.repository.catalog_db import CatalogRepository
-from services.recommendation.ranking_engine import RecommendationEngine
+from services.recommendation.shelves import ShelfRegistry, MovieExposure
 import random
+import datetime
 
 class ShelfEngine:
     def __init__(self):
         self.repo = CatalogRepository()
-        self.ranker = RecommendationEngine()
         
-    def _filter_and_rank(self, items, weights, limit=15, filter_func=None):
-        filtered = [item for item in items if filter_func is None or filter_func(item)]
-        custom_ranker = RecommendationEngine(custom_weights=weights)
-        ranked = custom_ranker.rank_items(filtered)
-        return ranked[:limit]
+    def _calculate_hero_score(self, m: Dict[str, Any]) -> float:
+        # Default config per user's specifications
+        cfg = {
+            "popularity": 0.30,
+            "freshness": 0.15,
+            "artwork": 0.20,
+            "trailer": 0.10,
+            "indian_popularity": 0.15,
+            "quality": 0.10
+        }
         
-    def generate_home_shelves(self, user_id=None, format="all"):
+        pop = float(m.get('popularity', 0)) / 100.0  # normalize
+        ind_pop = pop * 1.5 if "hi" in str(m.get('language', '')).lower() else pop * 0.5
+        rating = float(m.get('rating', 0)) / 10.0
+        
+        # Freshness
+        year_str = str(m.get('year', ''))
+        freshness = 0.0
+        try:
+            age = datetime.datetime.now().year - int(year_str)
+            if age <= 1: freshness = 1.0
+            elif age <= 3: freshness = 0.7
+            elif age <= 10: freshness = 0.3
+        except:
+            pass
+            
+        artwork = 1.0 if m.get('backdrop_url') else 0.0
+        trailer = 1.0 if m.get('trailer_url') else 0.0
+        
+        return (pop * cfg["popularity"] +
+                freshness * cfg["freshness"] +
+                artwork * cfg["artwork"] +
+                trailer * cfg["trailer"] +
+                ind_pop * cfg["indian_popularity"] +
+                rating * cfg["quality"])
+
+    def get_hero_item(self, movies: List[Dict]) -> Dict[str, Any]:
+        if not movies:
+            return {}
+        # Sort by hero score
+        scored = sorted(movies, key=self._calculate_hero_score, reverse=True)
+        
+        # Randomly pick from the top 5 to keep it fresh
+        top_k = scored[:5]
+        return random.choice(top_k) if top_k else {}
+
+    def generate_home_shelves(self, user_id=None, format="all") -> Dict[str, Any]:
         movies_map = self.repo.get_all()
         movies = list(movies_map.values())
         
@@ -23,76 +64,55 @@ class ShelfEngine:
         elif format == "series":
             movies = [m for m in movies if m.get('content_type') == 'series']
 
+        exposure = MovieExposure()
         shelves = []
         
-        # 1. 🔥 Everyone in India is watching
-        shelves.append({
-            "id": "india_trending",
-            "title": "🔥 Everyone in India is watching",
-            "items": self._filter_and_rank(
-                movies, 
-                weights={"popularity": 0.4, "indian_popularity": 0.5, "freshness": 0.1, "rating": 0.0, "personalization": 0.0, "engagement": 0.0, "trending_velocity": 0.0, "seasonality": 0.0, "similarity": 0.0}
-            )
-        })
+        # Use ShelfRegistry to get the shelves in home_order
+        assemblers = ShelfRegistry.get_home_shelves()
+        for assembler in assemblers:
+            shelf_data = assembler.generate(movies, exposure, context="home")
+            if shelf_data["items"]:
+                shelves.append(shelf_data)
         
-        # 2. 🎬 New this week
-        shelves.append({
-            "id": "new_releases",
-            "title": "🎬 New this week",
-            "items": self._filter_and_rank(
-                movies, 
-                weights={"popularity": 0.2, "indian_popularity": 0.1, "freshness": 0.7, "rating": 0.0, "personalization": 0.0, "engagement": 0.0, "trending_velocity": 0.0, "seasonality": 0.0, "similarity": 0.0}
-            )
-        })
-        
-        # 3. 🇮🇳 Bollywood Essentials
-        shelves.append({
-            "id": "bollywood_essentials",
-            "title": "🇮🇳 Bollywood Essentials",
-            "items": self._filter_and_rank(
-                movies, 
-                weights={"popularity": 0.3, "indian_popularity": 0.0, "freshness": 0.0, "rating": 0.7, "personalization": 0.0, "engagement": 0.0, "trending_velocity": 0.0, "seasonality": 0.0, "similarity": 0.0},
-                filter_func=lambda m: 'hi' in str(m.get('language', '')).lower() or 'bollywood' in str(m.get('genres', '')).lower()
-            )
-        })
-        
-        # 4. 💎 Hidden Gems
-        shelves.append({
-            "id": "hidden_gems",
-            "title": "💎 Hidden Gems",
-            "items": self._filter_and_rank(
-                movies, 
-                weights={"popularity": -0.5, "indian_popularity": 0.0, "freshness": 0.0, "rating": 1.0, "personalization": 0.0, "engagement": 0.0, "trending_velocity": 0.0, "seasonality": 0.0, "similarity": 0.0}
-            )
-        })
-        
-        # 5. 🧠 Mind-Bending Sci-Fi
-        shelves.append({
-            "id": "scifi_mind_bending",
-            "title": "🧠 Mind-Bending Sci-Fi",
-            "items": self._filter_and_rank(
-                movies, 
-                weights={"popularity": 0.3, "indian_popularity": 0.0, "freshness": 0.0, "rating": 0.7, "personalization": 0.0, "engagement": 0.0, "trending_velocity": 0.0, "seasonality": 0.0, "similarity": 0.0},
-                filter_func=lambda m: 'science fiction' in str(m.get('genres', '')).lower() or 'sci-fi' in str(m.get('genres', '')).lower()
-            )
-        })
-        
-        # 6. ❤️ Aurora's Picks (Randomized for now until full personalization is ready)
-        aurora_picks = self._filter_and_rank(
-            movies, 
-            weights={"popularity": 0.2, "indian_popularity": 0.2, "freshness": 0.2, "rating": 0.4, "personalization": 0.0, "engagement": 0.0, "trending_velocity": 0.0, "seasonality": 0.0, "similarity": 0.0}
-        )
-        random.shuffle(aurora_picks)
-        shelves.append({
-            "id": "aurora_picks",
-            "title": "❤️ Aurora's Picks",
-            "items": aurora_picks[:15]
-        })
-        
-        # Determine Hero item (usually the top trending Indian item)
-        hero = shelves[0]["items"][0] if shelves[0]["items"] else (movies[0] if movies else {})
+        hero = self.get_hero_item(movies)
         
         return {
             "hero": hero,
-            "sections": [s for s in shelves if len(s["items"]) > 0]
+            "sections": shelves
+        }
+        
+    def generate_genre_shelves(self, genre: str, user_id=None) -> Dict[str, Any]:
+        movies_map = self.repo.get_all()
+        all_movies = list(movies_map.values())
+        
+        genre_movies = [m for m in all_movies if genre.lower() in str(m.get('genres', '')).lower()]
+        exposure = MovieExposure()
+        
+        # Define temporary assemblers for the genre page
+        from services.recommendation.shelves import (
+            ShelfAssembler, TrendingRetriever, TrendingRanking, NewReleaseRetriever, 
+            NewReleaseRanking, HiddenGemsRetriever, QualityRanking
+        )
+        
+        assemblers = [
+            ShelfAssembler("trending_genre", f"🔥 Trending {genre.title()}", TrendingRetriever(), TrendingRanking(), limit=15, max_shelves=2),
+            ShelfAssembler("new_genre", f"🎬 New in {genre.title()}", NewReleaseRetriever(), NewReleaseRanking(), limit=15, max_shelves=2),
+            ShelfAssembler("hidden_genre", f"💎 Hidden {genre.title()} Gems", HiddenGemsRetriever(), QualityRanking(), limit=15, max_shelves=1)
+        ]
+        
+        shelves = []
+        for assembler in assemblers:
+            shelf_data = assembler.generate(genre_movies, exposure, context="genre")
+            if shelf_data["items"]:
+                shelves.append(shelf_data)
+                
+        hero = self.get_hero_item(genre_movies)
+        
+        return {
+            "hero": hero,
+            "sections": shelves,
+            "metadata": {
+                "genre": genre,
+                "total_items": len(genre_movies)
+            }
         }

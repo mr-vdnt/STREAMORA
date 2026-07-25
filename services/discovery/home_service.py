@@ -37,4 +37,9 @@ class HomeService:
             payload["sections"] = self.context_engine.reorder_shelves(payload["sections"], current_context)
             
         return payload
-
+        
+    def get_genre_payload(self, genre: str, user_id: int = None) -> dict:
+        """
+        Assembles a dedicated genre page layout with dynamic shelves.
+        """
+        return self.shelf_engine.generate_genre_shelves(genre=genre, user_id=user_id)

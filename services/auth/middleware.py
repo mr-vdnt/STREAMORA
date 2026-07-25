@@ -28,6 +28,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
             r"^/modal/.*",
             r"^/api/v2/home.*$",
             r"^/api/v2/item/.*$",
+            r"^/api/v2/genre/.*$",
             r"^/home$",
             r"^/movies$",
             r"^/series$",

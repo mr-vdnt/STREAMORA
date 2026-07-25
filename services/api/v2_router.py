@@ -65,6 +65,20 @@ def get_home_v2(request: Request, format: str = "all", current_user: dict = Depe
         "sections": payload.get("sections", [])
     }
 
+@v2_router.get("/genre/{genre}")
+def get_genre_v2(request: Request, genre: str, current_user: dict = Depends(get_optional_user)):
+    user_id = current_user["id"] if current_user else 32
+    payload = get_home_service().get_genre_payload(genre=genre, user_id=user_id)
+    
+    return {
+        "generated_at": datetime.utcnow().isoformat() + "Z",
+        "cache_age": 120,
+        "algorithm_version": "2.0",
+        "metadata": payload.get("metadata", {}),
+        "hero": payload.get("hero", {}),
+        "sections": payload.get("sections", [])
+    }
+
 @v2_router.get("/item/{content_type}/{item_id}")
 def get_item_v2(request: Request, content_type: str, item_id: int, current_user: dict = Depends(get_optional_user)):
     movie = get_catalog().get_by_id(item_id)
