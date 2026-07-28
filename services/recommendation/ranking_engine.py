@@ -5,10 +5,56 @@ import pkgutil
 import services.recommendation.scorers as scorers_pkg
 from services.recommendation.scorers.base_scorer import BaseScorer
 
+class BusinessRules:
+    """Applies strict business logic filters before ranking."""
+    @staticmethod
+    def apply(items: list, context: dict = None) -> list:
+        # Example rule: filter out items missing core fields
+        return [item for item in items if item.get('title') and item.get('item_id')]
+
+class DiversificationPolicy:
+    """Ensures a diverse mix of content in the final output."""
+    @staticmethod
+    def apply(items: list, limit: int = 15) -> list:
+        if not items:
+            return []
+            
+        diversified = []
+        seen_genres = set()
+        
+        for item in items:
+            if len(diversified) >= limit:
+                break
+                
+            # Naive diversification: avoid putting too many of the exact same primary genre back to back.
+            genres = item.get('genres', '')
+            primary_genre = genres.split('|')[0] if genres else ''
+            
+            # Allow it if we haven't seen this genre recently, or if we are desperate
+            if primary_genre not in seen_genres or len(seen_genres) > 5:
+                diversified.append(item)
+                if primary_genre:
+                    seen_genres.add(primary_genre)
+            else:
+                # If we just saw this genre, we still might add it if we clear the set periodically
+                if len(diversified) % 3 == 0:
+                    seen_genres.clear()
+                diversified.append(item)
+                
+        # Fill rest if we filtered too aggressively
+        if len(diversified) < limit:
+            for item in items:
+                if len(diversified) >= limit:
+                    break
+                if item not in diversified:
+                    diversified.append(item)
+                    
+        return diversified
+
 class RecommendationEngine:
     """
     Configurable scoring engine for ranking movies.
-    Dynamically loads all scorers from the `scorers` package.
+    Executes the full pipeline: Business Rules -> Semantic Rank -> Popularity -> Regional Boost -> Diversification
     """
     def __init__(self, custom_weights: Dict[str, float] = None):
         self.scorers: List[BaseScorer] = []
@@ -28,14 +74,10 @@ class RecommendationEngine:
                     scorer_instance = attr()
                     self.scorers.append(scorer_instance)
                     
-                    # Register default weight if not overridden
                     if scorer_instance.name not in self.weights:
                         self.weights[scorer_instance.name] = scorer_instance.default_weight
 
     def score_item(self, movie: Dict[str, Any], context: Dict[str, Any] = None) -> float:
-        """
-        Calculates the final score for a movie by aggregating all loaded scorers.
-        """
         context = context or {}
         final_score = 0.0
         
@@ -47,20 +89,28 @@ class RecommendationEngine:
                 
         return final_score
 
-    def rank_items(self, items: list, contexts: dict = None) -> list:
+    def execute_pipeline(self, items: list, contexts: dict = None, limit: int = 15) -> list:
         """
-        Ranks a list of movie dictionaries based on the scoring engine.
-        `contexts` is a dict mapping item_id -> context_dict.
+        Executes: Business Rules -> Ranking -> Diversification
+        Note: Candidate Retrieval and Exposure Policy (home page limit) are handled in shelves.py
         """
-        contexts = contexts or {}
+        # 1. Business Rules
+        filtered_items = BusinessRules.apply(items)
         
+        # 2. Score and Rank
+        contexts = contexts or {}
         scored_items = []
-        for item in items:
+        for item in filtered_items:
             iid = item.get('item_id')
             ctx = contexts.get(iid, {})
             score = self.score_item(item, ctx)
+            item['ranking_score'] = score  # Inject for debugging/UI
             scored_items.append((item, score))
             
-        # Sort by score descending
         scored_items.sort(key=lambda x: x[1], reverse=True)
-        return [item for item, score in scored_items]
+        ranked_items = [item for item, score in scored_items]
+        
+        # 3. Diversification
+        diversified_items = DiversificationPolicy.apply(ranked_items, limit=limit)
+        
+        return diversified_items

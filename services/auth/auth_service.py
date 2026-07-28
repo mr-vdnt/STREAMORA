@@ -29,15 +29,17 @@ async def login(request: Request, response: Response, payload: LoginRequest):
     req_id = getattr(request.state, "req_id", "N/A")
     ip = getattr(request.state, "client_ip", "unknown")
     
+    clean_username = payload.username.strip().lower()
+    
     # We delay response slightly for unknown users using constant time verify
-    user = get_user_by_username(payload.username)
+    user = get_user_by_username(clean_username)
     if not user:
         verify_password(payload.password, DUMMY_HASH)
-        log_event(who=payload.username, what="LOGIN_FAILED", where="/token", details="Invalid credentials", ip=ip, req_id=req_id)
+        log_event(who=clean_username, what="LOGIN_FAILED", where="/token", details="Invalid credentials", ip=ip, req_id=req_id)
         raise HTTPException(status_code=401, detail="Invalid username or password.")
         
     if not verify_password(payload.password, user["hashed_password"]):
-        log_event(who=payload.username, what="LOGIN_FAILED", where="/token", details="Invalid credentials", ip=ip, req_id=req_id)
+        log_event(who=clean_username, what="LOGIN_FAILED", where="/token", details="Invalid credentials", ip=ip, req_id=req_id)
         raise HTTPException(status_code=401, detail="Invalid username or password.")
 
     # Generate tokens
@@ -83,25 +85,28 @@ async def register(request: Request, payload: RegisterRequest):
     req_id = getattr(request.state, "req_id", "N/A")
     ip = getattr(request.state, "client_ip", "unknown")
     
-    if not validate_username(payload.username):
+    clean_username = payload.username.strip().lower()
+    clean_email = payload.email.strip().lower()
+    
+    if not validate_username(clean_username):
         raise HTTPException(status_code=400, detail="Invalid username format")
-    if not validate_email(payload.email):
+    if not validate_email(clean_email):
         raise HTTPException(status_code=400, detail="Invalid email format")
     if not validate_password(payload.password):
         raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
 
     user_id = create_user(
-        payload.username, 
-        payload.email, 
+        clean_username, 
+        clean_email, 
         hash_password(payload.password), 
         payload.display_name or payload.username
     )
     
     if not user_id:
-        log_event(who=payload.username, what="REGISTER_FAILED", where="/register", details="Username or email exists", ip=ip, req_id=req_id)
+        log_event(who=clean_username, what="REGISTER_FAILED", where="/register", details="Username or email exists", ip=ip, req_id=req_id)
         raise HTTPException(status_code=400, detail="Username or email already registered")
 
-    log_event(who=payload.username, what="REGISTER_SUCCESS", where="/register", details=f"User ID: {user_id}", ip=ip, req_id=req_id)
+    log_event(who=clean_username, what="REGISTER_SUCCESS", where="/register", details=f"User ID: {user_id}", ip=ip, req_id=req_id)
     return {"status": "success"}
 
 @router.post("/auth/refresh")

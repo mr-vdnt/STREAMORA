@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Streamora Series Experience</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="modal/modal.css">
+    <style>
+        .series-container { padding: 4rem 2rem; color: #fff; max-width: 1200px; margin: 0 auto; }
+        .series-hero { position: relative; height: 50vh; background-size: cover; background-position: center; border-radius: 16px; margin-bottom: 2rem; }
+        .series-hero-overlay { position: absolute; inset: 0; background: linear-gradient(to top, #141414, transparent); border-radius: 16px; }
+        .series-info { position: absolute; bottom: 2rem; left: 2rem; z-index: 2; }
+        .series-title { font-size: 3rem; font-weight: bold; margin: 0; }
+        
+        .heatmap-container { margin: 2rem 0; background: #222; padding: 1.5rem; border-radius: 12px; }
+        .heatmap-row { display: flex; align-items: center; margin-bottom: 0.5rem; gap: 0.5rem; }
+        .heatmap-label { width: 80px; font-weight: bold; }
+        .heatmap-boxes { display: flex; gap: 4px; }
+        .heatmap-box { width: 30px; height: 30px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: #000; font-weight: bold; }
+        
+        .ai-analysis { background: rgba(0, 150, 255, 0.1); border: 1px solid rgba(0, 150, 255, 0.3); padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; }
+        .ai-analysis h3 { color: #0096ff; margin-top: 0; }
+        
+        .season-selector { margin: 2rem 0; }
+        .season-selector select { padding: 0.5rem; border-radius: 4px; background: #333; color: white; border: none; font-size: 1.1rem; }
+        
+        .episode-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; }
+        .episode-card { background: #222; border-radius: 8px; overflow: hidden; transition: transform 0.2s; }
+        .episode-card:hover { transform: scale(1.02); }
+        .episode-img { width: 100%; height: 140px; background-size: cover; background-position: center; background-color: #333; }
+        .episode-details { padding: 1rem; }
+        .episode-title { font-weight: bold; margin-bottom: 0.5rem; }
+        .episode-overview { font-size: 0.85rem; color: #aaa; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+        
+        .visual-indicators { display: flex; gap: 1rem; margin-top: 1rem; }
+        .indicator { background: #333; padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.9rem; }
+    </style>
+</head>
+<body style="background: #141414; margin: 0; font-family: sans-serif;">
+
+    <div id="app" class="series-container">
+        <!-- Content injected by JS -->
+        <h2 style="color: #666; text-align: center; margin-top: 20vh;">Loading Premium Series Experience...</h2>
+    </div>
+
+    <script>
+        const API_URL = '/api/v2';
+        // Mock get series ID from URL (e.g. series.html?id=123)
+        const urlParams = new URLSearchParams(window.location.search);
+        const seriesId = urlParams.get('id') || 1; // Default to 1 for testing
+        let currentSeries = null;
+        let currentSeason = 1;
+        
+        function getRatingColor(rating) {
+            if (!rating) return '#444';
+            if (rating >= 8.5) return '#00C851'; // Green
+            if (rating >= 7.0) return '#a2d200'; // Light Green
+            if (rating >= 5.0) return '#ffbb33'; // Yellow
+            return '#ff4444'; // Red
+        }
+
+        async function loadSeries() {
+            try {
+                const res = await fetch(`${API_URL}/item/series/${seriesId}`);
+                const data = await res.json();
+                if (data.error) {
+                    document.getElementById('app').innerHTML = `<h2>Error: ${data.error}</h2>`;
+                    return;
+                }
+                currentSeries = data.series;
+                render();
+            } catch (err) {
+                document.getElementById('app').innerHTML = `<h2>Failed to load series.</h2>`;
+            }
+        }
+
+        function render() {
+            if (!currentSeries) return;
+            const app = document.getElementById('app');
+            
+            // Build Heatmap HTML
+            let heatmapHtml = '';
+            if (currentSeries.heatmap && currentSeries.heatmap.length > 0) {
+                heatmapHtml = currentSeries.heatmap.map(h => {
+                    const boxes = h.ratings.map(r => `
+                        <div class="heatmap-box" style="background-color: ${getRatingColor(r)}" title="Rating: ${r}">
+                            ${Math.round(r)}
+                        </div>
+                    `).join('');
+                    return `
+                        <div class="heatmap-row">
+                            <div class="heatmap-label">Season ${h.season}</div>
+                            <div class="heatmap-boxes">${boxes}</div>
+                            <div style="margin-left: 1rem; color: #888;">Avg: ${h.average.toFixed(1)}</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            
+            // AI Analysis
+            const ai = currentSeries.ai_analysis || {};
+            
+            // Render selected season
+            const seasonData = currentSeries.seasons.find(s => s.season_number === currentSeason) || currentSeries.seasons[0];
+            const episodesHtml = seasonData ? seasonData.episodes.map(ep => `
+                <div class="episode-card">
+                    <div class="episode-img" style="background-image: url('${ep.still_url || currentSeries.backdrop_url}')"></div>
+                    <div class="episode-details">
+                        <div class="episode-title">${ep.episode_number}. ${ep.title}</div>
+                        <div style="color: ${getRatingColor(ep.rating)}; font-weight: bold; margin-bottom: 0.5rem;">★ ${ep.rating || 'N/A'}</div>
+                        <div class="episode-overview">${ep.overview || 'No overview available.'}</div>
+                    </div>
+                </div>
+            `).join('') : '<p>No episodes found.</p>';
+            
+            const seasonOptions = currentSeries.seasons.map(s => 
+                `<option value="${s.season_number}" ${s.season_number === currentSeason ? 'selected' : ''}>Season ${s.season_number}</option>`
+            ).join('');
+
+            app.innerHTML = `
+                <div class="series-hero" style="background-image: url('${currentSeries.backdrop_url}')">
+                    <div class="series-hero-overlay"></div>
+                    <div class="series-info">
+                        <h1 class="series-title">${currentSeries.title}</h1>
+                        <p style="max-width: 600px; font-size: 1.1rem; line-height: 1.5;">${currentSeries.overview}</p>
+                        <div class="visual-indicators">
+                            <div class="indicator">★ ${currentSeries.rating || 'N/A'} / 10</div>
+                            <div class="indicator">${currentSeries.year}</div>
+                            <div class="indicator">${currentSeries.genres}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="ai-analysis">
+                    <h3>✨ AI Series Insight</h3>
+                    <p><strong>Story Arc:</strong> ${ai.story_arc || 'N/A'}</p>
+                    <p><strong>Mood Timeline:</strong> ${ai.mood_timeline || 'N/A'}</p>
+                    <p><strong>Highlight:</strong> ${ai.highlight || 'N/A'}</p>
+                </div>
+                
+                <h2>Episode Ratings Heatmap</h2>
+                <div class="heatmap-container">
+                    ${heatmapHtml || '<p>No ratings data available.</p>'}
+                </div>
+                
+                <div class="season-selector">
+                    <select id="seasonSelect" onchange="changeSeason(this.value)">
+                        ${seasonOptions}
+                    </select>
+                </div>
+                
+                <div class="episode-grid">
+                    ${episodesHtml}
+                </div>
+            `;
+        }
+        
+        window.changeSeason = function(val) {
+            currentSeason = parseInt(val);
+            render();
+        };
+
+        window.onload = loadSeries;
+    </script>
+</body>
+</html>

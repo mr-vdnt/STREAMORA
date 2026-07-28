@@ -1,6 +1,6 @@
 from typing import List, Dict, Any
-from services.repository.catalog_db import CatalogRepository
-from services.recommendation.shelves import ShelfRegistry, MovieExposure
+from services.repository.catalog_db import CatalogRepository, Content
+from services.recommendation.shelves import ShelfRegistry, MovieExposure, CandidateRetriever
 import random
 import datetime
 
@@ -52,26 +52,22 @@ class ShelfEngine:
         return scored[:count]
 
     def generate_home_shelves(self, user_id=None, format="all") -> Dict[str, Any]:
-        movies_map = self.repo.get_all()
-        movies = list(movies_map.values())
-        
-        # Filter by format
-        if format == "movie":
-            movies = [m for m in movies if m.get('content_type') == 'movie']
-        elif format == "series":
-            movies = [m for m in movies if m.get('content_type') == 'series']
-
         exposure = MovieExposure()
         shelves = []
         
-        # Use ShelfRegistry to get the shelves in home_order
-        assemblers = ShelfRegistry.get_home_shelves()
-        for assembler in assemblers:
-            shelf_data = assembler.generate(movies, exposure, context="home")
-            if shelf_data["items"]:
-                shelves.append(shelf_data)
-        
-        top_heroes = self.get_top_heroes(movies, count=10)
+        with self.repo.get_session() as session:
+            # Use ShelfRegistry to get the shelves in home_order
+            assemblers = ShelfRegistry.get_home_shelves()
+            for assembler in assemblers:
+                shelf_data = assembler.generate(session, exposure, format=format, context="home")
+                if shelf_data["items"]:
+                    shelves.append(shelf_data)
+            
+            # Fetch generic popular candidates for heroes
+            # We can use a basic CandidateRetriever to get top movies/series
+            hero_retriever = CandidateRetriever(min_popularity=10.0)
+            hero_candidates = hero_retriever.retrieve(session, format=format)
+            top_heroes = self.get_top_heroes(hero_candidates, count=10)
         
         return {
             "top_heroes": top_heroes,
@@ -79,37 +75,35 @@ class ShelfEngine:
         }
         
     def generate_genre_shelves(self, genre: str, user_id=None) -> Dict[str, Any]:
-        movies_map = self.repo.get_all()
-        all_movies = list(movies_map.values())
-        
-        genre_movies = [m for m in all_movies if genre.lower() in str(m.get('genres', '')).lower()]
         exposure = MovieExposure()
         
         # Define temporary assemblers for the genre page
         from services.recommendation.shelves import (
-            ShelfAssembler, TrendingRetriever, TrendingRanking, NewReleaseRetriever, 
-            NewReleaseRanking, HiddenGemsRetriever, QualityRanking
+            ShelfAssembler, TrendingRanking, NewReleaseRanking, QualityRanking, CandidateRetriever
         )
         
         assemblers = [
-            ShelfAssembler("trending_genre", f"🔥 Trending {genre.title()}", TrendingRetriever(), TrendingRanking(), limit=15, max_shelves=2),
-            ShelfAssembler("new_genre", f"🎬 New in {genre.title()}", NewReleaseRetriever(), NewReleaseRanking(), limit=15, max_shelves=2),
-            ShelfAssembler("hidden_genre", f"💎 Hidden {genre.title()} Gems", HiddenGemsRetriever(), QualityRanking(), limit=15, max_shelves=1)
+            ShelfAssembler("trending_genre", f"🔥 Trending {genre.title()}", CandidateRetriever(genre_like=genre, min_popularity=10.0), TrendingRanking(), limit=15, max_shelves=2),
+            ShelfAssembler("new_genre", f"🎬 New in {genre.title()}", CandidateRetriever(genre_like=genre, recent_years=3), NewReleaseRanking(), limit=15, max_shelves=2),
+            ShelfAssembler("hidden_genre", f"💎 Hidden {genre.title()} Gems", CandidateRetriever(genre_like=genre, min_rating=7.5, max_popularity=40.0), QualityRanking(), limit=15, max_shelves=1)
         ]
         
         shelves = []
-        for assembler in assemblers:
-            shelf_data = assembler.generate(genre_movies, exposure, context="genre")
-            if shelf_data["items"]:
-                shelves.append(shelf_data)
-                
-        top_heroes = self.get_top_heroes(genre_movies, count=5)
+        with self.repo.get_session() as session:
+            for assembler in assemblers:
+                shelf_data = assembler.generate(session, exposure, context="genre")
+                if shelf_data["items"]:
+                    shelves.append(shelf_data)
+                    
+            hero_retriever = CandidateRetriever(genre_like=genre)
+            hero_candidates = hero_retriever.retrieve(session)
+            top_heroes = self.get_top_heroes(hero_candidates, count=5)
         
         return {
             "top_heroes": top_heroes,
             "sections": shelves,
             "metadata": {
                 "genre": genre,
-                "total_items": len(genre_movies)
+                "total_items": len(hero_candidates)
             }
         }

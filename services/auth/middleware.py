@@ -17,6 +17,8 @@ class AuthMiddleware(BaseHTTPMiddleware):
             r"^/metrics$",
             r"^/token$",
             r"^/register$",
+            r"^/csrf-token$",
+            r"^/auth/refresh$",
             r"^/static/.*",
             r"^/favicon\.ico$",
             r"^/css/.*",

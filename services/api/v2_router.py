@@ -81,6 +81,22 @@ def get_genre_v2(request: Request, genre: str, current_user: dict = Depends(get_
 
 @v2_router.get("/item/{content_type}/{item_id}")
 def get_item_v2(request: Request, content_type: str, item_id: int, current_user: dict = Depends(get_optional_user)):
+    if content_type == 'series':
+        from services.discovery.series_service import SeriesService
+        series_data = SeriesService().get_series_payload(item_id)
+        if not series_data:
+            return {"error": "Series not found"}
+            
+        shelves = get_similarity().get_similar_items(item_id, top_k=15, multi_shelf=True)
+        return {
+            "series": series_data,
+            "recommendations": {
+                "generated_at": datetime.utcnow().isoformat() + "Z",
+                "engine_version": "v2",
+                "shelves": shelves
+            }
+        }
+        
     movie = get_catalog().get_by_id(item_id)
     if not movie:
         return {"error": "Item not found"}

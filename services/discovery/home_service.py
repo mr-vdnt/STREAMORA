@@ -25,15 +25,14 @@ class HomeService:
         Cached to ensure <300ms response time.
         """
         cache_key = f"{format}_{user_id}"
+        current_context = self.context_engine.get_current_context()
         
         if cache_key in self._cache:
             entry, timestamp = self._cache[cache_key]
             if time.time() - timestamp < self._cache_ttl:
                 payload = entry.copy()
                 if "top_heroes" in payload and payload["top_heroes"]:
-                    # Rotate every 10 seconds based on current time
-                    idx = int(time.time() / 10) % len(payload["top_heroes"])
-                    payload["hero"] = payload["top_heroes"][idx]
+                    payload["hero"] = self.context_engine.select_hero(payload["top_heroes"], current_context)
                 return payload
                 
         # 1. Global Discovery
@@ -44,7 +43,6 @@ class HomeService:
         # TODO: Filter or re-rank shelves based on user_prefs
         
         # 3. Context Engine
-        current_context = self.context_engine.get_current_context()
         if "sections" in payload:
             payload["sections"] = self.context_engine.reorder_shelves(payload["sections"], current_context)
             
@@ -53,8 +51,7 @@ class HomeService:
         # Assign dynamic hero before returning
         ret_payload = payload.copy()
         if "top_heroes" in ret_payload and ret_payload["top_heroes"]:
-            idx = int(time.time() / 10) % len(ret_payload["top_heroes"])
-            ret_payload["hero"] = ret_payload["top_heroes"][idx]
+            ret_payload["hero"] = self.context_engine.select_hero(ret_payload["top_heroes"], current_context)
             
         return ret_payload
         
@@ -63,10 +60,10 @@ class HomeService:
         Assembles a dedicated genre page layout with dynamic shelves.
         """
         payload = self.shelf_engine.generate_genre_shelves(genre=genre, user_id=user_id)
+        current_context = self.context_engine.get_current_context()
         
         # Assign dynamic hero before returning
         if "top_heroes" in payload and payload["top_heroes"]:
-            idx = int(time.time() / 10) % len(payload["top_heroes"])
-            payload["hero"] = payload["top_heroes"][idx]
+            payload["hero"] = self.context_engine.select_hero(payload["top_heroes"], current_context)
             
         return payload
