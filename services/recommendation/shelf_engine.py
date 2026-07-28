@@ -44,15 +44,12 @@ class ShelfEngine:
                 ind_pop * cfg["indian_popularity"] +
                 rating * cfg["quality"])
 
-    def get_hero_item(self, movies: List[Dict]) -> Dict[str, Any]:
+    def get_top_heroes(self, movies: List[Dict], count=5) -> List[Dict]:
         if not movies:
-            return {}
+            return []
         # Sort by hero score
         scored = sorted(movies, key=self._calculate_hero_score, reverse=True)
-        
-        # Randomly pick from the top 5 to keep it fresh
-        top_k = scored[:5]
-        return random.choice(top_k) if top_k else {}
+        return scored[:count]
 
     def generate_home_shelves(self, user_id=None, format="all") -> Dict[str, Any]:
         movies_map = self.repo.get_all()
@@ -74,10 +71,10 @@ class ShelfEngine:
             if shelf_data["items"]:
                 shelves.append(shelf_data)
         
-        hero = self.get_hero_item(movies)
+        top_heroes = self.get_top_heroes(movies, count=10)
         
         return {
-            "hero": hero,
+            "top_heroes": top_heroes,
             "sections": shelves
         }
         
@@ -106,10 +103,10 @@ class ShelfEngine:
             if shelf_data["items"]:
                 shelves.append(shelf_data)
                 
-        hero = self.get_hero_item(genre_movies)
+        top_heroes = self.get_top_heroes(genre_movies, count=5)
         
         return {
-            "hero": hero,
+            "top_heroes": top_heroes,
             "sections": shelves,
             "metadata": {
                 "genre": genre,

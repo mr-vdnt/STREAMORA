@@ -58,6 +58,25 @@ async def login(request: Request, response: Response, payload: LoginRequest):
         "email": user["email"]
     }
 
+@router.get("/csrf-token")
+@limiter.limit("10/minute")
+async def get_csrf_token(request: Request, response: Response):
+    import secrets
+    import os
+    
+    SECURE_COOKIES = os.getenv("ENVIRONMENT", "development").lower() == "production"
+    csrf_token = secrets.token_hex(32)
+    response.set_cookie(
+        key="csrf_token",
+        value=csrf_token,
+        httponly=False,
+        secure=SECURE_COOKIES,
+        samesite="lax",
+        max_age=30 * 24 * 60 * 60,
+        path="/"
+    )
+    return {"status": "success", "csrf_token": csrf_token}
+
 @router.post("/register")
 @limiter.limit("5/minute")
 async def register(request: Request, payload: RegisterRequest):
@@ -105,6 +124,10 @@ async def refresh_token(request: Request, response: Response):
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
         
+    # Revoke old refresh token
+    from services.security.user_data import revoke_token
+    revoke_token(refresh_token)
+    
     # Generate new tokens (Rotation)
     user_data = {"sub": user["username"], "role": user["role"], "user_id": user["id"]}
     new_access_token = create_access_token(data=user_data)
@@ -123,6 +146,15 @@ async def logout(request: Request, response: Response):
     
     user = getattr(request.state, "user", None)
     who = user.get("sub") if user else "Unknown"
+    
+    # Revoke tokens
+    access_token = request.cookies.get("access_token")
+    refresh_token = request.cookies.get("refresh_token")
+    from services.security.user_data import revoke_token
+    if access_token:
+        revoke_token(access_token)
+    if refresh_token:
+        revoke_token(refresh_token)
     
     clear_auth_cookies(response)
     log_event(who=who, what="LOGOUT", where="/logout", details="", ip=ip, req_id=req_id)

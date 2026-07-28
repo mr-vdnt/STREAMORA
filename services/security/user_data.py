@@ -52,8 +52,37 @@ def init_db():
     )
     ''')
     
+    # Revoked tokens table
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS revoked_tokens (
+        token TEXT PRIMARY KEY,
+        revoked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    ''')
+    
     conn.commit()
     conn.close()
+
+def revoke_token(token: str):
+    """Revokes a JWT token by adding it to the blocklist."""
+    if not token:
+        return
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("INSERT OR IGNORE INTO revoked_tokens (token) VALUES (?)", (token,))
+    conn.commit()
+    conn.close()
+
+def is_token_revoked(token: str) -> bool:
+    """Checks if a JWT token has been revoked."""
+    if not token:
+        return True
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1 FROM revoked_tokens WHERE token = ?", (token,))
+    row = cursor.fetchone()
+    conn.close()
+    return row is not None
 
 def create_user(username: str, email: str, hashed_password: str, display_name: str) -> Optional[int]:
     """Creates a new user and returns their ID. Returns None if username/email exists."""

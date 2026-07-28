@@ -16,14 +16,26 @@ class HomeService:
         self.shelf_engine = ShelfEngine()
         self.context_engine = ContextEngine()
         self.preference_engine = PreferenceEngine()
+        self._cache = {}
+        self._cache_ttl = 300 # 5 minutes
         
     def get_home_payload(self, format: str = "all", user_id: int = None) -> dict:
         """
-        Assembles the entire homepage layout using the three-stage pipeline:
-        1. Global Discovery
-        2. Personalization
-        3. Context Engine
+        Assembles the entire homepage layout using the three-stage pipeline.
+        Cached to ensure <300ms response time.
         """
+        cache_key = f"{format}_{user_id}"
+        
+        if cache_key in self._cache:
+            entry, timestamp = self._cache[cache_key]
+            if time.time() - timestamp < self._cache_ttl:
+                payload = entry.copy()
+                if "top_heroes" in payload and payload["top_heroes"]:
+                    # Rotate every 10 seconds based on current time
+                    idx = int(time.time() / 10) % len(payload["top_heroes"])
+                    payload["hero"] = payload["top_heroes"][idx]
+                return payload
+                
         # 1. Global Discovery
         payload = self.shelf_engine.generate_home_shelves(user_id=user_id, format=format)
         
@@ -36,10 +48,25 @@ class HomeService:
         if "sections" in payload:
             payload["sections"] = self.context_engine.reorder_shelves(payload["sections"], current_context)
             
-        return payload
+        self._cache[cache_key] = (payload, time.time())
+        
+        # Assign dynamic hero before returning
+        ret_payload = payload.copy()
+        if "top_heroes" in ret_payload and ret_payload["top_heroes"]:
+            idx = int(time.time() / 10) % len(ret_payload["top_heroes"])
+            ret_payload["hero"] = ret_payload["top_heroes"][idx]
+            
+        return ret_payload
         
     def get_genre_payload(self, genre: str, user_id: int = None) -> dict:
         """
         Assembles a dedicated genre page layout with dynamic shelves.
         """
-        return self.shelf_engine.generate_genre_shelves(genre=genre, user_id=user_id)
+        payload = self.shelf_engine.generate_genre_shelves(genre=genre, user_id=user_id)
+        
+        # Assign dynamic hero before returning
+        if "top_heroes" in payload and payload["top_heroes"]:
+            idx = int(time.time() / 10) % len(payload["top_heroes"])
+            payload["hero"] = payload["top_heroes"][idx]
+            
+        return payload

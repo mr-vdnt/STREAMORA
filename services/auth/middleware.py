@@ -43,16 +43,27 @@ class AuthMiddleware(BaseHTTPMiddleware):
             self.allowed_origins.append(render_url.rstrip("/"))
 
     async def dispatch(self, request: Request, call_next):
-        # CSRF Protection: Verify Origin for state-changing methods
+        # CSRF Protection: Verify X-CSRF-Token matches csrf_token cookie for state-changing methods
         if request.method in ["POST", "PUT", "DELETE", "PATCH"]:
-            origin = request.headers.get("origin")
-            referer = request.headers.get("referer")
-            
-            # Allow if no origin/referer (e.g., direct API client), but block mismatched origins
-            if origin and origin not in self.allowed_origins:
-                return JSONResponse(status_code=403, content={"detail": "CSRF check failed: Invalid Origin"})
-            if referer and not any(referer.startswith(o) for o in self.allowed_origins):
-                return JSONResponse(status_code=403, content={"detail": "CSRF check failed: Invalid Referer"})
+            # Bypass CSRF checks for auth creation endpoints
+            if request.url.path in ["/token", "/register"]:
+                pass
+            else:
+                csrf_cookie = request.cookies.get("csrf_token")
+                csrf_header = request.headers.get("x-csrf-token")
+                
+                # Check Origin/Referer as defense-in-depth
+                origin = request.headers.get("origin")
+                referer = request.headers.get("referer")
+                if origin and origin not in self.allowed_origins:
+                    return JSONResponse(status_code=403, content={"detail": "CSRF check failed: Invalid Origin"})
+                if referer and not any(referer.startswith(o) for o in self.allowed_origins):
+                    return JSONResponse(status_code=403, content={"detail": "CSRF check failed: Invalid Referer"})
+                
+                # Primary CSRF check: Double Submit Cookie
+                if not csrf_cookie or not csrf_header or csrf_cookie != csrf_header:
+                    log_event("Unknown", "CSRF_FAILED", request.url.path, "CSRF token missing or mismatch", request.client.host if request.client else "unknown", "N/A")
+                    return JSONResponse(status_code=403, content={"detail": "CSRF verification failed"})
 
         # Check if the path is public
         is_public = any(re.match(pattern, request.url.path) for pattern in self.public_paths)

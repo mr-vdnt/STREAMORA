@@ -8,10 +8,10 @@ class MovieExposure:
     def __init__(self):
         self.homepage_count: Dict[int, int] = {}
         self.genre_count: Dict[int, int] = {}
-        # Could add theme_count, etc.
 
-    def can_show_on_homepage(self, item_id: int, max_exposures: int = 2) -> bool:
-        return self.homepage_count.get(item_id, 0) < max_exposures
+    def can_show_on_homepage(self, item_id: int, max_exposures: int = 1) -> bool:
+        # Enforce zero duplicates on homepage (max_exposures = 1)
+        return self.homepage_count.get(item_id, 0) < 1
 
     def record_homepage_exposure(self, item_id: int):
         self.homepage_count[item_id] = self.homepage_count.get(item_id, 0) + 1
@@ -23,7 +23,7 @@ class CandidateRetriever:
 
 class TrendingRetriever(CandidateRetriever):
     def retrieve(self, movies: List[Dict]) -> List[Dict]:
-        return [m for m in movies if float(m.get('popularity', 0)) > 50.0]
+        return [m for m in movies if float(m.get('popularity', 0)) > 20.0]
 
 class NewReleaseRetriever(CandidateRetriever):
     def __init__(self):
@@ -32,7 +32,7 @@ class NewReleaseRetriever(CandidateRetriever):
     def retrieve(self, movies: List[Dict]) -> List[Dict]:
         def is_recent(year_str):
             try:
-                return int(year_str) >= (self.current_year - 1)
+                return int(year_str) >= (self.current_year - 2)
             except:
                 return False
         return [m for m in movies if is_recent(str(m.get('year', '')))]
@@ -46,7 +46,7 @@ class GenreRetriever(CandidateRetriever):
 
 class HiddenGemsRetriever(CandidateRetriever):
     def retrieve(self, movies: List[Dict]) -> List[Dict]:
-        return [m for m in movies if float(m.get('rating', 0)) >= 8.0 and float(m.get('popularity', 100)) < 40.0]
+        return [m for m in movies if float(m.get('rating', 0)) >= 7.5 and float(m.get('popularity', 100)) < 40.0]
 
 class AuroraPicksRetriever(CandidateRetriever):
     def retrieve(self, movies: List[Dict]) -> List[Dict]:
@@ -57,28 +57,28 @@ class AuroraPicksRetriever(CandidateRetriever):
 
 class RankingStrategy:
     def get_weights(self) -> Dict[str, float]:
-        return {"popularity": 1.0}
+        return {"popularity": 1.0, "indian_popularity": 0.5}
 
 class TrendingRanking(RankingStrategy):
     def get_weights(self) -> Dict[str, float]:
-        return {"popularity": 0.7, "indian_popularity": 0.5, "freshness": 0.1, "rating": 0.0}
+        # Indian-first ranking heavily prioritizes indian_popularity
+        return {"popularity": 0.5, "indian_popularity": 1.0, "freshness": 0.1, "rating": 0.0}
 
 class NewReleaseRanking(RankingStrategy):
     def get_weights(self) -> Dict[str, float]:
-        return {"popularity": 0.5, "indian_popularity": 0.2, "freshness": 1.0, "rating": 0.0}
+        return {"popularity": 0.3, "indian_popularity": 0.8, "freshness": 1.0, "rating": 0.0}
 
 class QualityRanking(RankingStrategy):
     def get_weights(self) -> Dict[str, float]:
-        return {"popularity": -0.5, "indian_popularity": 0.0, "freshness": 0.0, "rating": 1.0}
+        return {"popularity": -0.2, "indian_popularity": 0.4, "freshness": 0.0, "rating": 1.0}
 
 class AuroraPicksRanking(RankingStrategy):
     def get_weights(self) -> Dict[str, float]:
-        # Novelty + Quality + Semantic
-        return {"popularity": -0.2, "indian_popularity": 0.0, "freshness": 0.5, "rating": 0.8, "personalization": 0.0}
+        return {"popularity": 0.0, "indian_popularity": 0.6, "freshness": 0.5, "rating": 0.8, "personalization": 0.0}
 
 
 class ShelfAssembler:
-    def __init__(self, id: str, title: str, retriever: CandidateRetriever, ranking: RankingStrategy, limit: int = 15, max_shelves: int = 2):
+    def __init__(self, id: str, title: str, retriever: CandidateRetriever, ranking: RankingStrategy, limit: int = 15, max_shelves: int = 1):
         self.id = id
         self.title = title
         self.retriever = retriever
@@ -117,6 +117,28 @@ class ShelfAssembler:
         }
 
 
+class ThemeRetriever(CandidateRetriever):
+    def __init__(self, theme: str):
+        self.theme = theme.lower()
+    def retrieve(self, movies: List[Dict]) -> List[Dict]:
+        return [m for m in movies if self.theme in str(m.get('themes', '')).lower()]
+
+class LanguageRetriever(CandidateRetriever):
+    def __init__(self, languages: List[str]):
+        self.languages = [l.lower() for l in languages]
+    def retrieve(self, movies: List[Dict]) -> List[Dict]:
+        return [m for m in movies if str(m.get('language', '')).lower() in self.languages]
+
+class ContentTypeRetriever(CandidateRetriever):
+    def __init__(self, content_type: str):
+        self.content_type = content_type.lower()
+    def retrieve(self, movies: List[Dict]) -> List[Dict]:
+        return [m for m in movies if str(m.get('content_type', '')).lower() == self.content_type]
+
+class TopIMDbRetriever(CandidateRetriever):
+    def retrieve(self, movies: List[Dict]) -> List[Dict]:
+        return [m for m in movies if float(m.get('rating', 0)) >= 8.5]
+
 class ShelfRegistry:
     _shelves: Dict[str, ShelfAssembler] = {}
     _home_order: List[str] = []
@@ -135,32 +157,24 @@ class ShelfRegistry:
     def get_home_shelves(cls) -> List[ShelfAssembler]:
         return [cls._shelves[sid] for sid in cls._home_order if sid in cls._shelves]
 
-# Register default shelves
-ShelfRegistry.register(
-    ShelfAssembler("aurora_picks", "❤️ Aurora's Picks", AuroraPicksRetriever(), AuroraPicksRanking(), limit=15, max_shelves=2),
-    home_order=1
-)
-ShelfRegistry.register(
-    ShelfAssembler("trending_india", "🔥 Trending in India", TrendingRetriever(), TrendingRanking(), limit=15, max_shelves=2),
-    home_order=2
-)
-ShelfRegistry.register(
-    ShelfAssembler("new_releases", "🎬 New this week", NewReleaseRetriever(), NewReleaseRanking(), limit=15, max_shelves=2),
-    home_order=3
-)
-ShelfRegistry.register(
-    ShelfAssembler("scifi_picks", "🧠 Mind-Bending Sci-Fi", GenreRetriever("science fiction"), TrendingRanking(), limit=15, max_shelves=2),
-    home_order=4
-)
-ShelfRegistry.register(
-    ShelfAssembler("bollywood_hits", "🇮🇳 Bollywood Hits", GenreRetriever("bollywood"), TrendingRanking(), limit=15, max_shelves=2),
-    home_order=5
-)
-ShelfRegistry.register(
-    ShelfAssembler("comedy_gold", "😂 Comedy Gold", GenreRetriever("comedy"), TrendingRanking(), limit=15, max_shelves=2),
-    home_order=6
-)
-ShelfRegistry.register(
-    ShelfAssembler("hidden_gems", "💎 Hidden Gems", HiddenGemsRetriever(), QualityRanking(), limit=15, max_shelves=1),
-    home_order=7
-)
+# Register 20 exact shelves for RC2.2
+ShelfRegistry.register(ShelfAssembler("trending_india", "Trending India", TrendingRetriever(), TrendingRanking(), limit=20), home_order=1)
+ShelfRegistry.register(ShelfAssembler("new_releases", "New Releases", NewReleaseRetriever(), NewReleaseRanking(), limit=20), home_order=2)
+ShelfRegistry.register(ShelfAssembler("bollywood", "Bollywood", LanguageRetriever(["hi"]), TrendingRanking(), limit=20), home_order=3)
+ShelfRegistry.register(ShelfAssembler("south_indian", "South Indian", LanguageRetriever(["te", "ta", "ml", "kn"]), TrendingRanking(), limit=20), home_order=4)
+ShelfRegistry.register(ShelfAssembler("anime", "Anime", ContentTypeRetriever("anime"), TrendingRanking(), limit=20), home_order=5)
+ShelfRegistry.register(ShelfAssembler("korean_dramas", "Korean Dramas", LanguageRetriever(["ko"]), TrendingRanking(), limit=20), home_order=6)
+ShelfRegistry.register(ShelfAssembler("scifi", "Sci-Fi", GenreRetriever("science fiction"), TrendingRanking(), limit=20), home_order=7)
+ShelfRegistry.register(ShelfAssembler("crime", "Crime", GenreRetriever("crime"), TrendingRanking(), limit=20), home_order=8)
+ShelfRegistry.register(ShelfAssembler("mystery", "Mystery", GenreRetriever("mystery"), TrendingRanking(), limit=20), home_order=9)
+ShelfRegistry.register(ShelfAssembler("comedy", "Comedy", GenreRetriever("comedy"), TrendingRanking(), limit=20), home_order=10)
+ShelfRegistry.register(ShelfAssembler("family", "Family", GenreRetriever("family"), TrendingRanking(), limit=20), home_order=11)
+ShelfRegistry.register(ShelfAssembler("oscar_winners", "Oscar Winners", ThemeRetriever("oscars"), QualityRanking(), limit=20), home_order=12)
+ShelfRegistry.register(ShelfAssembler("hidden_gems", "Hidden Gems", HiddenGemsRetriever(), QualityRanking(), limit=20), home_order=13)
+ShelfRegistry.register(ShelfAssembler("classic_movies", "Classic Movies", ThemeRetriever("classics"), QualityRanking(), limit=20), home_order=14)
+ShelfRegistry.register(ShelfAssembler("top_imdb", "Top IMDb", TopIMDbRetriever(), QualityRanking(), limit=20), home_order=15)
+ShelfRegistry.register(ShelfAssembler("netflix_trending", "Netflix Trending", ThemeRetriever("netflix"), TrendingRanking(), limit=20), home_order=16)
+ShelfRegistry.register(ShelfAssembler("prime_video_trending", "Prime Video Trending", ThemeRetriever("prime"), TrendingRanking(), limit=20), home_order=17)
+ShelfRegistry.register(ShelfAssembler("disney_picks", "Disney Picks", ThemeRetriever("disney"), TrendingRanking(), limit=20), home_order=18)
+ShelfRegistry.register(ShelfAssembler("mind_bending", "Mind Bending", GenreRetriever("thriller"), AuroraPicksRanking(), limit=20), home_order=19)
+ShelfRegistry.register(ShelfAssembler("continue_watching", "Continue Watching", AuroraPicksRetriever(), QualityRanking(), limit=20), home_order=20)

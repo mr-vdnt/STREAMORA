@@ -1833,9 +1833,25 @@ let userId = userProfile ? userProfile.id : null;
 let isGuest = false;
 let isAuthModeLogin = true;
 
+function getCsrfToken() {
+    const match = document.cookie.match(new RegExp('(^| )csrf_token=([^;]+)'));
+    return match ? match[2] : null;
+}
+
 async function authFetch(url, options = {}) {
     options.headers = options.headers || {};
     options.credentials = 'include'; // Ensure cookies are sent
+    
+    if (options.method && options.method.toUpperCase() !== 'GET') {
+        let csrf = getCsrfToken();
+        if (!csrf && url !== '/csrf-token') {
+            await fetch('/csrf-token', { credentials: 'include' });
+            csrf = getCsrfToken();
+        }
+        if (csrf) {
+            options.headers['X-CSRF-Token'] = csrf;
+        }
+    }
     
     let res = await fetch(url, options);
     
@@ -1844,6 +1860,10 @@ async function authFetch(url, options = {}) {
         const refreshRes = await fetch('/auth/refresh', { method: 'POST', credentials: 'include' });
         if (refreshRes.ok) {
             // Retry original request
+            if (options.method && options.method.toUpperCase() !== 'GET') {
+                const newCsrf = getCsrfToken();
+                if (newCsrf) options.headers['X-CSRF-Token'] = newCsrf;
+            }
             res = await fetch(url, options);
         } else {
             // Refresh failed, force logout
@@ -2047,31 +2067,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.updateFormatTabs();
     
     // Auth Check
-    if (token) {
-        try {
-            const res = await authFetch('/me');
-            if (res.ok) {
-                const userData = await res.json();
-                userProfile = userData;
-                userId = userData.id;
-                isGuest = false;
-                await syncWatchlistFromBackend();
-                hideAuthScreen();
-                initApp();
-            } else {
-                // Token is invalid
-                localStorage.removeItem('streamora_jwt');
-                localStorage.removeItem('streamora_profile');
-                token = null;
-                showAuthScreen();
-            }
-        } catch(e) {
+    try {
+        const res = await authFetch('/me');
+        if (res.ok) {
+            const userData = await res.json();
+            userProfile = userData;
+            userId = userData.id;
+            isGuest = false;
+            localStorage.setItem('streamora_profile', JSON.stringify(userProfile));
+            await syncWatchlistFromBackend();
+            hideAuthScreen();
+            initApp();
+        } else {
+            // Token is invalid or not logged in
             localStorage.removeItem('streamora_jwt');
             localStorage.removeItem('streamora_profile');
-            token = null;
             showAuthScreen();
         }
-    } else {
+    } catch(e) {
         showAuthScreen();
     }
 });
@@ -5324,7 +5337,7 @@ window.submitFeedback = function() {
 window.performLogOut = async function() {
     closeDrawerModalDirect();
     try {
-        await fetch('/logout', { method: 'POST', credentials: 'include' });
+        await authFetch('/logout', { method: 'POST' });
     } catch (e) {
         console.error("Logout failed:", e);
     }

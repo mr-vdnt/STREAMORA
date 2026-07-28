@@ -659,3 +659,18 @@ def metrics():
 # Mount frontend directory at root
 frontend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../frontend'))
 app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
+
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.responses import FileResponse
+
+@app.exception_handler(StarletteHTTPException)
+async def spa_catch_all(request: Request, exc: StarletteHTTPException):
+    if exc.status_code == 404:
+        path = request.url.path
+        if path.startswith("/api/") or path.startswith("/auth/") or path.startswith("/health/"):
+            return JSONResponse(status_code=404, content={"detail": "Not Found"})
+        
+        index_file = os.path.join(frontend_path, "index.html")
+        if os.path.exists(index_file):
+            return FileResponse(index_file)
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})

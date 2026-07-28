@@ -274,18 +274,18 @@ class OrchestratorAgent:
                 profile_store = InMemoryProfileStore()
             
             user_adapter = PersonalizationAdapter(store=profile_store)
-            content_adapter = ContentIntelligenceAdapter(self.movies_db)
+            content_adapter = ContentIntelligenceAdapter(movies_db)
             
             registry = GeneratorRegistry()
-            exact_engine = DeterministicSearchEngine(self.movies_db)
+            exact_engine = DeterministicSearchEngine(movies_db)
             registry.register(ExactSearchGenerator(exact_engine))
             registry.register(SemanticGenerator("data/index/movies.index"))
-            registry.register(MetadataGenerator(self.movies_db))
-            registry.register(PersonalizationGenerator(self.movies_db, user_adapter))
-            registry.register(KnowledgeGraphGenerator(self.movies_db, content_adapter))
+            registry.register(MetadataGenerator(movies_db))
+            registry.register(PersonalizationGenerator(movies_db, user_adapter))
+            registry.register(KnowledgeGraphGenerator(movies_db, content_adapter))
             
             t_retrieval_start = time.time()
-            hybrid_engine = HybridRetrievalEngine(registry, self.movies_db)
+            hybrid_engine = HybridRetrievalEngine(registry, movies_db)
             retrieval_output = hybrid_engine.generate_candidates(query_plan)
             t_retrieval_end = time.time()
             
@@ -296,13 +296,13 @@ class OrchestratorAgent:
             
             t_ranking_start = time.time()
             from services.ranking.decision_engine import DecisionEngine
-            decision_engine = DecisionEngine(self.movies_db, user_adapter, content_adapter)
+            decision_engine = DecisionEngine(movies_db, user_adapter, content_adapter)
             recommendation_package = decision_engine.process(retrieval_output)
             t_ranking_end = time.time()
             
             t_presentation_start = time.time()
             from services.presentation.engine import PresentationEngine
-            presentation_engine = PresentationEngine(self.movies_db, user_adapter, content_adapter)
+            presentation_engine = PresentationEngine(movies_db, user_adapter, content_adapter)
             intent = query_plan.get("entities", {}).get("intent", "search")
             
             # Send initial timing metrics

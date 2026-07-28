@@ -70,12 +70,14 @@ class TestAuth(unittest.TestCase):
     def test_d_logout_clears_cookie(self):
         client = TestClient(app)
         # Login
-        client.post("/token", json={
+        response = client.post("/token", json={
             "username": self.test_username,
             "password": self.test_password
         })
+        csrf_token = response.cookies.get("csrf_token") or client.cookies.get("csrf_token")
+        
         # Logout
-        logout_response = client.post("/logout")
+        logout_response = client.post("/logout", headers={"X-CSRF-Token": csrf_token})
         self.assertEqual(logout_response.status_code, 200)
         
         # Access protected route (should fail)

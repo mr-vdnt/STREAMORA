@@ -34,7 +34,12 @@ def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None) 
     return encoded_jwt
 
 def verify_token(token: str, token_type: str = "access") -> Optional[Dict[str, Any]]:
-    """Verifies a JWT and returns its payload if valid, None otherwise."""
+    """Verifies a JWT and returns its payload if valid and not revoked, None otherwise."""
+    from services.security.user_data import is_token_revoked
+    
+    if is_token_revoked(token):
+        return None
+        
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         if payload.get("type") != token_type:
