@@ -377,6 +377,85 @@ class RecommendationFeatures(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+# ─────────────────────────────────────────────────────────────
+# Data Acquisition Platform (DAP) — Ingestion Tables
+# These tables are isolated from catalog domain models.
+# ─────────────────────────────────────────────────────────────
+
+class IngestionJob(Base):
+    """Tracks each connector execution run."""
+    __tablename__ = 'ingestion_jobs'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    uuid = Column(String(36), unique=True, nullable=False, index=True, default=lambda: str(uuid.uuid4()))
+    connector_name = Column(String(100), nullable=False, index=True)
+    job_type = Column(String(50), nullable=False)  # full_sync, incremental, on_demand
+    status = Column(String(50), default="pending", index=True)  # pending, running, completed, failed, partial
+    started_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    items_fetched = Column(Integer, default=0)
+    items_ingested = Column(Integer, default=0)
+    items_skipped = Column(Integer, default=0)
+    items_failed = Column(Integer, default=0)
+    error_summary = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class RawPayload(Base):
+    """Immutable record of every provider response."""
+    __tablename__ = 'raw_payloads'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    job_id = Column(Integer, ForeignKey('ingestion_jobs.id'), nullable=False)
+    connector_name = Column(String(100), nullable=False, index=True)
+    external_id = Column(String(100), nullable=False, index=True)
+    entity_type = Column(String(50), nullable=False)  # movie, tvseries
+    payload_json = Column(Text, nullable=False)  # Raw JSON from provider
+    payload_hash = Column(String(64), nullable=False, index=True)  # SHA-256 for change detection
+    fetched_at = Column(DateTime, default=datetime.utcnow)
+
+
+class SyncCheckpoint(Base):
+    """Tracks connector cursor state for incremental sync."""
+    __tablename__ = 'sync_checkpoints'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    connector_name = Column(String(100), unique=True, nullable=False)
+    last_sync_at = Column(DateTime, nullable=False)
+    cursor_value = Column(String(255), nullable=True)  # Provider-specific cursor
+    items_synced = Column(Integer, default=0)
+
+
+class DeadLetterRecord(Base):
+    """Failed payloads for manual inspection and retry."""
+    __tablename__ = 'dead_letter_records'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    job_id = Column(Integer, ForeignKey('ingestion_jobs.id'), nullable=False)
+    connector_name = Column(String(100), nullable=False, index=True)
+    external_id = Column(String(100), nullable=False)
+    payload_json = Column(Text, nullable=True)
+    failure_stage = Column(String(100), nullable=False)  # validation, normalization, resolution, write
+    failure_reason = Column(Text, nullable=False)
+    retry_count = Column(Integer, default=0)
+    max_retries = Column(Integer, default=3)
+    is_resolved = Column(Boolean, default=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class IngestionProvenance(Base):
+    """Links catalog Content entities back to their ingestion source."""
+    __tablename__ = 'ingestion_provenance'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    content_id = Column(Integer, ForeignKey('contents.id'), nullable=False)
+    connector_name = Column(String(100), nullable=False)
+    raw_payload_id = Column(Integer, ForeignKey('raw_payloads.id'), nullable=True)
+    job_id = Column(Integer, ForeignKey('ingestion_jobs.id'), nullable=True)
+    ingested_at = Column(DateTime, default=datetime.utcnow)
+    quality_score = Column(Float, default=0.0)
+
+
 class CatalogRepository:
     """
     Master SQLAlchemy Catalog Repository backing canonical schema.

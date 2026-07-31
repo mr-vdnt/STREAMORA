@@ -8,6 +8,10 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')
 from services.repository.catalog_db import CatalogRepository, Content
 from services.recommendation.ranking_engine import RecommendationEngine
 
+from services.repository.catalog_db import (
+    CatalogRepository, Content, ContentMetadata, ContentArtwork, ContentStatistics
+)
+
 class HeroService:
     """
     Dedicated Service for Hero Content Intelligence & Selection.
@@ -25,20 +29,42 @@ class HeroService:
     def select_hero(self, session: Session, format: str = "all", context: Dict[str, Any] = None) -> Optional[Dict[str, Any]]:
         context = context or {}
         
-        # 1. Candidate Retrieval (Top 25 highly rated/popular items)
-        query = session.query(Content)
+        # 1. Candidate Retrieval (Top 25 highly rated/popular items from canonical schema)
+        query = session.query(Content).join(Content.statistics_rel).filter(Content.is_deleted == False)
         if format == "movie":
             query = query.filter(Content.entity_type == 'movie')
         elif format == "series":
             query = query.filter(Content.entity_type == 'tvseries')
             
-        query = query.filter(Content.rating >= 7.0).order_by(desc(Content.popularity)).limit(25)
+        query = query.order_by(desc(ContentStatistics.popularity)).limit(25)
         raw_candidates = query.all()
         
         if not raw_candidates:
             return None
             
-        candidates = [{c.key: getattr(item, c.key) for c in item.__mapper__.columns.values()} for item in raw_candidates]
+        candidates = []
+        for item in raw_candidates:
+            meta = item.metadata_rel
+            art = item.artwork_rel
+            stats = item.statistics_rel
+            c_dict = {
+                "id": item.id,
+                "uuid": item.uuid,
+                "slug": item.slug,
+                "entity_type": item.entity_type,
+                "title": meta.title if meta else "",
+                "original_title": meta.original_title if meta else "",
+                "overview": meta.overview if meta else "",
+                "tagline": meta.tagline if meta else "",
+                "release_date": meta.release_date if meta else "",
+                "runtime": meta.runtime if meta else 0,
+                "poster_url": art.poster_url if art else None,
+                "backdrop_url": art.backdrop_url if art else None,
+                "rating": stats.average_rating if stats else 0.0,
+                "popularity": stats.popularity if stats else 0.0,
+                "genres": [cg.genre.name for cg in item.genres_rel if cg.genre] if hasattr(item, 'genres_rel') and item.genres_rel else [],
+            }
+            candidates.append(c_dict)
         
         # 2. Hero Ranking via Scorer Pipeline
         scored_candidates = []

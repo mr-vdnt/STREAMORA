@@ -83,23 +83,68 @@ def get_genre_v2(request: Request, genre: str, current_user: dict = Depends(get_
 async def get_content_by_slug_or_uuid(request: Request, identifier: str, current_user: dict = Depends(get_optional_user)):
     from services.repository.movie_repository import MovieRepository
     from services.repository.series_repository import SeriesRepository
+    from services.discovery.movie_orchestrator import MovieDetailOrchestrator
+    from services.discovery.series_orchestrator import SeriesDetailOrchestrator
 
     movie_repo = MovieRepository()
     series_repo = SeriesRepository()
 
+    # Try numeric ID lookup
+    if identifier.isdigit():
+        item_id = int(identifier)
+        try:
+            return await MovieDetailOrchestrator().get_movie_detail(item_id)
+        except Exception:
+            pass
+        try:
+            return await SeriesDetailOrchestrator().get_series_detail(item_id)
+        except Exception:
+            pass
+
     # Try slug or UUID lookup for movie
     movie = movie_repo.find_by_slug(identifier) or movie_repo.find_by_uuid(identifier)
     if movie:
-        from services.discovery.movie_orchestrator import MovieDetailOrchestrator
         return await MovieDetailOrchestrator().get_movie_detail(movie["id"])
 
     # Try slug or UUID lookup for series
     series = series_repo.find_by_slug(identifier) or series_repo.find_by_uuid(identifier)
     if series:
-        from services.discovery.series_orchestrator import SeriesDetailOrchestrator
         return await SeriesDetailOrchestrator().get_series_detail(series["id"])
 
     return {"error": f"Content not found for identifier: {identifier}"}
+
+
+@v2_router.get("/item/{content_type}/{item_id}")
+async def get_item_details_v2(request: Request, content_type: str, item_id: str, current_user: dict = Depends(get_optional_user)):
+    """
+    Primary modal & detail overlay content endpoint used by frontend app.js.
+    Supports movies & series by numeric ID, slug, or UUID.
+    """
+    from services.discovery.movie_orchestrator import MovieDetailOrchestrator
+    from services.discovery.series_orchestrator import SeriesDetailOrchestrator
+
+    normalized_type = str(content_type).lower().strip()
+
+    if normalized_type in ("movie", "movies"):
+        if item_id.isdigit():
+            return await MovieDetailOrchestrator().get_movie_detail(int(item_id))
+        else:
+            return await get_content_by_slug_or_uuid(request, item_id, current_user)
+    elif normalized_type in ("series", "tvseries", "tv"):
+        if item_id.isdigit():
+            return await SeriesDetailOrchestrator().get_series_detail(int(item_id))
+        else:
+            return await get_content_by_slug_or_uuid(request, item_id, current_user)
+
+    # Generic fallback if content_type is unknown or 'all'
+    if item_id.isdigit():
+        num_id = int(item_id)
+        try:
+            return await MovieDetailOrchestrator().get_movie_detail(num_id)
+        except Exception:
+            return await SeriesDetailOrchestrator().get_series_detail(num_id)
+
+    return await get_content_by_slug_or_uuid(request, item_id, current_user)
 
 
 # ── Catalog Operations & Intelligence Dashboards ──────────────────────
@@ -271,3 +316,123 @@ def parse_intent_v2(request: Request, q: str = "", current_user: dict = Depends(
     engine = QueryIntelligenceEngine(movies_db)
     result = engine.parse(q)
     return result
+
+
+# ─────────────────────────────────────────────────────────────
+# DAP Ingestion Management Endpoints
+# ─────────────────────────────────────────────────────────────
+
+@v2_router.post("/ingestion/sync/{connector_name}")
+async def trigger_ingestion_sync(
+    connector_name: str,
+    entity_type: str = "movie",
+    limit: int = 20,
+    current_user: dict = Depends(get_optional_user)
+):
+    """Trigger an on-demand sync run for a connector (e.g. tmdb)."""
+    from services.ingestion.scheduler import IngestionScheduler
+    from services.ingestion.connectors.tmdb_connector import TMDBConnector
+
+    scheduler = IngestionScheduler()
+    if connector_name == "tmdb":
+        scheduler.register_connector(TMDBConnector())
+
+    report = await scheduler.trigger_sync(connector_name, entity_type=entity_type, limit=limit)
+    return {
+        "job_id": report.job_id,
+        "connector": report.connector_name,
+        "items_fetched": report.items_fetched,
+        "items_created": report.items_created,
+        "items_updated": report.items_updated,
+        "items_skipped": report.items_skipped,
+        "items_failed": report.items_failed,
+        "error_summary": report.error_summary,
+    }
+
+
+@v2_router.get("/ingestion/jobs")
+def list_ingestion_jobs(limit: int = 10, current_user: dict = Depends(get_optional_user)):
+    """List recent ingestion job runs."""
+    from services.repository.catalog_db import CatalogRepository, IngestionJob
+
+    repo = CatalogRepository()
+    with repo.get_session() as session:
+        jobs = session.query(IngestionJob).order_by(IngestionJob.created_at.desc()).limit(limit).all()
+        return [
+            {
+                "id": j.id,
+                "uuid": j.uuid,
+                "connector_name": j.connector_name,
+                "job_type": j.job_type,
+                "status": j.status,
+                "started_at": j.started_at.isoformat() if j.started_at else None,
+                "completed_at": j.completed_at.isoformat() if j.completed_at else None,
+                "items_fetched": j.items_fetched,
+                "items_ingested": j.items_ingested,
+                "items_skipped": j.items_skipped,
+                "items_failed": j.items_failed,
+                "error_summary": j.error_summary,
+            }
+            for j in jobs
+        ]
+
+
+@v2_router.get("/ingestion/dead-letters")
+def list_dead_letters(limit: int = 20, current_user: dict = Depends(get_optional_user)):
+    """List items in the dead-letter queue requiring manual inspection."""
+    from services.repository.catalog_db import CatalogRepository, DeadLetterRecord
+
+    repo = CatalogRepository()
+    with repo.get_session() as session:
+        records = session.query(DeadLetterRecord).filter(
+            DeadLetterRecord.is_resolved == False
+        ).order_by(DeadLetterRecord.created_at.desc()).limit(limit).all()
+
+        return [
+            {
+                "id": r.id,
+                "job_id": r.job_id,
+                "connector_name": r.connector_name,
+                "external_id": r.external_id,
+                "failure_stage": r.failure_stage,
+                "failure_reason": r.failure_reason,
+                "retry_count": r.retry_count,
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+            }
+            for r in records
+        ]
+
+
+@v2_router.post("/ingestion/dead-letters/{record_id}/retry")
+async def retry_dead_letter(record_id: int, current_user: dict = Depends(get_optional_user)):
+    """Re-queue and retry a dead-letter payload."""
+    import json
+    from services.repository.catalog_db import CatalogRepository, DeadLetterRecord
+    from services.ingestion.pipeline import DataAcquisitionPipeline
+    from services.ingestion.dtos import RawPayloadDTO
+
+    repo = CatalogRepository()
+    with repo.get_session() as session:
+        dlr = session.query(DeadLetterRecord).filter(DeadLetterRecord.id == record_id).first()
+        if not dlr:
+            return {"error": f"Dead letter record #{record_id} not found"}, 404
+
+        raw_data = json.loads(dlr.payload_json) if dlr.payload_json else {}
+        dto = RawPayloadDTO(
+            connector_name=dlr.connector_name,
+            external_id=dlr.external_id,
+            entity_type="movie",
+            raw_data=raw_data,
+        )
+
+        pipeline = DataAcquisitionPipeline(repo)
+        result = await pipeline.process_raw_payload(dto, job_id=dlr.job_id)
+
+        if result.success:
+            dlr.is_resolved = True
+            session.commit()
+            return {"status": "retried_successfully", "result": result.action, "content_id": result.content_id}
+        else:
+            dlr.retry_count += 1
+            session.commit()
+            return {"status": "retry_failed", "errors": result.errors}

@@ -8,3 +8,5 @@ __pycache__/
 
 *.log
 *.stackdump
+*.db
+data/*.db
