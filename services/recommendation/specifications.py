@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, List, Optional
 from sqlalchemy import or_, and_, desc
-from services.repository.catalog_db import Content, Movie, TVSeries
+from services.repository.catalog_db import Content, ContentMetadata, ContentStatistics
 
 class Specification(ABC):
     """Abstract base class for all specifications."""

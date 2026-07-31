@@ -1,5 +1,4 @@
-import pytest
-from services.repository.catalog_db import CatalogRepository, Movie, TVSeries
+from services.repository.catalog_db import CatalogRepository, Content, MovieDetails, SeriesDetails
 from services.recommendation.specifications import (
     TrendingIndiaSpecification,
     MovieOnlySpecification,
