@@ -6,12 +6,17 @@ from services.recommendation.specifications import Specification
 
 class CandidateQueryBuilder:
     """
-    Translates Specification objects into SQLAlchemy candidate queries.
+    Translates Specification objects into SQLAlchemy candidate queries with pre-joined relationships.
     """
     def __init__(self, session: Session, entity_model: Any = Content):
         self.session = session
         self.entity_model = entity_model
-        self.query = self.session.query(self.entity_model).filter(Content.is_deleted == False)
+        # Join relationships once to prevent duplicate join clauses
+        self.query = self.session.query(self.entity_model)\
+            .outerjoin(ContentMetadata, Content.id == ContentMetadata.content_id)\
+            .outerjoin(ContentStatistics, Content.id == ContentStatistics.content_id)\
+            .outerjoin(ContentArtwork, Content.id == ContentArtwork.content_id)\
+            .filter(Content.is_deleted == False)
 
     def with_specification(self, spec: Optional[Specification]) -> 'CandidateQueryBuilder':
         if spec:
@@ -19,7 +24,6 @@ class CandidateQueryBuilder:
         return self
 
     def order_by_popularity(self, descending: bool = True) -> 'CandidateQueryBuilder':
-        self.query = self.query.outerjoin(ContentStatistics)
         if descending:
             self.query = self.query.order_by(desc(ContentStatistics.popularity))
         else:
@@ -27,7 +31,6 @@ class CandidateQueryBuilder:
         return self
 
     def order_by_rating(self, descending: bool = True) -> 'CandidateQueryBuilder':
-        self.query = self.query.outerjoin(ContentStatistics)
         if descending:
             self.query = self.query.order_by(desc(ContentStatistics.average_rating))
         else:
