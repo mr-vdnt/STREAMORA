@@ -27,9 +27,10 @@ def test_canonical_catalog_aggregate_and_relationships():
     
     session.add_all([meta, art, stats, details])
 
-    # Add ExternalIdentifier (Sole Source of Truth for IDs)
-    ext_tmdb = ExternalIdentifier(content_id=content.id, provider_name="tmdb", external_id="27205")
-    ext_imdb = ExternalIdentifier(content_id=content.id, provider_name="imdb", external_id="tt1375666")
+    import uuid
+    rand_suffix = uuid.uuid4().hex[:8]
+    ext_tmdb = ExternalIdentifier(content_id=content.id, provider_name="tmdb", external_id=f"27205_{rand_suffix}")
+    ext_imdb = ExternalIdentifier(content_id=content.id, provider_name="imdb", external_id=f"tt1375666_{rand_suffix}")
     session.add_all([ext_tmdb, ext_imdb])
 
     # Outbox Event Publishing
