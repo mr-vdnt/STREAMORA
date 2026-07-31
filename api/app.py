@@ -19,8 +19,12 @@ app = FastAPI(
 )
 
 from services.api.v2_router import v2_router
+from services.platform.responses import GlobalExceptionMiddleware
+from services.security.security_middleware import SecurityHeadersMiddleware
 
-# Register Routers
+app.add_middleware(GlobalExceptionMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
+
 app.include_router(health.router, prefix="/health", tags=["Health"])
 app.include_router(recommendations.router, prefix="/recommendations", tags=["Recommendations"])
 app.include_router(v2_router)
