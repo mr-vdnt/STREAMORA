@@ -408,6 +408,11 @@ class CatalogRepository:
                 seasons_cols = [c["name"] for c in inspect(self.engine).get_columns("seasons")]
                 if "uuid" not in seasons_cols:
                     conn.execute(text("ALTER TABLE seasons ADD COLUMN uuid VARCHAR(36)"))
+                if "series_content_id" not in seasons_cols:
+                    conn.execute(text("ALTER TABLE seasons ADD COLUMN series_content_id INTEGER"))
+                    if "series_id" in seasons_cols:
+                        conn.execute(text("UPDATE seasons SET series_content_id = series_id WHERE series_content_id IS NULL"))
+
                 # Check if episodes table has uuid column
                 episodes_cols = [c["name"] for c in inspect(self.engine).get_columns("episodes")]
                 if "uuid" not in episodes_cols:
