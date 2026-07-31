@@ -114,3 +114,8 @@ class RecommendationEngine:
         diversified_items = DiversificationPolicy.apply(ranked_items, limit=limit)
         
         return diversified_items
+
+    def rank_items(self, items: list, contexts: dict = None, limit: int = 15) -> list:
+        """Alias for execute_pipeline to support similarity engine and legacy callers."""
+        return self.execute_pipeline(items, contexts=contexts, limit=limit)
+

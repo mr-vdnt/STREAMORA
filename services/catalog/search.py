@@ -1,7 +1,22 @@
 import re
 import unicodedata
-from thefuzz import fuzz
 from typing import List, Dict, Any, Optional
+
+try:
+    from thefuzz import fuzz
+except ImportError:
+    class FuzzFallback:
+        @staticmethod
+        def token_sort_ratio(s1: str, s2: str) -> int:
+            words1 = set(s1.split())
+            words2 = set(s2.split())
+            if not words1 or not words2:
+                return 0
+            intersection = words1.intersection(words2)
+            union = words1.union(words2)
+            return int((len(intersection) / len(union)) * 100)
+    fuzz = FuzzFallback()
+
 
 # Alias mappings (simplified dictionary)
 ALIASES = {

@@ -1,44 +1,69 @@
+"""
+Streamora Platform Telemetry
+All observability dependencies are optional — the server starts cleanly
+even when pythonjsonlogger / opentelemetry / prometheus are not installed.
+"""
 import logging
-from pythonjsonlogger import jsonlogger
-from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from fastapi import FastAPI
-from core.config import get_settings
 
-settings = get_settings()
+# ── Optional: JSON structured logging ─────────────────────────────────────────
+try:
+    from pythonjsonlogger import jsonlogger
+    _JSON_LOGGER_AVAILABLE = True
+except ImportError:
+    jsonlogger = None  # type: ignore
+    _JSON_LOGGER_AVAILABLE = False
 
-def setup_telemetry(app: FastAPI):
-    # 1. Setup JSON Logging
-    logger = logging.getLogger()
-    
-    # We want to keep standard logging in development for readability,
-    # but use JSON logs in production.
-    if settings.environment == "production":
+# ── Optional: OpenTelemetry tracing ───────────────────────────────────────────
+try:
+    from opentelemetry import trace
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
+    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+    _OTEL_AVAILABLE = True
+except ImportError:
+    _OTEL_AVAILABLE = False
+
+# ── Config ────────────────────────────────────────────────────────────────────
+try:
+    from core.config import get_settings
+    settings = get_settings()
+    _env = getattr(settings, "environment", "development")
+    _telemetry_enabled = getattr(settings, "enable_telemetry", False)
+except Exception:
+    _env = "development"
+    _telemetry_enabled = False
+
+
+def setup_telemetry(app: FastAPI) -> None:
+    """Configure structured logging and distributed tracing.
+    All integrations degrade gracefully when their packages are absent.
+    """
+    # 1. JSON Logging (production only)
+    if _env == "production" and _JSON_LOGGER_AVAILABLE:
+        logger = logging.getLogger()
         logger.setLevel(logging.INFO)
-        # Clear existing handlers
         for handler in logger.handlers[:]:
             logger.removeHandler(handler)
-            
-        logHandler = logging.StreamHandler()
-        formatter = jsonlogger.JsonFormatter(
-            '%(timestamp)s %(level)s %(name)s %(message)s',
-            timestamp=True
+        log_handler = logging.StreamHandler()
+        formatter = jsonlogger.JsonFormatter(  # type: ignore[union-attr]
+            "%(timestamp)s %(level)s %(name)s %(message)s",
+            timestamp=True,
         )
-        logHandler.setFormatter(formatter)
-        logger.addHandler(logHandler)
+        log_handler.setFormatter(formatter)
+        logger.addHandler(log_handler)
+        logging.info("[telemetry] JSON structured logging enabled")
+    else:
+        logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
-    # 2. Setup OpenTelemetry
-    if settings.enable_telemetry:
-        provider = TracerProvider()
-        
-        # In a real production setting, you'd use OTLPSpanExporter here
-        # to send data to Jaeger or an OpenTelemetry Collector.
-        # For now, we'll just log traces to console (or drop them if no exporter is configured).
-        # We'll use ConsoleSpanExporter just for demonstration, but in real prod we'd configure OTLP.
+    # 2. OpenTelemetry tracing
+    if _telemetry_enabled and _OTEL_AVAILABLE:
+        provider = TracerProvider()  # type: ignore[name-defined]
+        # Uncomment to export to an OTLP collector:
         # processor = BatchSpanProcessor(ConsoleSpanExporter())
         # provider.add_span_processor(processor)
-        
-        trace.set_tracer_provider(provider)
-        FastAPIInstrumentor.instrument_app(app)
+        trace.set_tracer_provider(provider)  # type: ignore[name-defined]
+        FastAPIInstrumentor.instrument_app(app)  # type: ignore[name-defined]
+        logging.info("[telemetry] OpenTelemetry tracing enabled")
+    else:
+        logging.info("[telemetry] OpenTelemetry disabled (set ENABLE_TELEMETRY=true to activate)")

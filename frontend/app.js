@@ -3767,231 +3767,158 @@ window.closeVoiceSearch = function() {
 function loadSearchPage() {
     heroSection.innerHTML = '';
     heroSection.style.display = 'none';
-    
+
     contentRows.innerHTML = `
         <div class="search-page-container" style="padding: 80px 5% 40px; min-height: 80vh; max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 32px;">
-            
-            <!-- 1. Search Field Header -->
+
             <div class="search-page-header" style="display: flex; flex-direction: column; gap: 16px;">
-                <h1 style="font-size: 2.2rem; font-weight: 800; color: white;">Search & Discovery</h1>
-                <div class="search-input-wrapper" style="position: relative; display: flex; align-items: center; width: 100%;">
-                    <span style="position: absolute; left: 24px; color: var(--text-muted); font-size: 1.2rem;">🔍</span>
-                    <input type="text" id="search-page-input" placeholder="Search movies, TV series, actors, directors, genres..." 
-                           style="width: 100%; padding: 18px 60px; border-radius: var(--r-pill); background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); color: white; font-size: 1.1rem; outline: none; transition: border-color var(--t-fast), box-shadow var(--t-fast);"
-                           autocomplete="off">
-                    <button id="search-voice-placeholder" onclick="window.startVoiceSearch()" style="position: absolute; right: 24px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.2rem;" title="Voice Search">🎙️</button>
+                <h1 style="font-size: 2.2rem; font-weight: 800; color: white;">Search &amp; Discovery</h1>
+                <div style="position: relative; display: flex; flex-direction: column; width: 100%;">
+                    <div style="position: relative; display: flex; align-items: center; width: 100%;">
+                        <span style="position: absolute; left: 24px; color: var(--text-muted); font-size: 1.1rem; pointer-events: none;">&#128269;</span>
+                        <input type="text" id="search-page-input"
+                               placeholder="Search movies, TV series, actors, directors, genres..."
+                               style="width: 100%; padding: 18px 60px; border-radius: var(--r-pill); background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); color: white; font-size: 1.1rem; outline: none; transition: border-color var(--t-fast), box-shadow var(--t-fast);"
+                               autocomplete="off">
+                        <button id="search-voice-placeholder" onclick="window.startVoiceSearch()"
+                                style="position: absolute; right: 24px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.1rem;"
+                                title="Voice Search">&#127908;</button>
+                    </div>
+                    <div id="search-page-autocomplete" style="
+                        display: none;
+                        position: absolute;
+                        top: calc(100% + 8px);
+                        left: 0; right: 0;
+                        background: rgba(12,12,18,0.97);
+                        border: 1px solid var(--glass-border);
+                        border-radius: 16px;
+                        overflow: hidden;
+                        z-index: 999;
+                        box-shadow: 0 24px 80px rgba(0,0,0,0.8);
+                        backdrop-filter: blur(20px);
+                    "></div>
                 </div>
+                <div id="search-intent-badge" style="display:none; align-items:center; gap:8px; flex-wrap:wrap;"></div>
             </div>
-            
-            <!-- 2. Suggestions Dropdown / Live Results Box -->
-            <div id="search-page-suggestions" style="background: rgba(15,15,15,0.9); border: 1px solid var(--glass-border); border-radius: var(--r-md); padding: 15px; display: none; flex-direction: column; gap: 16px; z-index: 100;">
-            </div>
-            
-            <!-- 3. Main Search content area -->
-            <div id="search-page-content" style="display: flex; flex-direction: column; gap: 40px;">
-                 <!-- Empty state or Results grid gets rendered here -->
-            </div>
+
+            <div id="search-page-content" style="display: flex; flex-direction: column; gap: 40px;"></div>
         </div>
     `;
-    
+
     const input = document.getElementById('search-page-input');
     if (input) {
         input.addEventListener('input', handleLiveSearch);
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
-                executeSearchPageQuery(input.value.trim());
+                const q = input.value.trim();
+                hideSearchAutocomplete();
+                if (q) executeSearchPageQuery(q);
             }
+            if (e.key === 'Escape') hideSearchAutocomplete();
+        });
+        input.addEventListener('focus', () => {
+            if (input.value.trim().length >= 2) handleLiveSearch();
         });
     }
-    
+
+    document.addEventListener('click', (e) => {
+        const ac  = document.getElementById('search-page-autocomplete');
+        const inp = document.getElementById('search-page-input');
+        if (ac && inp && !ac.contains(e.target) && e.target !== inp) hideSearchAutocomplete();
+    });
+
     renderSearchEmptyState();
 }
 
-window.renderSearchEmptyState = function() {
-    const container = document.getElementById('search-page-content');
-    if (!container) return;
-    
-    const trendingMovies = FALLBACK_MOVIES.filter(m => !window.isSeries(m)).slice(0, 4);
-    const popularSeries = FALLBACK_MOVIES.filter(m => window.isSeries(m)).slice(0, 4);
-    
-    const recentSearches = JSON.parse(localStorage.getItem('streamora_recent_searches') || '[]');
-    
-    const suggestedSearches = [
-        "Mind-bending sci-fi",
-        "Dark psychological dramas",
-        "Action comedy thrillers",
-        "Gothic mystery",
-        "Dystopian future"
-    ];
-    
-    const searchCategories = {
-        "Genres": ["Action", "Sci-Fi", "Horror", "Comedy", "Drama", "Thriller", "Romance", "Mystery", "Anime", "Documentary"],
-        "Actors": ["Tom Hanks", "Leonardo DiCaprio", "Scarlett Johansson", "Cillian Murphy", "Zendaya", "Robert Downey Jr.", "Brad Pitt"],
-        "Directors": ["Christopher Nolan", "Quentin Tarantino", "Denis Villeneuve", "Martin Scorsese", "Greta Gerwig", "Steven Spielberg"],
-        "Release Year": ["2026", "2025", "2024", "2023", "2022", "2020s", "2010s", "2000s"],
-        "Language": ["English", "Spanish", "Japanese", "Korean", "French", "German"],
-        "Mood & Tone": ["Mind-bending", "Dark", "Uplifting", "Suspenseful", "Atmospheric", "Emotional", "Heartwarming"]
-    };
-    
-    let recentHTML = '';
-    if (recentSearches.length > 0) {
-        recentHTML = `
-            <div style="margin-top: 20px;">
-                <h3 style="color: white; font-size: 1.1rem; margin-bottom: 12px; text-align: left; font-weight: 700;">Recent Searches</h3>
-                <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-start;">
-                    ${recentSearches.map(q => `
-                        <button onclick="executeSearchPageQuery('${esc(q)}')" style="padding: 8px 16px; border-radius: var(--r-pill); background: rgba(6,182,212,0.06); border: 1px solid rgba(6,182,212,0.2); color: var(--streamora-cyan); cursor: pointer; transition: all var(--t-fast); font-size: 0.85rem;" onmouseover="this.style.background='rgba(6,182,212,0.12)'" onmouseout="this.style.background='rgba(6,182,212,0.06)'">${q}</button>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-    }
-    
-    let categoriesHTML = '';
-    for (const [title, list] of Object.entries(searchCategories)) {
-        categoriesHTML += `
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-                <h4 style="color: rgba(255,255,255,0.7); font-size: 0.95rem; text-align: left; margin: 0; font-weight: 700;">Search by ${title}</h4>
-                <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-start;">
-                    ${list.map(item => `
-                        <button onclick="executeSearchPageQuery('${item}')" style="padding: 8px 14px; border-radius: var(--r-pill); background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); color: rgba(255,255,255,0.85); cursor: pointer; transition: all var(--t-fast); font-size: 0.82rem;" onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.color='white';" onmouseout="this.style.background='rgba(255,255,255,0.03)'; this.style.color='rgba(255,255,255,0.85)';">${item}</button>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-    }
-    
-    const showMovies = window.currentFormat === 'all' || window.currentFormat === 'movie';
-    const showSeries = window.currentFormat === 'all' || window.currentFormat === 'series';
-    
-    container.innerHTML = `
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 32px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 30px;">
-            <div>
-                <h3 style="color: white; font-size: 1.1rem; margin-bottom: 16px; text-align: left; font-weight: 700;">Suggested Searches</h3>
-                <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-start;">
-                    ${suggestedSearches.map(q => `
-                        <button onclick="executeSearchPageQuery('${q}')" style="padding: 10px 18px; border-radius: var(--r-pill); background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); color: white; cursor: pointer; transition: all var(--t-fast); font-size: 0.85rem;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'">${q}</button>
-                    `).join('')}
-                </div>
-                ${recentHTML}
-            </div>
-            
-            <div style="display: flex; flex-direction: column; gap: 20px;">
-                ${categoriesHTML}
-            </div>
-        </div>
-        
-        ${showMovies ? `
-        <div>
-            <h3 style="color: white; font-size: 1.2rem; margin-bottom: 16px; text-align: left; font-weight: 700;">Trending Movies</h3>
-            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 20px;">
-                ${trendingMovies.map(movie => {
-                    const m = movie.rich_metadata || {};
-                    const score = m.match_percentage || 92;
-                    return `
-                        <div onclick="navigateToMovie(${movie.item_id})" style="cursor: pointer; transition: transform var(--t-fast);" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
-                            <div style="position: relative; border-radius: var(--r-sm); overflow: hidden; aspect-ratio: 2/3; border: 1px solid var(--glass-border);">
-                                <img src="${movie.poster_url}" alt="${movie.title}" style="width: 100%; height: 100%; object-fit: cover;">
-                                <div style="position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.7); color: var(--match-green); font-size: 0.75rem; font-weight: 700; padding: 2px 6px; border-radius: 4px;">${score}%</div>
-                            </div>
-                            <div style="font-size: 0.8rem; font-weight: 600; color: white; margin-top: 8px; text-align: center; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${movie.title}</div>
-                        </div>
-                    `;
-                }).join('')}
-            </div>
-        </div>
-        ` : ''}
+function hideSearchAutocomplete() {
+    const ac = document.getElementById('search-page-autocomplete');
+    if (ac) ac.style.display = 'none';
+}
 
-        ${showSeries ? `
-        <div>
-            <h3 style="color: white; font-size: 1.2rem; margin-bottom: 16px; text-align: left; font-weight: 700;">Popular TV Series</h3>
-            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 20px;">
-                ${popularSeries.map(movie => {
-                    const m = movie.rich_metadata || {};
-                    const score = m.match_percentage || 88;
-                    return `
-                        <div onclick="navigateToMovie(${movie.item_id})" style="cursor: pointer; transition: transform var(--t-fast);" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
-                            <div style="position: relative; border-radius: var(--r-sm); overflow: hidden; aspect-ratio: 2/3; border: 1px solid var(--glass-border);">
-                                <img src="${movie.poster_url}" alt="${movie.title}" style="width: 100%; height: 100%; object-fit: cover;">
-                                <div style="position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.7); color: var(--match-green); font-size: 0.75rem; font-weight: 700; padding: 2px 6px; border-radius: 4px;">${score}%</div>
-                            </div>
-                            <div style="font-size: 0.8rem; font-weight: 600; color: white; margin-top: 8px; text-align: center; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${movie.title}</div>
-                        </div>
-                    `;
-                }).join('')}
-            </div>
-        </div>
-        ` : ''}
-    `;
-};;
+// RC2.6: handleLiveSearch — hits real /api/v2/autocomplete endpoint with 180ms debounce
+let _liveSearchTimer = null;
 
 window.handleLiveSearch = function() {
-    const input = document.getElementById('search-page-input');
-    const suggestionsBox = document.getElementById('search-page-suggestions');
-    if (!input || !suggestionsBox) return;
-    
-    const query = input.value.trim().toLowerCase();
-    if (query.length < 2) {
-        suggestionsBox.style.display = 'none';
-        return;
-    }
-    
-    const matchedMovies = FALLBACK_MOVIES.filter(m => !isSeries(m) && m.title.toLowerCase().includes(query)).slice(0, 3);
-    const matchedSeries = FALLBACK_MOVIES.filter(m => isSeries(m) && m.title.toLowerCase().includes(query)).slice(0, 3);
-    
-    const allGenres = [...new Set(FALLBACK_MOVIES.flatMap(m => m.rich_metadata.genres || []))];
-    const matchedGenres = allGenres.filter(g => g.toLowerCase().includes(query)).slice(0, 3);
-    
-    const allDirectors = [...new Set(FALLBACK_MOVIES.map(m => m.rich_metadata.director).filter(Boolean))];
-    const matchedDirectors = allDirectors.filter(d => d.toLowerCase().includes(query)).slice(0, 3);
-    
-    const allThemes = [...new Set(FALLBACK_MOVIES.flatMap(m => m.rich_metadata.themes || []))];
-    const matchedThemes = allThemes.filter(t => t.toLowerCase().includes(query)).slice(0, 3);
-    
-    let html = '';
-    
-    if (matchedMovies.length > 0) {
-        html += `<div style="text-align: left; padding: 4px 8px;"><strong style="color:var(--streamora-cyan); font-size:0.8rem; text-transform:uppercase;">Movies</strong>`;
-        html += matchedMovies.map(m => `<div style="padding:6px 12px; cursor:pointer;" onclick="navigateToMovie(${m.item_id})">🎬 ${m.title}</div>`).join('');
-        html += `</div>`;
-    }
-    
-    if (matchedSeries.length > 0) {
-        html += `<div style="text-align: left; padding: 4px 8px;"><strong style="color:var(--streamora-cyan); font-size:0.8rem; text-transform:uppercase;">Series</strong>`;
-        html += matchedSeries.map(m => `<div style="padding:6px 12px; cursor:pointer;" onclick="navigateToMovie(${m.item_id})">📺 ${m.title}</div>`).join('');
-        html += `</div>`;
-    }
-    
-    if (matchedGenres.length > 0) {
-        html += `<div style="text-align: left; padding: 4px 8px;"><strong style="color:var(--streamora-cyan); font-size:0.8rem; text-transform:uppercase;">Genres</strong>`;
-        html += matchedGenres.map(g => `<div style="padding:6px 12px; cursor:pointer;" onclick="executeSearchPageQuery('${g}')">🎭 ${g}</div>`).join('');
-        html += `</div>`;
-    }
-    
-    if (matchedDirectors.length > 0) {
-        html += `<div style="text-align: left; padding: 4px 8px;"><strong style="color:var(--streamora-cyan); font-size:0.8rem; text-transform:uppercase;">Directors</strong>`;
-        html += matchedDirectors.map(d => `<div style="padding:6px 12px; cursor:pointer;" onclick="executeSearchPageQuery('${d}')">🎥 ${d}</div>`).join('');
-        html += `</div>`;
-    }
-    
-    if (matchedThemes.length > 0) {
-        html += `<div style="text-align: left; padding: 4px 8px;"><strong style="color:var(--streamora-cyan); font-size:0.8rem; text-transform:uppercase;">Themes</strong>`;
-        html += matchedThemes.map(t => `<div style="padding:6px 12px; cursor:pointer;" onclick="executeSearchPageQuery('${t}')">🌀 ${t}</div>`).join('');
-        html += `</div>`;
-    }
-    
-    if (html === '') {
-        suggestionsBox.style.display = 'none';
-    } else {
-        suggestionsBox.innerHTML = html;
-        suggestionsBox.style.display = 'flex';
-        suggestionsBox.style.flexDirection = 'column';
-    }
+    const input   = document.getElementById('search-page-input');
+    const acPanel = document.getElementById('search-page-autocomplete');
+    if (!input || !acPanel) return;
+
+    const query = input.value.trim();
+    if (query.length < 2) { acPanel.style.display = 'none'; return; }
+
+    clearTimeout(_liveSearchTimer);
+    _liveSearchTimer = setTimeout(async () => {
+        try {
+            const resp = await authFetch(`/api/v2/autocomplete?q=${encodeURIComponent(query)}`);
+            if (!resp || !resp.ok) return;
+            const data = await resp.json();
+            const { titles = [], genres = [], directors = [], actors = [] } = data;
+            const hasResults = titles.length || genres.length || directors.length || actors.length;
+            if (!hasResults) { acPanel.style.display = 'none'; return; }
+
+            let html = '';
+
+            if (titles.length > 0) {
+                html += `<div style="padding:12px 16px 6px; color:var(--streamora-cyan); font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; border-bottom:1px solid rgba(255,255,255,0.06);">Titles</div>`;
+                html += titles.slice(0, 5).map(t => {
+                    const typeIcon = (t.content_type === 'series' || t.content_type === 'tv_series') ? '&#128250;' : '&#127916;';
+                    const genreStr = (t.genres || []).join(', ');
+                    const ratingStr = t.rating ? `&#9733; ${t.rating}` : '';
+                    return `<div onclick="hideSearchAutocomplete(); navigateToMovie(${t.item_id})"
+                         style="display:flex; align-items:center; gap:12px; padding:10px 16px; cursor:pointer; transition:background var(--t-fast);"
+                         onmouseover="this.style.background='rgba(255,255,255,0.06)'"
+                         onmouseout="this.style.background='transparent'">
+                        <img src="${t.poster_url}" alt="${t.title}"
+                             style="width:36px; height:54px; object-fit:cover; border-radius:4px; flex-shrink:0; border:1px solid rgba(255,255,255,0.1);"
+                             onerror="this.style.display='none'">
+                        <div style="display:flex; flex-direction:column; gap:2px; min-width:0;">
+                            <span style="color:white; font-weight:600; font-size:0.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${t.title}</span>
+                            <span style="color:var(--text-muted); font-size:0.75rem;">${typeIcon} ${t.year || ''}${genreStr ? ' &middot; ' + genreStr : ''}${ratingStr ? ' &middot; ' + ratingStr : ''}</span>
+                        </div>
+                    </div>`;
+                }).join('');
+            }
+
+            const entityRows = [];
+            if (genres.length)    entityRows.push({ label: 'Genres',    icon: '&#127914;', items: genres });
+            if (directors.length) entityRows.push({ label: 'Directors', icon: '&#127910;', items: directors });
+            if (actors.length)    entityRows.push({ label: 'Actors',    icon: '&#127775;', items: actors.slice(0, 4) });
+
+            if (entityRows.length > 0) {
+                html += `<div style="padding:10px 16px 6px; border-top:1px solid rgba(255,255,255,0.06);">` +
+                    entityRows.map(row =>
+                        `<div style="display:flex; align-items:center; gap:8px; margin-bottom:8px; flex-wrap:wrap;">
+                            <span style="color:var(--text-muted); font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; white-space:nowrap;">${row.icon} ${row.label}:</span>` +
+                        row.items.map(item =>
+                            `<button onclick="hideSearchAutocomplete(); executeSearchPageQuery('${esc(item)}')"
+                                style="padding:4px 10px; border-radius:var(--r-pill); background:rgba(6,182,212,0.07); border:1px solid rgba(6,182,212,0.2); color:var(--streamora-cyan); cursor:pointer; font-size:0.78rem; transition:background var(--t-fast);"
+                                onmouseover="this.style.background='rgba(6,182,212,0.15)'"
+                                onmouseout="this.style.background='rgba(6,182,212,0.07)'">${item}</button>`
+                        ).join('') +
+                        `</div>`
+                    ).join('') + `</div>`;
+            }
+
+            html += `<div style="padding:8px 16px 10px; text-align:center; border-top:1px solid rgba(255,255,255,0.05);">
+                <span onclick="hideSearchAutocomplete(); executeSearchPageQuery('${esc(query)}')"
+                      style="color:var(--text-muted); font-size:0.75rem; cursor:pointer; transition:color var(--t-fast);"
+                      onmouseover="this.style.color='white'" onmouseout="this.style.color='var(--text-muted)'">
+                    Press Enter or click to search for &ldquo;${query}&rdquo; &rarr;
+                </span>
+            </div>`;
+
+            acPanel.innerHTML = html;
+            acPanel.style.display = 'block';
+        } catch(err) {
+            console.warn('Autocomplete error:', err);
+        }
+    }, 180);
 };
 
+// RC2.6: executeSearchPageQuery — Two-phase: instant keyword + AI deep search
 window.executeSearchPageQuery = async function(query) {
     if (!query) return;
-    
+
     // Save to recent searches
     try {
         let recent = JSON.parse(localStorage.getItem('streamora_recent_searches') || '[]');
@@ -3999,130 +3926,255 @@ window.executeSearchPageQuery = async function(query) {
         recent.unshift(query);
         if (recent.length > 5) recent.pop();
         localStorage.setItem('streamora_recent_searches', JSON.stringify(recent));
-    } catch(e) {
-        console.warn("Could not save recent search:", e);
-    }
+    } catch(e) { console.warn('Could not save recent search:', e); }
 
-    const suggestionsBox = document.getElementById('search-page-suggestions');
-    if (suggestionsBox) suggestionsBox.style.display = 'none';
-    
+    hideSearchAutocomplete();
     const input = document.getElementById('search-page-input');
     if (input) input.value = query;
-    
     const topbarInput = document.getElementById('topbar-search-input');
     if (topbarInput) topbarInput.value = query;
-    
     const container = document.getElementById('search-page-content');
     if (!container) return;
-    
-    container.innerHTML = `<div style="text-align:center; padding:40px;"><div class="skeleton" style="width:50px; height:50px; border-radius:50%; margin:0 auto 15px;"></div>Searching for "${query}"...</div>`;
-    
-    let movies = [];
-    if (window.ragCache && window.ragCache[`search_${query}`]) {
-        movies = [...window.ragCache[`search_${query}`]];
-    } else {
-        try {
-            const resp = await fetch('/search', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ query, top_k: 20 })
-            });
-            if (resp.ok) {
-                movies = await resp.json();
-                if (movies && movies.length > 0) {
-                    window.ragCache = window.ragCache || {};
-                    window.ragCache[`search_${query}`] = movies;
+
+    // ── Phase 1: Intent badge from NLP engine (fire-and-forget) ──────────
+    const intentBadge = document.getElementById('search-intent-badge');
+    if (intentBadge) {
+        intentBadge.style.display = 'none';
+        authFetch(`/api/v2/search/intent?q=${encodeURIComponent(query)}`)
+            .then(r => r && r.ok ? r.json() : null)
+            .then(plan => {
+                if (!plan) return;
+                const intent   = plan.intent   || 'search';
+                const entities = plan.entities || {};
+                const badges   = [];
+                const intentStyles = {
+                    recommendation: { bg:'rgba(6,182,212,0.12)',   border:'rgba(6,182,212,0.3)',   color:'var(--streamora-cyan)', label:'&#10024; Recommendation' },
+                    trending:       { bg:'rgba(251,146,60,0.12)',   border:'rgba(251,146,60,0.3)',   color:'#fb923c',              label:'&#128293; Trending' },
+                    explain:        { bg:'rgba(167,139,250,0.12)',  border:'rgba(167,139,250,0.3)',  color:'#a78bfa',              label:'&#128218; Explain' },
+                    search:         { bg:'rgba(255,255,255,0.06)', border:'rgba(255,255,255,0.15)', color:'rgba(255,255,255,0.7)', label:'&#128269; Search' },
+                };
+                const s = intentStyles[intent] || intentStyles['search'];
+                badges.push(`<span style="padding:4px 12px; border-radius:var(--r-pill); background:${s.bg}; border:1px solid ${s.border}; color:${s.color}; font-size:0.78rem; font-weight:600;">${s.label}</span>`);
+                if (entities.genres    && entities.genres.length)    badges.push(...entities.genres.map(g    => `<span style="padding:3px 10px; border-radius:var(--r-pill); background:rgba(255,255,255,0.04); border:1px solid var(--glass-border); color:rgba(255,255,255,0.7); font-size:0.75rem;">&#127914; ${g}</span>`));
+                if (entities.actors    && entities.actors.length)    badges.push(...entities.actors.map(a    => `<span style="padding:3px 10px; border-radius:var(--r-pill); background:rgba(255,255,255,0.04); border:1px solid var(--glass-border); color:rgba(255,255,255,0.7); font-size:0.75rem;">&#127775; ${a}</span>`));
+                if (entities.directors && entities.directors.length) badges.push(...entities.directors.map(d => `<span style="padding:3px 10px; border-radius:var(--r-pill); background:rgba(255,255,255,0.04); border:1px solid var(--glass-border); color:rgba(255,255,255,0.7); font-size:0.75rem;">&#127910; ${d}</span>`));
+                if (entities.temporal  && entities.temporal.length)  badges.push(...entities.temporal.map(t  => `<span style="padding:3px 10px; border-radius:var(--r-pill); background:rgba(255,255,255,0.04); border:1px solid var(--glass-border); color:rgba(255,255,255,0.7); font-size:0.75rem;">&#128197; ${t}</span>`));
+                intentBadge.innerHTML = badges.join('');
+                intentBadge.style.display = 'flex';
+            }).catch(() => {});
+    }
+
+    // ── Phase 2: Instant keyword results (fast, no AI) ────────────────────
+    container.innerHTML = `
+        <div style="text-align:center; padding:40px; color:var(--text-muted);">
+            <div style="display:inline-block; width:32px; height:32px; border:3px solid rgba(6,182,212,0.3); border-top-color:var(--streamora-cyan); border-radius:50%; animation:spin 0.8s linear infinite; margin-bottom:12px;"></div>
+            <div style="font-size:0.95rem;">Searching for &ldquo;${query}&rdquo;...</div>
+        </div>`;
+
+    let instantMovies = [];
+    const ctFilter = window.currentFormat === 'all' ? 'all' : window.currentFormat;
+    try {
+        const resp = await authFetch(`/api/v2/search/instant?q=${encodeURIComponent(query)}&limit=24&content_type=${ctFilter}`);
+        if (resp && resp.ok) {
+            const data = await resp.json();
+            instantMovies = (data.results || []).map(r => ({
+                item_id:      r.item_id,
+                title:        r.title,
+                poster_url:   r.poster_url || '',
+                content_type: r.content_type || 'movie',
+                genres:       r.genres ? r.genres.split('|') : [],
+                year:         r.year || '',
+                score:        r.score || 80,
+                rating:       r.rating || null,
+                rich_metadata: {
+                    genres:           r.genres ? r.genres.split('|') : [],
+                    match_percentage: r.score || 80,
+                    rating:           r.rating || 7.5
                 }
+            }));
+        }
+    } catch(err) { console.warn('Instant search error:', err); }
+
+    // Local fallback if instant search returned nothing
+    if (!instantMovies.length) {
+        const q = query.toLowerCase();
+        instantMovies = FALLBACK_MOVIES.filter(m => {
+            const fmt = window.currentFormat === 'all' ||
+                        (window.currentFormat === 'movie'  && !window.isSeries(m)) ||
+                        (window.currentFormat === 'series' &&  window.isSeries(m));
+            const match = m.title.toLowerCase().includes(q) ||
+                          m.overview.toLowerCase().includes(q) ||
+                          (m.rich_metadata.genres  || []).some(g => g.toLowerCase().includes(q)) ||
+                          (m.rich_metadata.themes  || []).some(t => t.toLowerCase().includes(q)) ||
+                          (m.rich_metadata.director || '').toLowerCase().includes(q);
+            return fmt && match;
+        });
+    }
+
+    renderSearchResultsGrid(container, query, instantMovies, { engine: 'instant' });
+
+    // ── Phase 3: AI deep search — upgrade grid when done ─────────────────
+    try {
+        if (window.ragCache && window.ragCache[`search_${query}`]) {
+            const cached = window.ragCache[`search_${query}`];
+            const filtered = cached.filter(m =>
+                window.currentFormat === 'all' ||
+                (window.currentFormat === 'movie'  && !window.isSeries(m)) ||
+                (window.currentFormat === 'series' &&  window.isSeries(m))
+            );
+            if (filtered.length > 0) { renderSearchResultsGrid(container, query, filtered, { engine: 'ai', fromCache: true }); return; }
+        }
+        const aiResp = await fetch('/search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ query, top_k: 20 })
+        });
+        if (aiResp.ok) {
+            const aiMovies = await aiResp.json();
+            if (aiMovies && Array.isArray(aiMovies) && aiMovies.length > 0) {
+                window.ragCache = window.ragCache || {};
+                window.ragCache[`search_${query}`] = aiMovies;
+                const filtered = aiMovies.filter(m =>
+                    window.currentFormat === 'all' ||
+                    (window.currentFormat === 'movie'  && !window.isSeries(m)) ||
+                    (window.currentFormat === 'series' &&  window.isSeries(m))
+                );
+                if (filtered.length > 0) renderSearchResultsGrid(container, query, filtered, { engine: 'ai' });
             }
-        } catch(err) {
-            console.warn("Search page query error, resorting to local search:", err);
         }
-    }
-    
-    if (!movies || !Array.isArray(movies) || movies.length === 0) {
-        const q = query.toLowerCase();
-        movies = FALLBACK_MOVIES.filter(m => {
-            return m.title.toLowerCase().includes(q) ||
-                   m.overview.toLowerCase().includes(q) ||
-                   (m.rich_metadata.genres || []).some(g => g.toLowerCase().includes(q)) ||
-                   (m.rich_metadata.themes || []).some(t => t.toLowerCase().includes(q)) ||
-                   (m.rich_metadata.director || '').toLowerCase().includes(q);
-        });
-    }
-    
-    // Filter search results by active format mode
-    let filteredMovies = (movies || []).filter(m => {
-        return window.currentFormat === 'all' ||
-               (window.currentFormat === 'movie' && !window.isSeries(m)) ||
-               (window.currentFormat === 'series' && window.isSeries(m));
-    });
-    
-    // If format filtering leaves us empty, fill with format-aligned fallbacks matching the query
-    if (filteredMovies.length === 0) {
-        const q = query.toLowerCase();
-        filteredMovies = FALLBACK_MOVIES.filter(m => {
-            const matchesFormat = window.currentFormat === 'all' ||
-                                  (window.currentFormat === 'movie' && !window.isSeries(m)) ||
-                                  (window.currentFormat === 'series' && window.isSeries(m));
-            const matchesQuery = m.title.toLowerCase().includes(q) ||
-                                 m.overview.toLowerCase().includes(q) ||
-                                 (m.rich_metadata.genres || []).some(g => g.toLowerCase().includes(q)) ||
-                                 (m.rich_metadata.themes || []).some(t => t.toLowerCase().includes(q)) ||
-                                 (m.rich_metadata.director || '').toLowerCase().includes(q);
-            return matchesFormat && matchesQuery;
-        });
-        
-        // If still empty, return any format-aligned fallbacks
-        if (filteredMovies.length === 0) {
-            filteredMovies = FALLBACK_MOVIES.filter(m => {
-                return window.currentFormat === 'all' ||
-                       (window.currentFormat === 'movie' && !window.isSeries(m)) ||
-                       (window.currentFormat === 'series' && window.isSeries(m));
-            }).slice(0, 4);
-        }
-    }
-    movies = filteredMovies;
-    
+    } catch(err) { console.warn('AI search error, keeping instant results:', err); }
+};
+
+function renderSearchResultsGrid(container, query, movies, meta = {}) {
+    if (!container) return;
+    const engineLabel = meta.engine === 'ai'
+        ? `<span style="display:inline-block; padding:2px 8px; border-radius:4px; background:rgba(6,182,212,0.12); border:1px solid rgba(6,182,212,0.3); color:var(--streamora-cyan); font-size:0.7rem; font-weight:700; margin-left:8px;">AI</span>`
+        : '';
+
     if (movies && movies.length > 0) {
         container.innerHTML = `
-            <h3 style="color:white; font-size:1.2rem; margin-bottom:16px; text-align: left;">Results for "${query}"</h3>
-            <div class="search-results-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:24px;">
-                ${movies.map(movie => {
-                    const m = movie.rich_metadata || {};
-                    const poster = movie.poster_url || placeholder(movie.title);
-                    const score = m.match_percentage || randScore();
-                    const rating = m.rating || '8.0';
-                    const genres = (m.genres || m.tags || ['Drama']).slice(0, 2).join(', ');
-                    const runtime = m.runtime || '120 min';
-                    
-                    return `
-                        <div onclick="navigateToMovie(${movie.item_id})" style="cursor:pointer; background:rgba(255,255,255,0.02); border:1px solid var(--glass-border); border-radius:var(--r-md); overflow:hidden; transition:transform var(--t-fast); text-align: left;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
-                            <div style="position:relative; aspect-ratio:2/3;">
-                                <img src="${poster}" alt="${movie.title}" style="width:100%; height:100%; object-fit:cover;">
-                                <div style="position:absolute; top:8px; left:8px; background:rgba(0,0,0,0.8); color:var(--match-green); font-size:0.75rem; font-weight:700; padding:3px 6px; border-radius:4px;">${score}% Match</div>
-                                <div style="position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.8); color:#f5c518; font-size:0.75rem; font-weight:700; padding:3px 6px; border-radius:4px;">★ ${rating}</div>
-                            </div>
-                            <div style="padding:12px; display:flex; flex-direction:column; gap:4px;">
-                                <div style="font-weight:700; color:white; font-size:0.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${movie.title}</div>
-                                <div style="font-size:0.8rem; color:var(--streamora-cyan);">${genres}</div>
-                                <div style="font-size:0.8rem; color:var(--text-muted);">${runtime}</div>
-                            </div>
-                        </div>
-                    `;
-                }).join('')}
-            </div>
-        `;
+            <div>
+                <h3 style="color:white; font-size:1.1rem; margin-bottom:20px; text-align:left; display:flex; align-items:center; gap:8px;">
+                    Results for &ldquo;${query}&rdquo;
+                    <span style="color:var(--text-muted); font-size:0.85rem; font-weight:400;">(${movies.length} found)</span>
+                    ${engineLabel}
+                </h3>
+                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:20px;">
+                    ${movies.map(movie => {
+                        const m      = movie.rich_metadata || {};
+                        const poster = movie.poster_url    || placeholder(movie.title);
+                        const score  = m.match_percentage  || movie.score || randScore();
+                        const rating = m.rating            || movie.rating || '7.5';
+                        const genres = Array.isArray(m.genres || movie.genres)
+                            ? (m.genres || movie.genres || []).slice(0, 2).join(', ')
+                            : (m.genres || movie.genres || 'Drama');
+                        const year   = movie.year || '';
+                        const isTv   = window.isSeries(movie);
+                        const tvTag  = isTv ? `<span style="position:absolute; bottom:8px; left:8px; background:rgba(139,92,246,0.85); color:white; font-size:0.65rem; font-weight:700; padding:2px 6px; border-radius:4px;">TV</span>` : '';
+                        return `
+                            <div onclick="navigateToMovie(${movie.item_id})"
+                                 style="cursor:pointer; background:rgba(255,255,255,0.02); border:1px solid var(--glass-border); border-radius:var(--r-md); overflow:hidden; transition:transform var(--t-fast), box-shadow var(--t-fast); text-align:left;"
+                                 onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 40px rgba(0,0,0,0.5)'"
+                                 onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                                <div style="position:relative; aspect-ratio:2/3; overflow:hidden;">
+                                    <img src="${poster}" alt="${movie.title}" style="width:100%; height:100%; object-fit:cover;">
+                                    <div style="position:absolute; top:8px; left:8px; background:rgba(0,0,0,0.8); color:var(--match-green); font-size:0.72rem; font-weight:700; padding:3px 6px; border-radius:4px;">${score}%</div>
+                                    <div style="position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.8); color:#f5c518; font-size:0.72rem; font-weight:700; padding:3px 6px; border-radius:4px;">&#9733; ${rating}</div>
+                                    ${tvTag}
+                                </div>
+                                <div style="padding:10px 12px; display:flex; flex-direction:column; gap:3px;">
+                                    <div style="font-weight:700; color:white; font-size:0.88rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${movie.title}</div>
+                                    <div style="font-size:0.75rem; color:var(--streamora-cyan); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${genres}</div>
+                                    ${year ? `<div style="font-size:0.72rem; color:var(--text-muted);">${year}</div>` : ''}
+                                </div>
+                            </div>`;
+                    }).join('')}
+                </div>
+            </div>`;
     } else {
         container.innerHTML = `
             <div style="text-align:center; padding:60px; color:var(--text-muted);">
-                <div style="font-size:3rem; margin-bottom:15px;">🔍</div>
-                <h3>No results found for "${query}"</h3>
-                <p>Try searching for a different movie, genre, director, or click one of the suggestions below.</p>
+                <div style="font-size:3rem; margin-bottom:15px;">&#128269;</div>
+                <h3 style="color:rgba(255,255,255,0.7);">No results found for &ldquo;${query}&rdquo;</h3>
+                <p style="margin-top:8px;">Try searching for a different movie, genre, director, or click one of the suggestions below.</p>
                 <button onclick="renderSearchEmptyState()" style="margin-top:20px; padding:10px 20px; border-radius:var(--r-pill); background:var(--streamora-cyan); border:none; color:black; font-weight:700; cursor:pointer;">Reset Search</button>
-            </div>
-        `;
+            </div>`;
     }
-};
+}
+
+// RC2.6: Initial state shown when the search page loads with no query
+function renderSearchEmptyState() {
+    const container = document.getElementById('search-page-content');
+    if (!container) return;
+
+    // Recent searches from localStorage
+    let recent = [];
+    try { recent = JSON.parse(localStorage.getItem('streamora_recent_searches') || '[]'); } catch(e) {}
+
+    // Genre chips from fallback data
+    const allGenres = [...new Set(FALLBACK_MOVIES.flatMap(m => (m.rich_metadata && m.rich_metadata.genres) || []))].slice(0, 14);
+
+    // Content split
+    const trendingMovies = FALLBACK_MOVIES.filter(m => !window.isSeries(m)).slice(0, 8);
+    const popularSeries  = FALLBACK_MOVIES.filter(m =>  window.isSeries(m)).slice(0, 8);
+    const showMovies     = window.currentFormat !== 'series';
+    const showSeries     = window.currentFormat !== 'movie';
+
+    const recentHTML = recent.length > 0
+        ? `<div>
+               <h3 style="color:rgba(255,255,255,0.5); font-size:0.8rem; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:12px;">Recent Searches</h3>
+               <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                   ${recent.map(q => `
+                       <button onclick="executeSearchPageQuery('${esc(q)}')"
+                               style="display:flex; align-items:center; gap:6px; padding:6px 14px; border-radius:var(--r-pill); background:rgba(255,255,255,0.04); border:1px solid var(--glass-border); color:rgba(255,255,255,0.8); cursor:pointer; font-size:0.85rem; transition:background var(--t-fast);"
+                               onmouseover="this.style.background='rgba(255,255,255,0.09)'"
+                               onmouseout="this.style.background='rgba(255,255,255,0.04)'">
+                           &#128337; ${q}
+                       </button>`).join('')}
+               </div>
+           </div>` : '';
+
+    const categoriesHTML = allGenres.length > 0
+        ? `<div>
+               <h3 style="color:rgba(255,255,255,0.5); font-size:0.8rem; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:12px;">Browse by Genre</h3>
+               <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                   ${allGenres.map(g => `
+                       <button onclick="executeSearchPageQuery('${esc(g)}')"
+                               style="padding:7px 16px; border-radius:var(--r-pill); background:rgba(6,182,212,0.07); border:1px solid rgba(6,182,212,0.2); color:var(--streamora-cyan); cursor:pointer; font-size:0.82rem; transition:background var(--t-fast);"
+                               onmouseover="this.style.background='rgba(6,182,212,0.15)'"
+                               onmouseout="this.style.background='rgba(6,182,212,0.07)'">${g}</button>`).join('')}
+               </div>
+           </div>` : '';
+
+    const posterGrid = (items, title) => items.length === 0 ? '' : `
+        <div>
+            <h3 style="color:white; font-size:1.1rem; font-weight:700; margin-bottom:16px;">${title}</h3>
+            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); gap:16px;">
+                ${items.map(movie => {
+                    const score = (movie.rich_metadata && movie.rich_metadata.match_percentage) || (80 + Math.floor(Math.random() * 18));
+                    return `
+                        <div onclick="navigateToMovie(${movie.item_id})"
+                             style="cursor:pointer; transition:transform var(--t-fast);"
+                             onmouseover="this.style.transform='scale(1.04)'"
+                             onmouseout="this.style.transform='scale(1)'">
+                            <div style="position:relative; border-radius:var(--r-sm); overflow:hidden; aspect-ratio:2/3; border:1px solid var(--glass-border);">
+                                <img src="${movie.poster_url}" alt="${movie.title}" style="width:100%; height:100%; object-fit:cover;" onerror="this.src=''">
+                                <div style="position:absolute; top:6px; left:6px; background:rgba(0,0,0,0.75); color:var(--match-green); font-size:0.68rem; font-weight:700; padding:2px 5px; border-radius:3px;">${score}%</div>
+                            </div>
+                            <div style="font-size:0.75rem; font-weight:600; color:rgba(255,255,255,0.9); margin-top:6px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${movie.title}</div>
+                        </div>`;
+                }).join('')}
+            </div>
+        </div>`;
+
+    container.innerHTML = `
+        <div style="display:flex; flex-direction:column; gap:32px;">
+            ${recentHTML}
+            ${categoriesHTML}
+            ${showMovies ? posterGrid(trendingMovies, '&#127916; Trending Movies') : ''}
+            ${showSeries ? posterGrid(popularSeries,  '&#128250; Popular Series')  : ''}
+        </div>`;
+}
 
 // ══════════════════════════════════════════════════════════════════════
 //  RENDER ENGINE

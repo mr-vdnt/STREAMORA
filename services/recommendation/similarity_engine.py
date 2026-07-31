@@ -41,7 +41,10 @@ class SimilarityEngine:
                 continue
                 
             cand_dict = dict(cand)
-            
+            # Ensure item_id is present (catalog rows may use different field name)
+            if 'item_id' not in cand_dict:
+                cand_dict['item_id'] = cid
+
             # Simple context for the ranker
             ctx = {
                 "similarity": max(0, 1.0 - distance/2.0),

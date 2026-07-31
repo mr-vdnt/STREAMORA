@@ -19,6 +19,11 @@ class AuthMiddleware(BaseHTTPMiddleware):
             r"^/register$",
             r"^/csrf-token$",
             r"^/auth/refresh$",
+            r"^/api/auth/register$",
+            r"^/api/auth/login$",
+            r"^/api/auth/token$",
+            r"^/api/auth/refresh$",
+            r"^/api/auth/csrf-token$",
             r"^/static/.*",
             r"^/favicon\.ico$",
             r"^/css/.*",
@@ -31,6 +36,8 @@ class AuthMiddleware(BaseHTTPMiddleware):
             r"^/api/v2/home.*$",
             r"^/api/v2/item/.*$",
             r"^/api/v2/genre/.*$",
+            r"^/api/v2/search/.*$",
+            r"^/api/v2/autocomplete.*$",
             r"^/home$",
             r"^/movies$",
             r"^/series$",
@@ -47,8 +54,14 @@ class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         # CSRF Protection: Verify X-CSRF-Token matches csrf_token cookie for state-changing methods
         if request.method in ["POST", "PUT", "DELETE", "PATCH"]:
-            # Bypass CSRF checks for auth creation endpoints
-            if request.url.path in ["/token", "/register"]:
+            # Bypass CSRF checks for auth creation endpoints (match actual mounted paths)
+            CSRF_EXEMPT = {
+                "/token", "/register",                      # legacy bare paths
+                "/api/auth/register", "/api/auth/login",   # actual mounted paths
+                "/api/auth/token",                         # OAuth token endpoint
+                "/search", "/api/v2/search",               # Search query endpoints
+            }
+            if request.url.path in CSRF_EXEMPT or request.url.path.startswith("/api/v2/search"):
                 pass
             else:
                 csrf_cookie = request.cookies.get("csrf_token")
@@ -75,8 +88,11 @@ class AuthMiddleware(BaseHTTPMiddleware):
         client_ip = request.client.host if request.client else "unknown"
         request.state.client_ip = client_ip
         
-        # We can extract token from HttpOnly cookie
+        # Extract token from Authorization header (Bearer token) or HttpOnly cookie
         access_token = request.cookies.get("access_token")
+        auth_header = request.headers.get("authorization")
+        if not access_token and auth_header and auth_header.startswith("Bearer "):
+            access_token = auth_header.split(" ", 1)[1].strip()
         
         # Verify Token
         user_payload = None

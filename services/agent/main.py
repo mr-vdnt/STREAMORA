@@ -63,23 +63,25 @@ async def lifespan(app: FastAPI):
     # Initialize DB (if not already done)
     init_db()
 
-    # Warmup LLM in background
+    # Warmup LLM in background (optional — skipped when ollama package is absent)
     if os.environ.get("ENVIRONMENT", "dev") != "test":
-        import ollama
-        print("[System] Initiating LLM warmup...")
-        def run_warmup():
-            try:
-                ollama.chat(
-                    model='llama3.2',
-                    messages=[{'role': 'user', 'content': 'warmup'}],
-                    keep_alive="1h"
-                )
-                print("[System] LLM warm-up complete. Model is resident in memory.")
-            except Exception as e:
-                print(f"[System] LLM warm-up failed: {e}")
-        
-        # Do not block startup for warmup
-        asyncio.get_event_loop().run_in_executor(None, run_warmup)
+        try:
+            import ollama as _ollama
+            print("[System] Initiating LLM warmup...")
+            def run_warmup():
+                try:
+                    _ollama.chat(
+                        model='llama3.2',
+                        messages=[{'role': 'user', 'content': 'warmup'}],
+                        keep_alive="1h"
+                    )
+                    print("[System] LLM warm-up complete. Model is resident in memory.")
+                except Exception as e:
+                    print(f"[System] LLM warm-up failed: {e}")
+            # Do not block startup for warmup
+            asyncio.get_event_loop().run_in_executor(None, run_warmup)
+        except ImportError:
+            print("[System] ollama not installed — LLM warmup skipped (safe for dev).")
     else:
         print("[System] Skipping LLM warmup in test environment.")
     
@@ -98,9 +100,13 @@ app.include_router(v2_router)
 from services.platform.telemetry import setup_telemetry
 setup_telemetry(app)
 
-# Prometheus Instrumentation
-from prometheus_fastapi_instrumentator import Instrumentator
-Instrumentator().instrument(app).expose(app)
+# Prometheus Instrumentation (optional — degrades gracefully when package absent)
+try:
+    from prometheus_fastapi_instrumentator import Instrumentator
+    Instrumentator().instrument(app).expose(app)
+except ImportError:
+    pass  # prometheus metrics disabled in dev; install prometheus-fastapi-instrumentator for production
+
 
 # Rate Limiting is imported from services.agent.limiter
 app.state.limiter = limiter

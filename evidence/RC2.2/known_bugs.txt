@@ -1,0 +1,4 @@
+1. Search caching is currently minimal. Very fast typers might send too many queries. Needs debounce enhancement on the frontend.
+2. The "Mind Bending" shelf relies on thriller genres which sometimes overlap with "Crime". We are enforcing no-overlap via the deduplication layer, but the candidate pool is slightly smaller as a result.
+3. Fallback posters (generated via placehold.co) can sometimes take 200ms longer to load than native TMDB CDN images.
+4. "Continue Watching" is currently populated with high-rated items for guest users instead of an empty state or prompt to login.

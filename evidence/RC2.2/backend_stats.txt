@@ -1,0 +1,9 @@
+Backend Catalog Verification
+Total Items: 15326
+Movies: 9152
+TV Series: 5079
+Anime: 777
+Bollywood: 40
+South Indian: 16
+Korean: 258
+Documentaries: 318

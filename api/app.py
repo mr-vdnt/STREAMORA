@@ -18,9 +18,12 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+from services.api.v2_router import v2_router
+
 # Register Routers
 app.include_router(health.router, prefix="/health", tags=["Health"])
 app.include_router(recommendations.router, prefix="/recommendations", tags=["Recommendations"])
+app.include_router(v2_router)
 
 @app.middleware("http")
 async def add_process_time_header(request, call_next):

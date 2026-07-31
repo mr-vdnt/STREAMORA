@@ -28,6 +28,12 @@ class HomeService:
         Cached to ensure <300ms response time.
         """
         cache_key = f"{format}_{user_id}"
+        now = time.time()
+        if cache_key in self._cache:
+            cached_data, timestamp = self._cache[cache_key]
+            if now - timestamp < self._cache_ttl:
+                return cached_data
+
         current_context = self.context_engine.get_current_context()
         
         # 1. Global Discovery
@@ -42,7 +48,8 @@ class HomeService:
             hero = self.hero_service.select_hero(session, format=format, context=current_context)
             if hero:
                 payload["hero"] = hero
-                
+
+        self._cache[cache_key] = (payload, now)
         return payload
         
     def get_genre_payload(self, genre: str, user_id: int = None) -> dict:

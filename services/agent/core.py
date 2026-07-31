@@ -5,7 +5,13 @@ import requests
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
 from services.agent.tools import get_explanation
-import ollama
+try:
+    import ollama
+    OLLAMA_AVAILABLE = True
+except ImportError:
+    ollama = None
+    OLLAMA_AVAILABLE = False
+
 
 from services.repository.movie_repository import MovieRepository
 
