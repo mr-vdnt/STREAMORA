@@ -2,7 +2,7 @@ import os
 import uuid
 from datetime import datetime
 from sqlalchemy import (
-    create_engine, Column, Integer, String, Float, Text, Boolean, DateTime, ForeignKey, CheckConstraint, UniqueConstraint
+    create_engine, Column, Integer, String, Float, Text, Boolean, DateTime, ForeignKey, CheckConstraint, UniqueConstraint, inspect, text
 )
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 from sqlalchemy.pool import StaticPool
@@ -398,7 +398,23 @@ class CatalogRepository:
             self.engine = create_engine(db_url)
             
         Base.metadata.create_all(self.engine)
+        self._ensure_schema_up_to_date()
         self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
+
+    def _ensure_schema_up_to_date(self):
+        with self.engine.connect() as conn:
+            try:
+                # Check if seasons table has uuid column
+                seasons_cols = [c["name"] for c in inspect(self.engine).get_columns("seasons")]
+                if "uuid" not in seasons_cols:
+                    conn.execute(text("ALTER TABLE seasons ADD COLUMN uuid VARCHAR(36)"))
+                # Check if episodes table has uuid column
+                episodes_cols = [c["name"] for c in inspect(self.engine).get_columns("episodes")]
+                if "uuid" not in episodes_cols:
+                    conn.execute(text("ALTER TABLE episodes ADD COLUMN uuid VARCHAR(36)"))
+                conn.commit()
+            except Exception:
+                pass
         
     def get_session(self):
         return self.SessionLocal()
