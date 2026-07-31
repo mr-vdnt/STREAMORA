@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, asc
-from services.repository.catalog_db import Content, Movie, TVSeries
+from services.repository.catalog_db import Content
 from services.recommendation.specifications import Specification
 
 class CandidateQueryBuilder:

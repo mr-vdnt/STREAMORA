@@ -43,6 +43,14 @@ class MovieRepository:
             ).order_by(ContentStatistics.popularity.desc()).limit(limit).all()
             return [self._to_dict(session, c) for c in results]
 
+    def get_all(self) -> Dict[int, Dict[str, Any]]:
+        with self.catalog_repo.get_session() as session:
+            movies = session.query(Content).filter(Content.entity_type == 'movie', Content.is_deleted == False).all()
+            return {m.id: self._to_dict(session, m) for m in movies}
+
+    def get_by_id(self, item_id: int) -> Optional[Dict[str, Any]]:
+        return self.find_by_id(item_id)
+
     def _to_dict(self, session, content: Content) -> Dict[str, Any]:
         meta = content.metadata_rel
         art = content.artwork_rel
