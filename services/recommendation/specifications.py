@@ -36,10 +36,10 @@ class TrendingIndiaSpecification(Specification):
         self.min_popularity = min_popularity
 
     def apply_filter(self, query: Any) -> Any:
-        return query.filter(
+        return query.outerjoin(ContentMetadata).outerjoin(ContentStatistics).filter(
             and_(
-                Content.language.in_(['hi', 'te', 'ta', 'kn', 'ml', 'mr', 'bn', 'in', 'en']),
-                Content.popularity >= self.min_popularity
+                ContentMetadata.language.in_(['hi', 'te', 'ta', 'kn', 'ml', 'mr', 'bn', 'in', 'en']),
+                ContentStatistics.popularity >= self.min_popularity
             )
         )
 
@@ -49,7 +49,7 @@ class GenreSpecification(Specification):
         self.genre = genre
 
     def apply_filter(self, query: Any) -> Any:
-        return query.filter(Content.genres.ilike(f"%{self.genre}%"))
+        return query.outerjoin(ContentMetadata).filter(ContentMetadata.overview.ilike(f"%{self.genre}%"))
 
 
 class ThemeSpecification(Specification):
@@ -57,7 +57,7 @@ class ThemeSpecification(Specification):
         self.theme = theme
 
     def apply_filter(self, query: Any) -> Any:
-        return query.filter(Content.themes.ilike(f"%{self.theme}%"))
+        return query.outerjoin(ContentMetadata).filter(ContentMetadata.overview.ilike(f"%{self.theme}%"))
 
 
 class MinRatingSpecification(Specification):
@@ -65,7 +65,7 @@ class MinRatingSpecification(Specification):
         self.min_rating = min_rating
 
     def apply_filter(self, query: Any) -> Any:
-        return query.filter(Content.rating >= self.min_rating)
+        return query.outerjoin(ContentStatistics).filter(ContentStatistics.average_rating >= self.min_rating)
 
 
 class MinPopularitySpecification(Specification):
@@ -73,7 +73,7 @@ class MinPopularitySpecification(Specification):
         self.min_popularity = min_popularity
 
     def apply_filter(self, query: Any) -> Any:
-        return query.filter(Content.popularity >= self.min_popularity)
+        return query.outerjoin(ContentStatistics).filter(ContentStatistics.popularity >= self.min_popularity)
 
 
 class LanguageSpecification(Specification):
@@ -81,7 +81,7 @@ class LanguageSpecification(Specification):
         self.languages = languages
 
     def apply_filter(self, query: Any) -> Any:
-        return query.filter(Content.language.in_(self.languages))
+        return query.outerjoin(ContentMetadata).filter(ContentMetadata.language.in_(self.languages))
 
 
 class ExcludeIDsSpecification(Specification):

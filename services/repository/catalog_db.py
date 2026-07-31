@@ -402,3 +402,33 @@ class CatalogRepository:
         
     def get_session(self):
         return self.SessionLocal()
+
+    def get_by_id(self, content_id: int):
+        with self.get_session() as session:
+            c = session.query(Content).filter(Content.id == content_id, Content.is_deleted == False).first()
+            if not c:
+                return None
+            meta = c.metadata_rel
+            art = c.artwork_rel
+            stats = c.statistics_rel
+            return {
+                "id": c.id,
+                "uuid": c.uuid,
+                "slug": c.slug,
+                "entity_type": c.entity_type,
+                "title": meta.title if meta else "",
+                "original_title": meta.original_title if meta else "",
+                "overview": meta.overview if meta else "",
+                "poster_url": art.poster_url if art else "",
+                "backdrop_url": art.backdrop_url if art else "",
+                "rating": stats.average_rating if stats else 0.0,
+                "popularity": stats.popularity if stats else 0.0,
+                "genres": []
+            }
+
+    def get_by_slug(self, slug: str):
+        with self.get_session() as session:
+            c = session.query(Content).filter(Content.slug == slug, Content.is_deleted == False).first()
+            if not c:
+                return None
+            return self.get_by_id(c.id)

@@ -1,5 +1,5 @@
 from typing import Dict, Any, List
-from services.repository.catalog_db import CatalogRepository, Content
+from services.repository.catalog_db import CatalogRepository, Content, ContentArtwork, ContentMetadata, ContentStatistics
 
 class CatalogHealthService:
     """
@@ -11,7 +11,7 @@ class CatalogHealthService:
 
     def audit_catalog_health(self) -> Dict[str, Any]:
         with self.repo.get_session() as session:
-            total_items = session.query(Content).count()
+            total_items = session.query(Content).filter(Content.is_deleted == False).count()
             if total_items == 0:
                 return {
                     "health_score": 100.0,
@@ -19,10 +19,10 @@ class CatalogHealthService:
                     "issues": []
                 }
 
-            missing_posters = session.query(Content).filter((Content.poster_url == None) | (Content.poster_url == "")).count()
-            missing_backdrops = session.query(Content).filter((Content.backdrop_url == None) | (Content.backdrop_url == "")).count()
-            missing_overviews = session.query(Content).filter((Content.overview == None) | (Content.overview == "")).count()
-            missing_ratings = session.query(Content).filter((Content.rating == None) | (Content.rating == 0.0)).count()
+            missing_posters = session.query(ContentArtwork).filter((ContentArtwork.poster_url == None) | (ContentArtwork.poster_url == "")).count()
+            missing_backdrops = session.query(ContentArtwork).filter((ContentArtwork.backdrop_url == None) | (ContentArtwork.backdrop_url == "")).count()
+            missing_overviews = session.query(ContentMetadata).filter((ContentMetadata.overview == None) | (ContentMetadata.overview == "")).count()
+            missing_ratings = session.query(ContentStatistics).filter((ContentStatistics.average_rating == None) | (ContentStatistics.average_rating == 0.0)).count()
 
             # Calculate quality penalties
             penalty = (missing_posters * 10) + (missing_backdrops * 5) + (missing_overviews * 5) + (missing_ratings * 2)
