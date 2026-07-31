@@ -33,6 +33,9 @@ class SeriesRepository:
             ).order_by(ContentStatistics.popularity.desc()).limit(limit).all()
             return [self._to_dict(session, c) for c in results]
 
+    def get_by_id(self, item_id: int) -> Optional[Dict[str, Any]]:
+        return self.find_by_id(item_id)
+
     def _to_dict(self, session, content: Content) -> Dict[str, Any]:
         meta = content.metadata_rel
         art = content.artwork_rel
