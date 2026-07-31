@@ -1,37 +1,71 @@
 from typing import Optional, Dict, Any, List
-from services.repository.catalog_db import CatalogRepository, Movie
+from services.repository.catalog_db import (
+    CatalogRepository, Content, ContentMetadata, ContentArtwork, ContentStatistics, MovieDetails, ExternalIdentifier
+)
 
 class MovieRepository:
     """
-    Dedicated SQLAlchemy-backed repository for Movie entities.
-    Strictly isolated from Series data pipelines.
+    Repository operating on Movie aggregate root.
+    Exposes domain operations without direct inter-repository calls.
     """
     def __init__(self, db_url: Optional[str] = None):
         self.catalog_repo = CatalogRepository(db_url=db_url)
 
-    def get_by_id(self, movie_id: int) -> Optional[Dict[str, Any]]:
+    def find_by_slug(self, slug: str) -> Optional[Dict[str, Any]]:
         with self.catalog_repo.get_session() as session:
-            movie = session.query(Movie).filter(Movie.id == movie_id).first()
-            if not movie:
-                return None
-            return {c.key: getattr(movie, c.key) for c in movie.__mapper__.columns.values()}
+            content = session.query(Content).filter(Content.slug == slug, Content.entity_type == 'movie', Content.is_deleted == False).first()
+            return self._to_dict(session, content) if content else None
 
-    def get_by_tmdb_id(self, tmdb_id: int) -> Optional[Dict[str, Any]]:
+    def find_by_uuid(self, content_uuid: str) -> Optional[Dict[str, Any]]:
         with self.catalog_repo.get_session() as session:
-            movie = session.query(Movie).filter(Movie.tmdb_id == tmdb_id).first()
-            if not movie:
+            content = session.query(Content).filter(Content.uuid == content_uuid, Content.is_deleted == False).first()
+            return self._to_dict(session, content) if content else None
+
+    def find_by_id(self, content_id: int) -> Optional[Dict[str, Any]]:
+        with self.catalog_repo.get_session() as session:
+            content = session.query(Content).filter(Content.id == content_id, Content.is_deleted == False).first()
+            return self._to_dict(session, content) if content else None
+
+    def find_by_external_id(self, provider_name: str, external_id: str) -> Optional[Dict[str, Any]]:
+        with self.catalog_repo.get_session() as session:
+            ext = session.query(ExternalIdentifier).filter(
+                ExternalIdentifier.provider_name == provider_name,
+                ExternalIdentifier.external_id == str(external_id)
+            ).first()
+            if not ext:
                 return None
-            return {c.key: getattr(movie, c.key) for c in movie.__mapper__.columns.values()}
+            return self.find_by_id(ext.content_id)
 
     def get_top_movies(self, limit: int = 20) -> List[Dict[str, Any]]:
         with self.catalog_repo.get_session() as session:
-            movies = session.query(Movie).order_by(Movie.popularity.desc()).limit(limit).all()
-            return [{c.key: getattr(m, c.key) for c in m.__mapper__.columns.values()} for m in movies]
+            results = session.query(Content).join(ContentStatistics).filter(
+                Content.entity_type == 'movie', Content.is_deleted == False
+            ).order_by(ContentStatistics.popularity.desc()).limit(limit).all()
+            return [self._to_dict(session, c) for c in results]
 
-    def get_all(self) -> Dict[int, Dict[str, Any]]:
-        with self.catalog_repo.get_session() as session:
-            movies = session.query(Movie).all()
-            return {m.id: {c.key: getattr(m, c.key) for c in m.__mapper__.columns.values()} for m in movies}
+    def _to_dict(self, session, content: Content) -> Dict[str, Any]:
+        meta = content.metadata_rel
+        art = content.artwork_rel
+        stats = content.statistics_rel
+        details = content.movie_details_rel
 
-    def save_movie(self, movie_data: dict) -> int:
-        return self.catalog_repo.save_movie(movie_data)
+        return {
+            "id": content.id,
+            "uuid": content.uuid,
+            "slug": content.slug,
+            "entity_type": content.entity_type,
+            "title": meta.title if meta else "",
+            "original_title": meta.original_title if meta else "",
+            "overview": meta.overview if meta else "",
+            "tagline": meta.tagline if meta else "",
+            "release_date": meta.release_date if meta else "",
+            "runtime": meta.runtime if meta else 0,
+            "language": meta.language if meta else "en",
+            "poster_url": art.poster_url if art else "",
+            "backdrop_url": art.backdrop_url if art else "",
+            "popularity": stats.popularity if stats else 0.0,
+            "rating": stats.average_rating if stats else 0.0,
+            "budget": details.budget if details else "",
+            "revenue": details.revenue if details else "",
+            "mpaa_rating": details.mpaa_rating if details else ""
+        }

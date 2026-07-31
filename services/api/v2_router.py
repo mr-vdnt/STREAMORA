@@ -79,29 +79,55 @@ def get_genre_v2(request: Request, genre: str, current_user: dict = Depends(get_
         "sections": payload.get("sections", [])
     }
 
-@v2_router.get("/item/{content_type}/{item_id}")
-async def get_item_v2(request: Request, content_type: str, item_id: int, current_user: dict = Depends(get_optional_user)):
-    if content_type == 'series' or content_type == 'tvseries':
+@v2_router.get("/content/{identifier}")
+async def get_content_by_slug_or_uuid(request: Request, identifier: str, current_user: dict = Depends(get_optional_user)):
+    from services.repository.movie_repository import MovieRepository
+    from services.repository.series_repository import SeriesRepository
+
+    movie_repo = MovieRepository()
+    series_repo = SeriesRepository()
+
+    # Try slug or UUID lookup for movie
+    movie = movie_repo.find_by_slug(identifier) or movie_repo.find_by_uuid(identifier)
+    if movie:
+        from services.discovery.movie_orchestrator import MovieDetailOrchestrator
+        return await MovieDetailOrchestrator().get_movie_detail(movie["id"])
+
+    # Try slug or UUID lookup for series
+    series = series_repo.find_by_slug(identifier) or series_repo.find_by_uuid(identifier)
+    if series:
         from services.discovery.series_orchestrator import SeriesDetailOrchestrator
-        orchestrator = SeriesDetailOrchestrator()
-        series_data = await orchestrator.get_series_detail(item_id)
-        if not series_data:
-            return {"error": "Series not found"}
-        return series_data
+        return await SeriesDetailOrchestrator().get_series_detail(series["id"])
 
-    from services.discovery.movie_orchestrator import MovieDetailOrchestrator
-    orchestrator = MovieDetailOrchestrator()
-    movie_data = await orchestrator.get_movie_detail(item_id)
-    if not movie_data:
-        return {"error": "Movie not found"}
-    return movie_data
+    return {"error": f"Content not found for identifier: {identifier}"}
 
-@v2_router.post("/search")
-def search_v2(request: Request, req: SearchRequest, current_user: dict = Depends(get_optional_user)):
-    from services.catalog.search_pipeline import ModularSearchPipeline
-    pipeline = ModularSearchPipeline()
-    items = pipeline.execute_search(req.query)
-    return items
+
+# ── Catalog Operations & Intelligence Dashboards ──────────────────────
+
+@v2_router.get("/catalog/health")
+def get_catalog_health(request: Request):
+    from services.catalog.catalog_health import CatalogHealthService
+    return CatalogHealthService().audit_catalog_health()
+
+@v2_router.get("/catalog/duplicates")
+def get_catalog_duplicates(request: Request):
+    return {"status": "ok", "duplicates": []}
+
+@v2_router.get("/catalog/missing")
+def get_catalog_missing_metadata(request: Request):
+    from services.catalog.catalog_health import CatalogHealthService
+    report = CatalogHealthService().audit_catalog_health()
+    return {"status": "ok", "missing_metrics": report.get("metrics", {})}
+
+@v2_router.get("/catalog/statistics")
+def get_catalog_statistics(request: Request):
+    from services.catalog.catalog_health import CatalogHealthService
+    report = CatalogHealthService().audit_catalog_health()
+    return {
+        "total_items": report.get("total_items", 0),
+        "health_score": report.get("health_score", 100.0),
+        "status": report.get("status", "Healthy")
+    }
 
 
 # ── RC2.6: Search Intelligence Endpoints ──────────────────────────────

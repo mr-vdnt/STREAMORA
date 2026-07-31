@@ -1,43 +1,79 @@
 from typing import Optional, Dict, Any, List
-from services.repository.catalog_db import CatalogRepository, TVSeries, Season, Episode
+from services.repository.catalog_db import (
+    CatalogRepository, Content, ContentMetadata, ContentArtwork, ContentStatistics, SeriesDetails, Season, Episode, ExternalIdentifier
+)
 
 class SeriesRepository:
     """
-    Dedicated SQLAlchemy-backed repository for TVSeries, Season, and Episode entities.
-    Strictly isolated from Movie data pipelines.
+    Repository operating on Series aggregate root (Series, Season, Episode).
+    Exposes domain operations without direct inter-repository calls.
     """
     def __init__(self, db_url: Optional[str] = None):
         self.catalog_repo = CatalogRepository(db_url=db_url)
 
-    def get_by_id(self, series_id: int) -> Optional[Dict[str, Any]]:
+    def find_by_slug(self, slug: str) -> Optional[Dict[str, Any]]:
         with self.catalog_repo.get_session() as session:
-            series = session.query(TVSeries).filter(TVSeries.id == series_id).first()
-            if not series:
-                return None
-            
-            series_dict = {c.key: getattr(series, c.key) for c in series.__mapper__.columns.values()}
-            
-            # Fetch seasons and episodes hierarchy
-            seasons_list = []
-            for s in series.seasons:
-                s_dict = {c.key: getattr(s, c.key) for c in s.__mapper__.columns.values()}
-                s_dict["episodes"] = [{c.key: getattr(e, c.key) for c in e.__mapper__.columns.values()} for e in s.episodes]
-                seasons_list.append(s_dict)
-                
-            series_dict["seasons"] = seasons_list
-            return series_dict
+            content = session.query(Content).filter(Content.slug == slug, Content.entity_type == 'tvseries', Content.is_deleted == False).first()
+            return self._to_dict(session, content) if content else None
 
-    def get_by_tmdb_id(self, tmdb_id: int) -> Optional[Dict[str, Any]]:
+    def find_by_uuid(self, content_uuid: str) -> Optional[Dict[str, Any]]:
         with self.catalog_repo.get_session() as session:
-            series = session.query(TVSeries).filter(TVSeries.tmdb_id == tmdb_id).first()
-            if not series:
-                return None
-            return {c.key: getattr(series, c.key) for c in series.__mapper__.columns.values()}
+            content = session.query(Content).filter(Content.uuid == content_uuid, Content.is_deleted == False).first()
+            return self._to_dict(session, content) if content else None
+
+    def find_by_id(self, content_id: int) -> Optional[Dict[str, Any]]:
+        with self.catalog_repo.get_session() as session:
+            content = session.query(Content).filter(Content.id == content_id, Content.is_deleted == False).first()
+            return self._to_dict(session, content) if content else None
 
     def get_top_series(self, limit: int = 20) -> List[Dict[str, Any]]:
         with self.catalog_repo.get_session() as session:
-            series_items = session.query(TVSeries).order_by(TVSeries.popularity.desc()).limit(limit).all()
-            return [{c.key: getattr(s, c.key) for c in s.__mapper__.columns.values()} for s in series_items]
+            results = session.query(Content).join(ContentStatistics).filter(
+                Content.entity_type == 'tvseries', Content.is_deleted == False
+            ).order_by(ContentStatistics.popularity.desc()).limit(limit).all()
+            return [self._to_dict(session, c) for c in results]
 
-    def save_series(self, series_data: dict) -> int:
-        return self.catalog_repo.save_tv_series(series_data)
+    def _to_dict(self, session, content: Content) -> Dict[str, Any]:
+        meta = content.metadata_rel
+        art = content.artwork_rel
+        stats = content.statistics_rel
+        details = content.series_details_rel
+
+        # Fetch seasons and episodes
+        seasons = session.query(Season).filter(Season.series_content_id == content.id, Season.is_deleted == False).all()
+        seasons_list = []
+        for s in seasons:
+            episodes = session.query(Episode).filter(Episode.season_id == s.id, Episode.is_deleted == False).all()
+            seasons_list.append({
+                "id": s.id,
+                "uuid": s.uuid,
+                "season_number": s.season_number,
+                "title": s.title,
+                "overview": s.overview,
+                "episodes": [{
+                    "id": ep.id,
+                    "uuid": ep.uuid,
+                    "episode_number": ep.episode_number,
+                    "title": ep.title,
+                    "overview": ep.overview,
+                    "runtime": ep.runtime,
+                    "rating": ep.rating
+                } for ep in episodes]
+            })
+
+        return {
+            "id": content.id,
+            "uuid": content.uuid,
+            "slug": content.slug,
+            "entity_type": content.entity_type,
+            "title": meta.title if meta else "",
+            "original_title": meta.original_title if meta else "",
+            "overview": meta.overview if meta else "",
+            "poster_url": art.poster_url if art else "",
+            "backdrop_url": art.backdrop_url if art else "",
+            "popularity": stats.popularity if stats else 0.0,
+            "rating": stats.average_rating if stats else 0.0,
+            "total_seasons": details.total_seasons if details else 1,
+            "total_episodes": details.total_episodes if details else 1,
+            "seasons": seasons_list
+        }
