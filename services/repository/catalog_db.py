@@ -404,7 +404,7 @@ class CatalogRepository:
     def _ensure_schema_up_to_date(self):
         with self.engine.connect() as conn:
             try:
-                # Check if seasons table has uuid column
+                # Seasons table auto-migrations
                 seasons_cols = [c["name"] for c in inspect(self.engine).get_columns("seasons")]
                 if "uuid" not in seasons_cols:
                     conn.execute(text("ALTER TABLE seasons ADD COLUMN uuid VARCHAR(36)"))
@@ -412,11 +412,24 @@ class CatalogRepository:
                     conn.execute(text("ALTER TABLE seasons ADD COLUMN series_content_id INTEGER"))
                     if "series_id" in seasons_cols:
                         conn.execute(text("UPDATE seasons SET series_content_id = series_id WHERE series_content_id IS NULL"))
+                if "air_date" not in seasons_cols:
+                    conn.execute(text("ALTER TABLE seasons ADD COLUMN air_date VARCHAR(50)"))
+                if "episode_count" not in seasons_cols:
+                    conn.execute(text("ALTER TABLE seasons ADD COLUMN episode_count INTEGER DEFAULT 0"))
+                if "is_deleted" not in seasons_cols:
+                    conn.execute(text("ALTER TABLE seasons ADD COLUMN is_deleted BOOLEAN DEFAULT 0"))
 
-                # Check if episodes table has uuid column
+                # Episodes table auto-migrations
                 episodes_cols = [c["name"] for c in inspect(self.engine).get_columns("episodes")]
                 if "uuid" not in episodes_cols:
                     conn.execute(text("ALTER TABLE episodes ADD COLUMN uuid VARCHAR(36)"))
+                if "air_date" not in episodes_cols:
+                    conn.execute(text("ALTER TABLE episodes ADD COLUMN air_date VARCHAR(50)"))
+                if "still_url" not in episodes_cols:
+                    conn.execute(text("ALTER TABLE episodes ADD COLUMN still_url VARCHAR(512)"))
+                if "is_deleted" not in episodes_cols:
+                    conn.execute(text("ALTER TABLE episodes ADD COLUMN is_deleted BOOLEAN DEFAULT 0"))
+
                 conn.commit()
             except Exception:
                 pass
