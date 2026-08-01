@@ -108,6 +108,23 @@ class MovieDetailOrchestrator:
                 "revenue": "$180,000,000"
             },
             "media": media,
+            "media_package": {
+                "poster": {"url": movie.get("poster_url", "")},
+                "backdrop": {"url": movie.get("backdrop_url", ""), "is_dark": True},
+                "primary_video": {
+                    "player_type": "embed_iframe",
+                    "player_payload": {
+                        "src": f"https://www.youtube.com/embed/{movie.get('video_id', 'JfVOs4VSpmA')}?autoplay=1&enablejsapi=1&rel=0&modestbranding=1",
+                        "video_id": movie.get("video_id", "JfVOs4VSpmA"),
+                        "aspect_ratio": "16:9"
+                    },
+                    "fallback": {
+                        "type": "external_url",
+                        "url": f"https://www.youtube.com/watch?v={movie.get('video_id', 'JfVOs4VSpmA')}",
+                        "label": "Watch Official Trailer on YouTube"
+                    }
+                }
+            },
             "credits": credits_data,
             "ratings": ratings,
             "providers": providers,
@@ -116,3 +133,4 @@ class MovieDetailOrchestrator:
             "recommendations": recommendations,
             "ai": ai
         }
+

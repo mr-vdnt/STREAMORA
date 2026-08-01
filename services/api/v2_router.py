@@ -118,6 +118,120 @@ async def get_content_by_slug_or_uuid(request: Request, identifier: str, current
 
     return {"error": f"Content not found for identifier: {identifier}"}
 
+@v2_router.get("/media-package/{content_id}")
+def get_media_package_endpoint(content_id: int, content_type: str = "movie", current_user: dict = Depends(get_optional_user)):
+    from services.media_engine.media_package_service import MediaPackageService
+    service = MediaPackageService()
+    return service.get_media_package(content_id, content_type=content_type)
+
+@v2_router.get("/media-package/{content_type}/{content_id}")
+def get_typed_media_package_endpoint(content_type: str, content_id: int, current_user: dict = Depends(get_optional_user)):
+    from services.media_engine.media_package_service import MediaPackageService
+    service = MediaPackageService()
+    return service.get_media_package(content_id, content_type=content_type)
+
+
+@v2_router.get("/content/movie/{identifier}")
+async def get_movie_content_endpoint(identifier: str, request: Request, current_user: dict = Depends(get_optional_user)):
+    from services.repository.movie_repository import MovieRepository
+    from services.discovery.movie_orchestrator import MovieDetailOrchestrator
+
+    movie_repo = MovieRepository()
+    if identifier.isdigit():
+        res = await MovieDetailOrchestrator().get_movie_detail(int(identifier))
+        if res:
+            return res
+        return {"error": f"Movie not found for ID: {identifier}"}
+
+    movie = movie_repo.find_by_slug(identifier) or movie_repo.find_by_uuid(identifier)
+    if movie:
+        res = await MovieDetailOrchestrator().get_movie_detail(movie["id"])
+        if res:
+            return res
+
+    return {"error": f"Movie not found for identifier: {identifier}"}
+
+@v2_router.get("/content/series/{identifier}")
+async def get_series_content_endpoint(identifier: str, request: Request, current_user: dict = Depends(get_optional_user)):
+    from services.repository.series_repository import SeriesRepository
+    from services.discovery.series_orchestrator import SeriesDetailOrchestrator
+
+    series_repo = SeriesRepository()
+    if identifier.isdigit():
+        res = await SeriesDetailOrchestrator().get_series_detail(int(identifier))
+        if res:
+            return res
+        return {"error": f"Series not found for ID: {identifier}"}
+
+    series = series_repo.find_by_slug(identifier) or series_repo.find_by_uuid(identifier)
+    if series:
+        res = await SeriesDetailOrchestrator().get_series_detail(series["id"])
+        if res:
+            return res
+
+    return {"error": f"Series not found for identifier: {identifier}"}
+
+
+@v2_router.get("/content/series/{identifier}/season/{season_number}")
+async def get_season_content_endpoint(identifier: str, season_number: int, request: Request, current_user: dict = Depends(get_optional_user)):
+    from services.repository.series_repository import SeriesRepository
+    series_repo = SeriesRepository()
+    
+    series_id = int(identifier) if identifier.isdigit() else None
+    if not series_id:
+        s = series_repo.find_by_slug(identifier) or series_repo.find_by_uuid(identifier)
+        if s:
+            series_id = s["id"]
+            
+    if not series_id:
+        return {"error": f"Series not found for identifier: {identifier}"}
+
+    series_data = series_repo.get_by_id(series_id)
+    if not series_data:
+        return {"error": "Series not found"}
+
+    for season in series_data.get("seasons", []):
+        if season.get("season_number") == season_number:
+            return {
+                "series_id": series_id,
+                "series_title": series_data.get("title"),
+                "season": season
+            }
+
+    return {"error": f"Season {season_number} not found for series {identifier}"}
+
+@v2_router.get("/content/series/{identifier}/season/{season_number}/episode/{episode_number}")
+async def get_episode_content_endpoint(identifier: str, season_number: int, episode_number: int, request: Request, current_user: dict = Depends(get_optional_user)):
+    from services.repository.series_repository import SeriesRepository
+    series_repo = SeriesRepository()
+
+    series_id = int(identifier) if identifier.isdigit() else None
+    if not series_id:
+        s = series_repo.find_by_slug(identifier) or series_repo.find_by_uuid(identifier)
+        if s:
+            series_id = s["id"]
+
+    if not series_id:
+        return {"error": f"Series not found for identifier: {identifier}"}
+
+    series_data = series_repo.get_by_id(series_id)
+    if not series_data:
+        return {"error": "Series not found"}
+
+    for season in series_data.get("seasons", []):
+        if season.get("season_number") == season_number:
+            for ep in season.get("episodes", []):
+                if ep.get("episode_number") == episode_number:
+                    return {
+                        "series_id": series_id,
+                        "series_title": series_data.get("title"),
+                        "season_number": season_number,
+                        "episode": ep
+                    }
+
+    return {"error": f"Episode S{season_number}E{episode_number} not found for series {identifier}"}
+
+
 
 @v2_router.get("/item/{content_type}/{item_id}")
 async def get_item_details_v2(request: Request, content_type: str, item_id: str, current_user: dict = Depends(get_optional_user)):
@@ -319,6 +433,38 @@ def autocomplete_v2(request: Request, q: str = "", current_user: dict = Depends(
     if len(q) < 2:
         return {"titles": [], "genres": [], "directors": [], "actors": []}
 
+@v2_router.get("/person/{name}")
+def get_person_profile(name: str, request: Request, current_user: dict = Depends(get_optional_user)):
+    from services.repository.movie_repository import MovieRepository
+    from services.repository.series_repository import SeriesRepository
+    
+    movie_repo = MovieRepository()
+    series_repo = SeriesRepository()
+    
+    person_name = name.replace("-", " ").title()
+    matched_movies = []
+    
+    for m in movie_repo.get_all().values():
+        cast_str = str(m.get("cast", ""))
+        director_str = str(m.get("director", ""))
+        if person_name.lower() in cast_str.lower() or person_name.lower() in director_str.lower():
+            matched_movies.append({
+                "id": m.get("id"),
+                "title": m.get("title"),
+                "poster_url": m.get("poster_url"),
+                "rating": m.get("rating"),
+                "role": "Director" if person_name.lower() in director_str.lower() else "Actor"
+            })
+            
+    return {
+        "name": person_name,
+        "biography": f"{person_name} is a renowned cinematic artist known for compelling storytelling and performances across major Streamora titles.",
+        "avatar_url": f"https://ui-avatars.com/api/?name={person_name.replace(' ', '+')}&background=0D8ABC&color=fff",
+        "known_for_count": len(matched_movies),
+        "filmography": matched_movies
+    }
+
+
     from services.repository.movie_repository import MovieRepository
     import unicodedata
 
@@ -394,6 +540,16 @@ def autocomplete_v2(request: Request, q: str = "", current_user: dict = Depends(
         "directors": directors,
         "actors": actors
     }
+
+@v2_router.get("/demo/system")
+def get_demo_system_metrics(request: Request, current_user: dict = Depends(get_optional_user)):
+    """
+    Operational demo system metrics endpoint powering the Admin Dashboard.
+    """
+    from services.analytics.system_service import SystemAnalyticsService
+    service = SystemAnalyticsService()
+    return service.get_system_metrics()
+
 
 
 @v2_router.get("/search/instant")

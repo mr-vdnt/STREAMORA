@@ -1,4 +1,7 @@
+from typing import Optional, List, Dict, Any
+
 class ExplanationEngine:
+
     """
     Generates dynamic 'Why we recommend this' text using matched signals.
     """
@@ -41,3 +44,20 @@ class ExplanationEngine:
             explanations.append("Recommended for you")
             
         return explanations
+
+    def generate_detailed_explanation(self, item: dict, seed_item: Optional[dict] = None) -> dict:
+        rating = float(item.get('rating', 8.0) or 8.0)
+        match_score = min(99, int(rating * 10) + 5)
+        
+        seed_title = seed_item.get("title", "Interstellar") if seed_item else "Interstellar"
+        genres = item.get("genres", ["Sci-Fi", "Drama"])
+        if isinstance(genres, str):
+            genres = [g.strip() for g in genres.split("|") if g.strip()]
+
+        return {
+            "reason": f"Because you watched {seed_title}",
+            "match_score": match_score,
+            "similarity_percentage": match_score,
+            "shared_themes": genres[:4] if genres else ["Cinematic", "Drama", "Storytelling"]
+        }
+

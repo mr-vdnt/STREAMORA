@@ -164,3 +164,30 @@ async def logout(request: Request, response: Response):
     clear_auth_cookies(response)
     log_event(who=who, what="LOGOUT", where="/logout", details="", ip=ip, req_id=req_id)
     return {"status": "success"}
+
+@router.post("/auth/guest")
+@limiter.limit("10/minute")
+async def guest_login(request: Request, response: Response):
+    import uuid
+    req_id = getattr(request.state, "req_id", "N/A")
+    ip = getattr(request.state, "client_ip", "unknown")
+    
+    guest_id = f"guest_{uuid.uuid4().hex[:8]}"
+    user_data = {"sub": guest_id, "role": "Guest", "user_id": 0}
+    
+    access_token = create_access_token(data=user_data)
+    refresh_token = create_refresh_token(data=user_data)
+    
+    set_auth_cookies(response, access_token, refresh_token)
+    log_event(who=guest_id, what="GUEST_LOGIN", where="/auth/guest", details="", ip=ip, req_id=req_id)
+    
+    return {
+        "status": "success",
+        "user_id": 0,
+        "username": guest_id,
+        "role": "Guest",
+        "display_name": "Guest Explorer",
+        "access_token": access_token,
+        "refresh_token": refresh_token
+    }
+

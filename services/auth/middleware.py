@@ -19,6 +19,8 @@ class AuthMiddleware(BaseHTTPMiddleware):
             r"^/register$",
             r"^/csrf-token$",
             r"^/auth/refresh$",
+            r"^/auth/guest$",
+            r"^/logout$",
             r"^/api/auth/register$",
             r"^/api/auth/login$",
             r"^/api/auth/token$",
@@ -35,6 +37,10 @@ class AuthMiddleware(BaseHTTPMiddleware):
             r"^/modal/.*",
             r"^/api/v2/home.*$",
             r"^/api/v2/item/.*$",
+            r"^/api/v2/content/.*$",
+            r"^/api/v2/media-package/.*$",
+            r"^/api/v2/person/.*$",
+            r"^/api/v2/demo/system.*$",
             r"^/api/v2/genre/.*$",
             r"^/api/v2/search/.*$",
             r"^/api/v2/autocomplete.*$",
@@ -56,11 +62,12 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if request.method in ["POST", "PUT", "DELETE", "PATCH"]:
             # Bypass CSRF checks for auth creation endpoints (match actual mounted paths)
             CSRF_EXEMPT = {
-                "/token", "/register",                      # legacy bare paths
+                "/token", "/register", "/auth/guest", "/logout", "/auth/refresh", # legacy bare paths
                 "/api/auth/register", "/api/auth/login",   # actual mounted paths
                 "/api/auth/token",                         # OAuth token endpoint
                 "/search", "/api/v2/search",               # Search query endpoints
             }
+
             if request.url.path in CSRF_EXEMPT or request.url.path.startswith("/api/v2/search"):
                 pass
             else:
