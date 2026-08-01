@@ -583,6 +583,75 @@ class FranchiseMember(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+# ─────────────────────────────────────────────────────────────
+# Search Intelligence Platform (SIP) Models
+# ─────────────────────────────────────────────────────────────
+
+class SearchFeatureStore(Base):
+    """Pre-computed feature store for fast offline/online LTR and multi-stage ranking."""
+    __tablename__ = 'search_feature_store'
+
+    content_id = Column(Integer, ForeignKey('contents.id'), primary_key=True)
+    knowledge_features_json = Column(Text, nullable=True)  # Theme/mood density, fact counts
+    popularity_features_json = Column(Text, nullable=True)  # Popularity score, trending velocity
+    quality_features_json = Column(Text, nullable=True)  # Rating, completeness score
+    graph_features_json = Column(Text, nullable=True)  # Franchise depth, relationship count
+    vector_features_json = Column(Text, nullable=True)  # Vector embedding
+    updated_at = Column(DateTime, default=datetime.utcnow)
+
+
+class SearchSession(Base):
+    """User search behavior session tracking."""
+    __tablename__ = 'search_sessions'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    uuid = Column(String(36), unique=True, nullable=False, index=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String(100), nullable=True, index=True)
+    query_count = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class SearchEvent(Base):
+    """Detailed search interactions telemetry (queries, clicks, dwell times, reformulations)."""
+    __tablename__ = 'search_events'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    uuid = Column(String(36), unique=True, nullable=False, index=True, default=lambda: str(uuid.uuid4()))
+    session_id = Column(Integer, ForeignKey('search_sessions.id'), nullable=True, index=True)
+    query_text = Column(String(512), nullable=False, index=True)
+    rewritten_query = Column(String(512), nullable=True)
+    parsed_intent = Column(String(50), nullable=False)
+    plan_hash = Column(String(64), nullable=True, index=True)
+    results_count = Column(Integer, default=0)
+    latency_ms = Column(Float, default=0.0)
+    clicked_content_id = Column(Integer, ForeignKey('contents.id'), nullable=True)
+    click_position = Column(Integer, nullable=True)
+    dwell_time_seconds = Column(Float, nullable=True)
+    event_type = Column(String(50), default="query", index=True)  # query, click, dwell, reformulation, abandonment
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class SearchPlanCache(Base):
+    """Cached executable search plans for query optimization."""
+    __tablename__ = 'search_plan_cache'
+
+    plan_hash = Column(String(64), primary_key=True)
+    query_text = Column(String(512), nullable=False, index=True)
+    plan_json = Column(Text, nullable=False)
+    hits_count = Column(Integer, default=1)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class SynonymDictionary(Base):
+    """Managed term expansion dictionary for genres, themes, and abbreviations."""
+    __tablename__ = 'synonym_dictionary'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    term = Column(String(100), unique=True, nullable=False, index=True)
+    expanded_terms_json = Column(Text, nullable=False)  # JSON List[str]
+    category = Column(String(50), default="genre")
+
+
 class CatalogRepository:
     """
     Master SQLAlchemy Catalog Repository backing canonical schema.
