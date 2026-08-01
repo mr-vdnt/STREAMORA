@@ -12,6 +12,7 @@ Verifies:
 """
 import pytest
 import asyncio
+import uuid
 from services.repository.catalog_db import (
     CatalogRepository, Content, ContentMetadata, ContentArtwork, ContentStatistics,
     ExternalIdentifier, OutboxEvent, IngestionJob, RawPayload, IngestionProvenance
@@ -244,14 +245,15 @@ def test_catalog_writer_create_command(repo):
 
 @pytest.mark.anyio
 async def test_e2e_dap_pipeline(repo, sample_tmdb_movie):
+    unique_ext_id = f"e2e_test_{uuid.uuid4().hex[:8]}"
     movie_data = dict(sample_tmdb_movie)
-    movie_data["id"] = "e2e_test_99927205"
-    movie_data["title"] = "E2E Unique Title 2026"
+    movie_data["id"] = unique_ext_id
+    movie_data["title"] = f"E2E Unique Title {unique_ext_id}"
 
     pipeline = DataAcquisitionPipeline(repo)
     raw_dto = RawPayloadDTO(
         connector_name="tmdb",
-        external_id="e2e_test_99927205",
+        external_id=unique_ext_id,
         entity_type="movie",
         raw_data=movie_data,
     )

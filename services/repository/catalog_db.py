@@ -456,6 +456,133 @@ class IngestionProvenance(Base):
     quality_score = Column(Float, default=0.0)
 
 
+# ─────────────────────────────────────────────────────────────
+# Knowledge & Intelligence Platform (KIP) Models
+# ─────────────────────────────────────────────────────────────
+
+class KnowledgeFact(Base):
+    """Atomic normalized facts with confidence, source weight, and lifecycle states."""
+    __tablename__ = 'knowledge_facts'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    uuid = Column(String(36), unique=True, nullable=False, index=True, default=lambda: str(uuid.uuid4()))
+    content_id = Column(Integer, ForeignKey('contents.id'), nullable=False, index=True)
+    category = Column(String(50), nullable=False, index=True)  # theme, mood, setting, topic, trope, character, object, narrative, audience_safety
+    predicate = Column(String(100), nullable=False, index=True)  # has_theme, has_mood, located_in, features_object
+    value = Column(Text, nullable=False)  # "mind-bending", "dream-heist", "totem"
+    confidence = Column(Float, default=1.0)  # 0.0 to 1.0
+    source_weight = Column(Float, default=0.80)  # Provider / model reliability weight
+    state = Column(String(20), default="ACTIVE", index=True)  # ACTIVE, SUPERSEDED, RETRACTED, EXPIRED
+    superseded_by_id = Column(Integer, ForeignKey('knowledge_facts.id'), nullable=True)
+    retracted_reason = Column(Text, nullable=True)
+    source_provider = Column(String(100), nullable=False, default="streamora_kip")
+    inference_model = Column(String(100), nullable=False, default="baseline_extractor")
+    model_version = Column(String(50), nullable=False, default="1.0.0")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class KnowledgeAssertion(Base):
+    """Structured assertions linking entities and concepts."""
+    __tablename__ = 'knowledge_assertions'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    content_id = Column(Integer, ForeignKey('contents.id'), nullable=False, index=True)
+    assertion_type = Column(String(50), nullable=False)  # character_role, conflict_structure, thematic_premise
+    subject = Column(String(255), nullable=False)
+    relationship = Column(String(100), nullable=False)
+    target = Column(String(255), nullable=False)
+    confidence = Column(Float, default=1.0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class KnowledgeRelationship(Base):
+    """Semantic inter-content relationships (sequels, spin-offs, thematic twins)."""
+    __tablename__ = 'knowledge_relationships'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    source_content_id = Column(Integer, ForeignKey('contents.id'), nullable=False, index=True)
+    target_content_id = Column(Integer, ForeignKey('contents.id'), nullable=False, index=True)
+    relationship_type = Column(String(50), nullable=False, index=True)  # sequel, prequel, spin_off, shared_universe, thematic_twin
+    strength = Column(Float, default=1.0)  # 0.0 to 1.0
+    provenance = Column(String(255), default="franchise_engine")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class InferenceRun(Base):
+    """Audit log and execution metrics for intelligence engine runs."""
+    __tablename__ = 'inference_runs'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    content_id = Column(Integer, ForeignKey('contents.id'), nullable=False, index=True)
+    engine_name = Column(String(100), nullable=False, index=True)
+    model_name = Column(String(100), nullable=False)
+    model_version = Column(String(50), nullable=False)
+    prompt_hash = Column(String(64), nullable=True)
+    execution_time_ms = Column(Float, default=0.0)
+    facts_produced = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class KnowledgeSnapshot(Base):
+    """Immutable freeze of atomic facts used for reproducible intelligence materialization."""
+    __tablename__ = 'knowledge_snapshots'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    uuid = Column(String(36), unique=True, nullable=False, index=True, default=lambda: str(uuid.uuid4()))
+    content_id = Column(Integer, ForeignKey('contents.id'), nullable=False, index=True)
+    fact_count = Column(Integer, default=0)
+    knowledge_hash = Column(String(64), nullable=False, index=True)  # SHA-256 of active facts
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class IntelligenceProfile(Base):
+    """CQRS Materialized Read Model for high-speed API & service consumption."""
+    __tablename__ = 'intelligence_profiles'
+
+    content_id = Column(Integer, ForeignKey('contents.id'), primary_key=True)
+    snapshot_id = Column(Integer, ForeignKey('knowledge_snapshots.id'), nullable=True)
+    profile_version = Column(String(50), default="1.0.0")
+    dominant_themes_json = Column(Text, nullable=True)  # JSON List[str]
+    dominant_moods_json = Column(Text, nullable=True)  # JSON List[str]
+    pacing = Column(String(50), default="steady")  # fast-paced, slow-burn, steady
+    narrative_structure = Column(String(100), default="linear")
+    audience_rating = Column(String(20), default="PG-13")
+    content_warnings_json = Column(Text, nullable=True)  # JSON List[str]
+    summary_short = Column(Text, nullable=True)
+    summary_medium = Column(Text, nullable=True)
+    summary_deep = Column(Text, nullable=True)
+    summary_spoiler_free = Column(Text, nullable=True)
+    overall_confidence = Column(Float, default=1.0)
+    fact_count = Column(Integer, default=0)
+    generated_at = Column(DateTime, default=datetime.utcnow)
+
+
+class FranchiseUniverse(Base):
+    """Franchise / Universe aggregate root."""
+    __tablename__ = 'franchise_universes'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    uuid = Column(String(36), unique=True, nullable=False, index=True, default=lambda: str(uuid.uuid4()))
+    name = Column(String(255), nullable=False, index=True)
+    slug = Column(String(255), unique=True, nullable=False, index=True)
+    description = Column(Text, nullable=True)
+    backdrop_url = Column(String(512), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class FranchiseMember(Base):
+    """Links Content to Franchise Universe with chronological and release ordering."""
+    __tablename__ = 'franchise_members'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    franchise_id = Column(Integer, ForeignKey('franchise_universes.id'), nullable=False, index=True)
+    content_id = Column(Integer, ForeignKey('contents.id'), nullable=False, index=True)
+    chronological_order = Column(Integer, default=1)
+    release_order = Column(Integer, default=1)
+    timeline_era = Column(String(100), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class CatalogRepository:
     """
     Master SQLAlchemy Catalog Repository backing canonical schema.

@@ -147,6 +147,133 @@ async def get_item_details_v2(request: Request, content_type: str, item_id: str,
     return await get_content_by_slug_or_uuid(request, item_id, current_user)
 
 
+# ── Knowledge & Intelligence Platform (KIP) Endpoints ────────────────
+
+@v2_router.post("/knowledge/extract/{content_id}")
+async def extract_and_infer_knowledge(content_id: int, request: Request, current_user: dict = Depends(get_optional_user)):
+    """
+    Trigger baseline fact extraction & full inference engine pipeline for a content item.
+    """
+    from services.knowledge.pipeline import KnowledgePipeline
+    pipeline = KnowledgePipeline()
+    try:
+        profile = await pipeline.process_content(content_id)
+        return {
+            "status": "success",
+            "content_id": content_id,
+            "fact_count": profile.fact_count,
+            "overall_confidence": profile.overall_confidence,
+            "profile": profile
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+@v2_router.get("/knowledge/facts/{content_id}")
+def get_knowledge_facts(content_id: int, request: Request, current_user: dict = Depends(get_optional_user)):
+    """
+    Retrieve all atomic facts, source reliability weights, confidence scores, and states for a content item.
+    """
+    from services.repository.catalog_db import CatalogRepository, KnowledgeFact
+    repo = CatalogRepository()
+    with repo.get_session() as session:
+        facts = session.query(KnowledgeFact).filter(
+            KnowledgeFact.content_id == content_id,
+            KnowledgeFact.state == "ACTIVE"
+        ).all()
+        return {
+            "content_id": content_id,
+            "fact_count": len(facts),
+            "facts": [
+                {
+                    "id": f.id,
+                    "uuid": f.uuid,
+                    "category": f.category,
+                    "predicate": f.predicate,
+                    "value": f.value,
+                    "confidence": f.confidence,
+                    "source_weight": f.source_weight,
+                    "state": f.state,
+                    "source_provider": f.source_provider,
+                    "inference_model": f.inference_model,
+                    "model_version": f.model_version
+                } for f in facts
+            ]
+        }
+
+
+@v2_router.get("/knowledge/profile/{content_id}")
+def get_intelligence_profile(content_id: int, request: Request, current_user: dict = Depends(get_optional_user)):
+    """
+    Retrieve the materialized IntelligenceProfile CQRS read view for a content item.
+    """
+    import json
+    from services.repository.catalog_db import CatalogRepository, IntelligenceProfile
+    repo = CatalogRepository()
+    with repo.get_session() as session:
+        profile = session.query(IntelligenceProfile).filter(IntelligenceProfile.content_id == content_id).first()
+        if not profile:
+            return {"error": f"Intelligence profile not found for content_id {content_id}. Run /knowledge/extract/{content_id} first."}
+        
+        return {
+            "content_id": profile.content_id,
+            "snapshot_id": profile.snapshot_id,
+            "profile_version": profile.profile_version,
+            "dominant_themes": json.loads(profile.dominant_themes_json) if profile.dominant_themes_json else [],
+            "dominant_moods": json.loads(profile.dominant_moods_json) if profile.dominant_moods_json else [],
+            "pacing": profile.pacing,
+            "narrative_structure": profile.narrative_structure,
+            "audience_rating": profile.audience_rating,
+            "content_warnings": json.loads(profile.content_warnings_json) if profile.content_warnings_json else [],
+            "summaries": {
+                "short": profile.summary_short,
+                "medium": profile.summary_medium,
+                "deep": profile.summary_deep,
+                "spoiler_free": profile.summary_spoiler_free
+            },
+            "overall_confidence": profile.overall_confidence,
+            "fact_count": profile.fact_count,
+            "generated_at": profile.generated_at.isoformat() if profile.generated_at else None
+        }
+
+
+@v2_router.get("/knowledge/franchise/{slug}")
+def get_franchise_universe(slug: str, request: Request, current_user: dict = Depends(get_optional_user)):
+    """
+    Retrieve franchise universe details, timeline ordering, and member contents.
+    """
+    from services.repository.catalog_db import CatalogRepository, FranchiseUniverse, FranchiseMember, Content
+    repo = CatalogRepository()
+    with repo.get_session() as session:
+        franchise = session.query(FranchiseUniverse).filter(FranchiseUniverse.slug == slug).first()
+        if not franchise:
+            return {"error": f"Franchise universe not found for slug: {slug}"}
+
+        members = session.query(FranchiseMember).filter(FranchiseMember.franchise_id == franchise.id).order_by(FranchiseMember.chronological_order).all()
+        member_list = []
+        for m in members:
+            content = session.query(Content).filter(Content.id == m.content_id).first()
+            meta = content.metadata_rel if content else None
+            member_list.append({
+                "content_id": m.content_id,
+                "title": meta.title if meta else "Unknown",
+                "chronological_order": m.chronological_order,
+                "release_order": m.release_order,
+                "timeline_era": m.timeline_era
+            })
+
+        return {
+            "id": franchise.id,
+            "uuid": franchise.uuid,
+            "name": franchise.name,
+            "slug": franchise.slug,
+            "description": franchise.description,
+            "backdrop_url": franchise.backdrop_url,
+            "member_count": len(member_list),
+            "members": member_list
+        }
+
+
 # ── Catalog Operations & Intelligence Dashboards ──────────────────────
 
 @v2_router.get("/catalog/health")
