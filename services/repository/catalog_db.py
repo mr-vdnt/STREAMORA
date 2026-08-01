@@ -652,6 +652,145 @@ class SynonymDictionary(Base):
     category = Column(String(50), default="genre")
 
 
+# ─────────────────────────────────────────────────────────────
+# Recommendation Intelligence Platform (RIP) Models
+# ─────────────────────────────────────────────────────────────
+
+class UserProfile(Base):
+    """User Intelligence Platform rich profile containing 20+ affinity vectors and behavioral metrics."""
+    __tablename__ = 'user_profiles'
+
+    user_id = Column(String(100), primary_key=True)
+    genre_affinities_json = Column(Text, nullable=True)
+    theme_affinities_json = Column(Text, nullable=True)
+    mood_affinities_json = Column(Text, nullable=True)
+    person_affinities_json = Column(Text, nullable=True)
+    franchise_affinities_json = Column(Text, nullable=True)
+    language_affinities_json = Column(Text, nullable=True)
+    runtime_preference = Column(String(50), default="standard")
+    freshness_preference = Column(Float, default=0.5)
+    novelty_preference = Column(Float, default=0.5)
+    popularity_bias = Column(Float, default=0.5)
+    completion_rate = Column(Float, default=0.8)
+    total_searches = Column(Integer, default=0)
+    total_watches = Column(Integer, default=0)
+    updated_at = Column(DateTime, default=datetime.utcnow)
+
+
+class UserInteractionEvent(Base):
+    """Granular user interaction telemetry (watch, click, rate, search_followthrough, dismiss, complete)."""
+    __tablename__ = 'user_interaction_events'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    uuid = Column(String(36), unique=True, nullable=False, index=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String(100), nullable=False, index=True)
+    content_id = Column(Integer, ForeignKey('contents.id'), nullable=False, index=True)
+    event_type = Column(String(50), nullable=False, index=True)  # watch, click, rate, search_followthrough, dismiss, complete
+    weight = Column(Float, default=1.0)
+    context_metadata_json = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class RecommendationFeatureStore(Base):
+    """Materialized feature store for offline & online recommendation ranking."""
+    __tablename__ = 'recommendation_feature_store'
+
+    content_id = Column(Integer, ForeignKey('contents.id'), primary_key=True)
+    user_features_json = Column(Text, nullable=True)
+    content_features_json = Column(Text, nullable=True)
+    interaction_features_json = Column(Text, nullable=True)
+    graph_features_json = Column(Text, nullable=True)
+    embedding_features_json = Column(Text, nullable=True)
+    freshness_features_json = Column(Text, nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow)
+
+
+class RecommendationCache(Base):
+    """Pre-computed recommendation slates per user."""
+    __tablename__ = 'recommendation_cache'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(100), nullable=False, index=True)
+    slate_type = Column(String(100), nullable=False, index=True)  # home, because_you_watched, trending
+    items_json = Column(Text, nullable=False)
+    profile_hash = Column(String(64), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class RecommendationSession(Base):
+    """Recommendation slate rendering session tracking."""
+    __tablename__ = 'recommendation_sessions'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    uuid = Column(String(36), unique=True, nullable=False, index=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String(100), nullable=False, index=True)
+    slate_type = Column(String(100), nullable=False)
+    item_count = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class RecommendationEvent(Base):
+    """Detailed telemetry on items shown, clicked, dwell times, and watch completions."""
+    __tablename__ = 'recommendation_events'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    uuid = Column(String(36), unique=True, nullable=False, index=True, default=lambda: str(uuid.uuid4()))
+    session_id = Column(Integer, ForeignKey('recommendation_sessions.id'), nullable=True, index=True)
+    user_id = Column(String(100), nullable=False, index=True)
+    content_id = Column(Integer, ForeignKey('contents.id'), nullable=False)
+    position = Column(Integer, default=0)
+    event_type = Column(String(50), default="shown", index=True)  # shown, click, dwell, watch, complete, dismiss
+    dwell_seconds = Column(Float, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class RecommendationPlanCache(Base):
+    """Cached executable recommendation plans for query optimization."""
+    __tablename__ = 'recommendation_plan_cache'
+
+    plan_hash = Column(String(64), primary_key=True)
+    user_id = Column(String(100), nullable=False, index=True)
+    slate_type = Column(String(100), nullable=False)
+    plan_json = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class RecommendationFeedback(Base):
+    """Explicit & implicit feedback telemetry for recommendation learning."""
+    __tablename__ = 'recommendation_feedback'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(100), nullable=False, index=True)
+    content_id = Column(Integer, ForeignKey('contents.id'), nullable=False)
+    feedback_type = Column(String(50), nullable=False)  # like, dislike, rating, watchlist, skip, watch
+    score = Column(Float, default=1.0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class RecommendationExperiment(Base):
+    """A/B testing, Feature Flags, and Multi-Arm Bandit experiment variant assignments."""
+    __tablename__ = 'recommendation_experiments'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    experiment_name = Column(String(100), nullable=False, index=True)
+    variant_name = Column(String(50), nullable=False)
+    user_id = Column(String(100), nullable=False, index=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class RecommendationMetrics(Base):
+    """Operational and IR evaluation metrics log."""
+    __tablename__ = 'recommendation_metrics'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    metric_name = Column(String(100), nullable=False, index=True)
+    metric_value = Column(Float, nullable=False)
+    slate_type = Column(String(100), nullable=True)
+    eval_window = Column(String(50), default="24h")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class CatalogRepository:
     """
     Master SQLAlchemy Catalog Repository backing canonical schema.

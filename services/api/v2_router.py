@@ -13,7 +13,9 @@ from pydantic import BaseModel
 v2_router = APIRouter(prefix="/api/v2")
 
 from services.search.api.search_router import search_router
+from services.recommendation.api.recommendation_router import recommendation_router
 v2_router.include_router(search_router)
+v2_router.include_router(recommendation_router)
 
 class SearchRequest(BaseModel):
     query: str
