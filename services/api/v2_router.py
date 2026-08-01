@@ -423,17 +423,8 @@ def get_catalog_statistics(request: Request):
 
 # ── RC2.6: Search Intelligence Endpoints ──────────────────────────────
 
-@v2_router.get("/autocomplete")
-def autocomplete_v2(request: Request, q: str = "", current_user: dict = Depends(get_optional_user)):
-    """
-    Rich real-time autocomplete with entity-type classification.
-    Returns grouped results: titles, genres, directors, actors.
-    Designed for the frontend search-as-you-type dropdown.
-    """
-    if len(q) < 2:
-        return {"titles": [], "genres": [], "directors": [], "actors": []}
-
 @v2_router.get("/person/{name}")
+
 def get_person_profile(name: str, request: Request, current_user: dict = Depends(get_optional_user)):
     from services.repository.movie_repository import MovieRepository
     from services.repository.series_repository import SeriesRepository
