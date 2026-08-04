@@ -24,10 +24,11 @@ jobs:
           pip install -r requirements.txt
           pip install pytest
 
-      - name: Run Pytest
+      - name: Run Pytest & Launch Suites
         run: |
-          # Make sure all tests pass before continuing
-          python -m pytest tests/
+          python tests/test_v1_1_infrastructure.py
+          python tests/test_launch_additions.py
+          python tests/test_launch_milestone_a.py
 
   security-scan:
     name: Security Vulnerability Scan

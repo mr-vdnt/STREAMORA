@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: streamora-api
+  labels:
+    app: streamora-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: streamora-api
+  template:
+    metadata:
+      labels:
+        app: streamora-api
+    spec:
+      containers:
+      - name: streamora-api
+        image: streamora/api:v1.1.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+        env:
+        - name: STREAMORA_ENV
+          value: "production"
+        - name: STREAMORA_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: streamora-secrets
+              key: secret-key
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 15
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
