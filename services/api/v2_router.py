@@ -18,6 +18,10 @@ from services.auth.api.auth_router import auth_router
 from services.discovery.api.discovery_router import discovery_router
 from services.hero.api.hero_router import hero_router
 from services.playback.api.playback_router import playback_router
+from services.media.api.media_router import media_router
+from services.notification.api.notification_router import notification_router
+from services.admin.api.admin_router import admin_router
+from services.observability.api.observability_router import observability_router
 
 v2_router.include_router(search_router)
 v2_router.include_router(recommendation_router)
@@ -25,6 +29,10 @@ v2_router.include_router(auth_router)
 v2_router.include_router(discovery_router)
 v2_router.include_router(hero_router)
 v2_router.include_router(playback_router)
+v2_router.include_router(media_router)
+v2_router.include_router(notification_router)
+v2_router.include_router(admin_router)
+v2_router.include_router(observability_router)
 
 class SearchRequest(BaseModel):
     query: str

@@ -852,6 +852,33 @@ class DiscoveryCollection(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class WatchHistory(Base):
+    """Immutable view event history timeline log."""
+    __tablename__ = 'watch_histories'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    account_id = Column(Integer, ForeignKey('user_accounts.id'), nullable=False, index=True)
+    profile_id = Column(Integer, ForeignKey('household_profiles.id'), nullable=True, index=True)
+    content_id = Column(Integer, ForeignKey('contents.id'), nullable=False, index=True)
+    duration_watched_seconds = Column(Float, default=0.0)
+    completed = Column(Boolean, default=False)
+    watched_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class UserNotification(Base):
+    """User notifications log for continue watching, new releases, and recommendations."""
+    __tablename__ = 'user_notifications'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    account_id = Column(Integer, ForeignKey('user_accounts.id'), nullable=False, index=True)
+    title = Column(String(255), nullable=False)
+    message = Column(Text, nullable=False)
+    notification_type = Column(String(50), default="info")  # continue_watching, new_release, recommendation, system
+    link_url = Column(String(512), nullable=True)
+    is_read = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class CatalogRepository:
     """
     Master SQLAlchemy Catalog Repository backing canonical schema.
