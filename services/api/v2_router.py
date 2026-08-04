@@ -22,6 +22,8 @@ from services.media.api.media_router import media_router
 from services.notification.api.notification_router import notification_router
 from services.admin.api.admin_router import admin_router
 from services.observability.api.observability_router import observability_router
+from services.config.api.config_router import config_router
+from services.workers.api.workers_router import workers_router
 
 v2_router.include_router(search_router)
 v2_router.include_router(recommendation_router)
@@ -33,6 +35,8 @@ v2_router.include_router(media_router)
 v2_router.include_router(notification_router)
 v2_router.include_router(admin_router)
 v2_router.include_router(observability_router)
+v2_router.include_router(config_router)
+v2_router.include_router(workers_router)
 
 class SearchRequest(BaseModel):
     query: str
