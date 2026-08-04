@@ -25,6 +25,7 @@ from services.observability.api.observability_router import observability_router
 from services.config.api.config_router import config_router
 from services.workers.api.workers_router import workers_router
 from services.feature_store.api.feature_store_router import feature_store_router
+from services.analytics.api.analytics_router import analytics_router
 
 v2_router.include_router(search_router)
 v2_router.include_router(recommendation_router)
@@ -39,6 +40,7 @@ v2_router.include_router(observability_router)
 v2_router.include_router(config_router)
 v2_router.include_router(workers_router)
 v2_router.include_router(feature_store_router)
+v2_router.include_router(analytics_router)
 
 class SearchRequest(BaseModel):
     query: str
