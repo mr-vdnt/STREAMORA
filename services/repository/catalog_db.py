@@ -791,6 +791,67 @@ class RecommendationMetrics(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+# ─────────────────────────────────────────────────────────────
+# Milestone A & Launch Platform Models
+# ─────────────────────────────────────────────────────────────
+
+class UserAccount(Base):
+    """User account authentication & identity model."""
+    __tablename__ = 'user_accounts'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    uuid = Column(String(36), unique=True, nullable=False, index=True, default=lambda: str(uuid.uuid4()))
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    hashed_password = Column(String(255), nullable=False)
+    full_name = Column(String(100), nullable=True)
+    is_active = Column(Boolean, default=True)
+    is_admin = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class HouseholdProfile(Base):
+    """Multi-profile household support per user account."""
+    __tablename__ = 'household_profiles'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    uuid = Column(String(36), unique=True, nullable=False, index=True, default=lambda: str(uuid.uuid4()))
+    account_id = Column(Integer, ForeignKey('user_accounts.id'), nullable=False, index=True)
+    profile_name = Column(String(100), nullable=False)
+    avatar_url = Column(String(512), nullable=True)
+    is_kids = Column(Boolean, default=False)
+    maturity_rating = Column(String(20), default="PG-13")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class WatchProgress(Base):
+    """Real-time watch progress sync and resume timestamp tracking."""
+    __tablename__ = 'watch_progress'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    account_id = Column(Integer, ForeignKey('user_accounts.id'), nullable=False, index=True)
+    profile_id = Column(Integer, ForeignKey('household_profiles.id'), nullable=True, index=True)
+    content_id = Column(Integer, ForeignKey('contents.id'), nullable=False, index=True)
+    progress_seconds = Column(Float, default=0.0)
+    duration_seconds = Column(Float, default=0.0)
+    is_completed = Column(Boolean, default=False)
+    last_watched_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class DiscoveryCollection(Base):
+    """Curated franchise timelines, thematic collections, and spotlight hubs."""
+    __tablename__ = 'discovery_collections'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    slug = Column(String(100), unique=True, nullable=False, index=True)
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    backdrop_url = Column(String(512), nullable=True)
+    category = Column(String(50), default="spotlight")  # spotlight, franchise, genre, mood
+    content_ids_json = Column(Text, nullable=False)  # JSON List[int]
+    is_featured = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class CatalogRepository:
     """
     Master SQLAlchemy Catalog Repository backing canonical schema.
