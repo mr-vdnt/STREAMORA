@@ -24,16 +24,21 @@ from services.recommendation.policies.policy_engine import ModularPolicyEngine
 from services.recommendation.explainability.explainability import RecommendationExplainer
 from services.recommendation.dtos import RecommendationPlanDTO, RecommendationItemDTO, ShelfDTO
 
+from services.recommendation.policy_config import RecommendationPolicy
+from services.recommendation.evaluator import RecommendationEvaluator
+
 logger = logging.getLogger("streamora.recommendation.pipeline")
 
 class RecommendationPipeline:
     """
-    Master Recommendation Intelligence Platform Pipeline.
-    Orchestrates User Intelligence -> Planner -> Optimizer -> Candidate Marketplace -> Fusion -> Ranking -> Diversification -> Policy Engine -> Explainability.
+    Master Recommendation Intelligence Platform Pipeline (v3 Hybrid Architecture).
+    Orchestrates User Intelligence -> Planner -> Optimizer -> Candidate Marketplace -> Fusion -> Ranking -> Diversification -> Policy Engine -> Explainability -> Evaluator.
     """
 
-    def __init__(self, repo: CatalogRepository = None):
+    def __init__(self, repo: CatalogRepository = None, policy: Optional[RecommendationPolicy] = None):
         self.repo = repo or CatalogRepository()
+        self.policy = policy or RecommendationPolicy()
+        self.evaluator = RecommendationEvaluator()
         self.user_intel = UserIntelligencePlatform(self.repo)
         self.planner = RecommendationPlanner()
         self.optimizer = RecommendationOptimizer()
