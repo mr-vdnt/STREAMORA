@@ -11,6 +11,10 @@ class FactCategory(Enum):
     OBJECT = "object"
     NARRATIVE = "narrative"
     AUDIENCE_SAFETY = "audience_safety"
+    UNIVERSE = "universe"
+    STUDIO = "studio"
+    DISTRIBUTOR = "distributor"
+    IP_OWNER = "ip_owner"
 
 class FactState(Enum):
     ACTIVE = "ACTIVE"
@@ -51,3 +55,7 @@ class Predicate:
     FEATURES_OBJECT = "features_object"
     HAS_NARRATIVE_TYPE = "has_narrative_type"
     HAS_SAFETY_WARNING = "has_safety_warning"
+    BELONGS_TO_UNIVERSE = "belongs_to_universe"
+    PRODUCED_BY_STUDIO = "produced_by_studio"
+    DISTRIBUTED_BY = "distributed_by"
+    BASED_ON_IP = "based_on_ip"
