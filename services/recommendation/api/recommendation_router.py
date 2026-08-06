@@ -50,6 +50,15 @@ async def get_because_you_watched(content_id: int, user_id: str = "demo_user", l
     return await pipeline.generate_slate(user_id=user_id, slate_type="because_you_watched", context_item_id=content_id, limit=limit)
 
 
+@recommendation_router.get("/contextual/{content_id}")
+def get_contextual_shelves(content_id: int, user_id: str = "demo_user"):
+    """
+    Retrieve contextual recommendation shelves ('Recommended Because...') for movie details.
+    """
+    pipeline = RecommendationPipeline()
+    return pipeline.generate_contextual_shelves(content_id=content_id, user_id=user_id)
+
+
 @recommendation_router.post("/feedback")
 def log_user_feedback(req: FeedbackRequest):
     """

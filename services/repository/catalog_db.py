@@ -1,6 +1,8 @@
 import os
 import uuid
+from typing import Dict, List, Any, Optional
 from datetime import datetime
+import json
 from sqlalchemy import (
     create_engine, Column, Integer, String, Float, Text, Boolean, DateTime, ForeignKey, CheckConstraint, UniqueConstraint, inspect, text
 )
@@ -968,3 +970,13 @@ class CatalogRepository:
             if not c:
                 return None
             return self.get_by_id(c.id)
+
+    def list_all_contents(self, limit: int = 100) -> List[Dict[str, Any]]:
+        with self.get_session() as session:
+            records = session.query(Content).filter(Content.is_deleted == False).limit(limit).all()
+            res = []
+            for c in records:
+                item = self.get_by_id(c.id)
+                if item:
+                    res.append(item)
+            return res
