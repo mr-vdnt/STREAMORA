@@ -15,15 +15,15 @@ RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
 
 # ==========================================
 # RUNTIME STAGE
 # ==========================================
 FROM python:3.11-slim
 
-# Create a non-root user
-RUN groupadd -r streamora && useradd -r -g streamora streamora
+# Create a non-root user with home directory
+RUN groupadd -r streamora && useradd -r -g streamora -m -d /home/streamora streamora && chown -R streamora:streamora /home/streamora
 
 WORKDIR /app
 
@@ -53,4 +53,4 @@ HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
   CMD curl -f http://localhost:${PORT:-8000}/health/live || exit 1
 
 # Run with Gunicorn using Uvicorn workers
-CMD sh -c "gunicorn services.agent.main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-8000}"
+CMD sh -c "gunicorn services.agent.main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --timeout 120 --bind 0.0.0.0:${PORT:-8000}"

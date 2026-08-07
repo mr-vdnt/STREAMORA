@@ -9,6 +9,7 @@ fakeredis
 networkx
 pydantic
 python-jose[cryptography]
+PyJWT
 bcrypt
 python-multipart
 slowapi

@@ -46,8 +46,38 @@ class HomeService:
         # 3. Dedicated Hero Selection via HeroService
         with self.shelf_engine.repo.get_session() as session:
             hero = self.hero_service.select_hero(session, format=format, context=current_context)
-            if hero:
-                payload["hero"] = hero
+        # 4. Attach quick-access curated chips and metadata
+        payload["genres"] = [
+            "Action", "Sci-Fi", "Thrillers", "Comedy", "Family", "Anime", "Documentaries", "Drama", "Crime", "Romance"
+        ]
+        payload["studios"] = [
+            {"id": "marvel", "name": "Marvel Studios", "logo_url": "https://img.icons8.com/color/96/marvel.png"},
+            {"id": "dc", "name": "DC Studios", "logo_url": "https://img.icons8.com/color/96/dc-comics.png"},
+            {"id": "a24", "name": "A24", "logo_url": "https://img.icons8.com/ios-filled/100/ffffff/a24.png"},
+            {"id": "disney", "name": "Walt Disney Pictures", "logo_url": "https://img.icons8.com/color/96/disney-logo.png"},
+            {"id": "warner", "name": "Warner Bros", "logo_url": "https://img.icons8.com/color/96/warner-bros.png"}
+        ]
+        payload["collections"] = [
+            {"id": "spiderman", "title": "Spider-Man Universe", "item_count": 8},
+            {"id": "mcu", "title": "Marvel Cinematic Universe", "item_count": 32},
+            {"id": "nolan", "title": "Christopher Nolan Collection", "item_count": 11},
+            {"id": "oscar", "title": "Oscar Best Picture Winners", "item_count": 24}
+        ]
+
+        # Extract continue watching items from first shelf if present or mock active user progress
+        payload["continue_watching"] = []
+        if payload.get("sections") and len(payload["sections"]) > 0:
+            first_shelf_items = payload["sections"][0].get("items", [])
+            for idx, item in enumerate(first_shelf_items[:3]):
+                payload["continue_watching"].append({
+                    "content_id": item.get("id"),
+                    "title": item.get("title"),
+                    "poster_url": item.get("poster_url"),
+                    "backdrop_url": item.get("backdrop_url"),
+                    "progress_percentage": 45 + (idx * 20),
+                    "remaining_mins": 35 - (idx * 10),
+                    "season_episode": "S1:E3" if item.get("entity_type") == "tvseries" else None
+                })
 
         self._cache[cache_key] = (payload, now)
         return payload

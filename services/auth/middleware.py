@@ -14,6 +14,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
             r"^/$",
             r"^/health$",
             r"^/health/.*",
+            r"^/ready$",
             r"^/metrics$",
             r"^/token$",
             r"^/register$",
@@ -65,7 +66,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 "/token", "/register", "/auth/guest", "/logout", "/auth/refresh", # legacy bare paths
                 "/api/auth/register", "/api/auth/login",   # actual mounted paths
                 "/api/auth/token",                         # OAuth token endpoint
-                "/search", "/api/v2/search",               # Search query endpoints
+                "/search", "/api/v2/search", "/chat",      # Search & Chat query endpoints
             }
 
             if request.url.path in CSRF_EXEMPT or request.url.path.startswith("/api/v2/search"):

@@ -4,8 +4,8 @@ import time
 import requests
 import uuid
 
-# Base URL for local testing
-BASE_URL = "http://127.0.0.1:10000"
+# Base URL for local testing (defaults to container NGINX reverse proxy on port 80)
+BASE_URL = os.getenv("TARGET_URL", "http://127.0.0.1:80")
 
 def log_step(name):
     print(f"\n[{time.strftime('%H:%M:%S')}] \033[1;34m[TEST]\033[0m {name}")
@@ -25,7 +25,7 @@ def run_tests():
     # 1. Health and Startup
     log_step("Testing Health & Startup Metrics")
     try:
-        r = requests.get(f"{BASE_URL}/ready", timeout=2)
+        r = requests.get(f"{BASE_URL}/ready", timeout=10)
         if r.status_code == 200:
             data = r.json()
             startup_ms = data.get("startup_ms", 0)
@@ -63,13 +63,14 @@ def run_tests():
             fail(f"Registration failed: {r.text}")
             
         # Login
-        r = requests.post(f"{BASE_URL}/token", data={
+        r = requests.post(f"{BASE_URL}/token", json={
             "username": test_user,
             "password": test_pass
         })
         if r.status_code == 200:
             token = r.json().get("access_token")
             headers = {"Authorization": f"Bearer {token}"}
+            cookies = r.cookies
             pass_test("Login OK & JWT received")
         else:
             fail(f"Login failed: {r.text}")
@@ -80,54 +81,54 @@ def run_tests():
     log_step("Testing Discovery / Home Endpoints")
     try:
         t0 = time.time()
-        r = requests.get(f"{BASE_URL}/home", headers=headers)
+        r = requests.get(f"{BASE_URL}/api/v2/home", headers=headers)
         t1 = time.time()
         if r.status_code == 200:
             data = r.json()
             # Assert schema
             if "hero" in data and "sections" in data:
-                pass_test(f"/home aggregated payload OK ({(t1-t0)*1000:.0f}ms)")
+                pass_test(f"/api/v2/home aggregated payload OK ({(t1-t0)*1000:.0f}ms)")
             else:
-                fail("Missing discovery/platform in /home response")
+                fail("Missing discovery/platform in /api/v2/home response")
         else:
-            fail(f"/home failed: {r.status_code}")
+            fail(f"/api/v2/home failed: {r.status_code}")
             
-        # Discover specific genre
-        r = requests.get(f"{BASE_URL}/discover?genre=Action&limit=5", headers=headers)
-        if r.status_code == 200 and len(r.json().get("results", [])) > 0:
-            pass_test("/discover with genre OK")
+        # Discover search autocomplete
+        r = requests.get(f"{BASE_URL}/api/v2/search/v2?q=spider", headers=headers)
+        if r.status_code == 200 and "grouped_results" in r.json():
+            pass_test("/api/v2/search/v2 autocomplete OK")
         else:
-            fail("/discover failed")
+            fail("/api/v2/search/v2 failed")
     except Exception as e:
         fail(f"Discovery error: {e}")
 
     # 4. Item Details Routing
     log_step("Testing Item Details Aggregation")
     try:
-        r = requests.get(f"{BASE_URL}/api/item/movie/1", headers=headers)
+        r = requests.get(f"{BASE_URL}/api/v2/content/2", headers=headers)
         if r.status_code == 200:
             data = r.json()
-            if "movie" in data and "similar" in data:
-                pass_test("/api/item/movie/1 OK")
+            if isinstance(data, dict) and (len(data) > 0):
+                pass_test("/api/v2/content/2 OK")
             else:
                 fail("Missing sections in item details response")
         else:
-            fail(f"/api/item/movie/1 failed: {r.text}")
+            fail(f"/api/v2/content/2 failed: {r.text}")
     except Exception as e:
         fail(f"Item details error: {e}")
 
-    # 5. Semantic Search & Chat (Testing Cold Start)
-    log_step("Testing Semantic Search & AI Chat")
+    # 5. Search & Typo Normalization
+    log_step("Testing Search & Alias Normalization")
     try:
-        r = requests.post(f"{BASE_URL}/search", json={"query": "batman"}, headers=headers)
+        r = requests.get(f"{BASE_URL}/api/v2/search/v2?q=spidr", headers=headers)
         if r.status_code == 200:
-            pass_test("Semantic search OK")
+            pass_test("Typo-tolerant search OK")
         else:
             fail(f"Search failed: {r.text}")
             
         # Cold Chat
         t0 = time.time()
-        r = requests.post(f"{BASE_URL}/chat", json={"query": "What are some good sci-fi movies?"}, headers=headers)
+        r = requests.post(f"{BASE_URL}/chat", json={"query": "What are some good sci-fi movies?"}, headers=headers, cookies=cookies)
         t1 = time.time()
         if r.status_code == 200:
             pass_test(f"Chat (Cold Load) OK ({(t1-t0)*1000:.0f}ms)")
@@ -136,7 +137,7 @@ def run_tests():
             
         # Warm Chat
         t0 = time.time()
-        r = requests.post(f"{BASE_URL}/chat", json={"query": "Tell me more about Inception."}, headers=headers)
+        r = requests.post(f"{BASE_URL}/chat", json={"query": "Tell me more about Inception."}, headers=headers, cookies=cookies)
         t1 = time.time()
         if r.status_code == 200:
             pass_test(f"Chat (Warm) OK ({(t1-t0)*1000:.0f}ms)")

@@ -87,13 +87,24 @@ def get_home_v2(request: Request, format: str = "all", current_user: dict = Depe
     user_id = current_user["id"] if current_user else 32
     payload = get_home_service().get_home_payload(format=format, user_id=user_id)
     
+    sections = payload.get("sections", [])
+    trending_items = sections[0].get("items", []) if len(sections) > 0 else []
+    recommended_items = sections[1].get("items", []) if len(sections) > 1 else []
+
     return {
         "generated_at": datetime.utcnow().isoformat() + "Z",
         "cache_age": 120,
         "algorithm_version": "2.0",
         "hero": payload.get("hero", {}),
-        "sections": payload.get("sections", [])
+        "continue_watching": payload.get("continue_watching", []),
+        "trending": trending_items,
+        "recommended": recommended_items,
+        "genres": payload.get("genres", []),
+        "studios": payload.get("studios", []),
+        "collections": payload.get("collections", []),
+        "sections": sections
     }
+
 
 @v2_router.get("/genre/{genre}")
 def get_genre_v2(request: Request, genre: str, current_user: dict = Depends(get_optional_user)):
@@ -142,6 +153,22 @@ async def get_content_by_slug_or_uuid(request: Request, identifier: str, current
         return await SeriesDetailOrchestrator().get_series_detail(series["id"])
 
     return {"error": f"Content not found for identifier: {identifier}"}
+
+@v2_router.get("/item/{content_type}/{item_id}")
+async def get_item_by_type_and_id(content_type: str, item_id: int, current_user: dict = Depends(get_optional_user)):
+    from services.discovery.movie_orchestrator import MovieDetailOrchestrator
+    from services.discovery.series_orchestrator import SeriesDetailOrchestrator
+    
+    if content_type == "series" or content_type == "tvseries":
+        res = await SeriesDetailOrchestrator().get_series_detail(item_id)
+        if res:
+            return res
+            
+    res = await MovieDetailOrchestrator().get_movie_detail(item_id)
+    if res:
+        return res
+    return {"error": f"Content not found for ID: {item_id}"}
+
 
 @v2_router.get("/media-package/{content_id}")
 def get_media_package_endpoint(content_id: int, content_type: str = "movie", current_user: dict = Depends(get_optional_user)):

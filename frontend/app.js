@@ -4655,56 +4655,25 @@ function renderModalData(m, id) {
     const typeLabel = isSeries({ item_id: id, rich_metadata: m, title: m.title }) ? 'TV Series' : 'Movie';
     document.getElementById('modal-match').innerHTML = `${m.match_percentage || 85}% Match <span style="margin-left: 8px; padding: 2px 6px; background: rgba(6, 182, 212, 0.15); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: 4px; color: var(--streamora-cyan); font-size: 0.8rem; font-weight: 700; display: inline-block;">${typeLabel}</span>`;
     document.getElementById('modal-year').textContent = m.year || '';
-    document.getElementById('modal-rating').textContent = m.rating ? `IMDB ${m.rating}` : '';
-    document.getElementById('modal-runtime').textContent = m.runtime || '';
+    document.getElementById('modal-rating').textContent = m.rating ? `IMDb ${m.rating}` : '';
+    document.getElementById('modal-runtime').textContent = m.runtime_formatted || (m.runtime ? `${m.runtime} min` : '');
     
     document.getElementById('modal-genres').innerHTML = (m.genres || []).map(g => `<span>${g}</span>`).join('');
     document.getElementById('modal-audience').textContent = m.audience_type || 'General';
     
-    document.getElementById('modal-synopsis').textContent = m.story_summary || 'No overview available.';
+    document.getElementById('modal-synopsis').textContent = m.story_summary || m.overview || 'No overview available.';
     document.getElementById('modal-why').textContent = m.why_recommended || 'Highly correlated with your preferences.';
     
-    document.getElementById('modal-director').textContent = m.director || 'Unknown';
-    
-    document.getElementById('modal-themes').innerHTML = (m.themes || []).map(t => `<span>${t}</span>`).join('');
-    document.getElementById('modal-moods').innerHTML = (m.moods || []).map(t => `<span>${t}</span>`).join('');
-    
-    // Render "This Movie Is" characteristics
-    const characteristics = [];
-    if (m.pacing) characteristics.push(m.pacing);
-    if (m.complexity && m.complexity !== 'Medium') characteristics.push(`${m.complexity} Complexity`);
-    if (m.world_building && m.world_building !== 'Standard') characteristics.push(`${m.world_building} World`);
-    if (m.action_level && m.action_level !== 'Medium') characteristics.push(`${m.action_level} Action`);
-    if (m.audience_type) characteristics.push(m.audience_type);
-    if (m.moods && m.moods.length > 0) characteristics.push(...m.moods.slice(0, 2));
-    
-    const characteristicsContainer = document.getElementById('modal-characteristics');
-    if (characteristicsContainer) {
-        if (characteristics.length > 0) {
-            characteristicsContainer.innerHTML = [...new Set(characteristics)].map(c => `<span>${c}</span>`).join('');
-        } else {
-            characteristicsContainer.innerHTML = '<span>Cinematic</span><span>Immersive</span>';
-        }
-    }
-    
-    document.getElementById('modal-pacing').textContent = m.pacing || 'Steady';
-    document.getElementById('modal-complexity').textContent = m.complexity || 'Medium';
-    document.getElementById('modal-world').textContent = m.world_building || 'Standard';
-    document.getElementById('modal-action').textContent = m.action_level || 'Medium';
-    
-    document.getElementById('adv-violence').textContent = m.violence_level || 'Low';
-    document.getElementById('adv-language').textContent = m.language_severity || 'Mild';
-    document.getElementById('adv-adult').textContent = m.adult ? 'Yes' : 'No';
-    
-    // Populate metadata grid and bottom details panel
+    // Clean metadata grid suppression: omit fields if unknown, none, disclosed, or empty
     function setMetaGrid(id, val) {
         const el = document.getElementById(id);
         if (!el) return;
-        if (val && val !== 'Unknown' && val !== 'None') {
+        const invalidValues = ['Unknown', 'Unknown Director', 'Unknown Writer', 'None', 'Undisclosed', 'Standalone', 'N/A', '$0', '0'];
+        if (val && !invalidValues.includes(String(val).trim())) {
             el.textContent = val;
-            el.parentElement.style.display = '';
+            if (el.parentElement) el.parentElement.style.display = '';
         } else {
-            el.parentElement.style.display = 'none';
+            if (el.parentElement) el.parentElement.style.display = 'none';
         }
     }
     
@@ -4714,29 +4683,30 @@ function renderModalData(m, id) {
     setMetaGrid('modal-studios', m.studio || m.studios);
     setMetaGrid('modal-countries', m.countries);
     setMetaGrid('modal-languages', m.languages || 'English');
+    setMetaGrid('modal-budget', m.budget);
+    setMetaGrid('modal-revenue', m.revenue);
+    setMetaGrid('modal-boxoffice', m.box_office);
+    setMetaGrid('modal-franchise', m.franchise);
 
+    document.getElementById('modal-themes').innerHTML = (m.themes || []).map(t => `<span>${t}</span>`).join('');
+    document.getElementById('modal-moods').innerHTML = (m.moods || []).map(t => `<span>${t}</span>`).join('');
+    
     // Content-type adaptive metadata: show movie fields for movies, series fields for TV/anime/docs
     const isTVContent = ['series', 'anime', 'documentary'].includes((m.content_type || '').toLowerCase());
     document.querySelectorAll('.modal-movie-only').forEach(el => el.style.display = isTVContent ? 'none' : '');
     document.querySelectorAll('.modal-series-only').forEach(el => el.style.display = isTVContent ? '' : 'none');
 
     if (isTVContent) {
-        // Series-specific fields
         const networkEl = document.getElementById('modal-network');
         const seasonsEl = document.getElementById('modal-seasons');
         const episodesEl = document.getElementById('modal-episodes');
         const statusEl = document.getElementById('modal-series-status');
-        if (networkEl) networkEl.textContent = m.network || 'Unknown';
-        if (seasonsEl) seasonsEl.textContent = m.seasons ? `${m.seasons} Season${m.seasons !== 1 ? 's' : ''}` : 'Unknown';
-        if (episodesEl) episodesEl.textContent = m.episodes ? `${m.episodes} Episodes` : 'Unknown';
-        if (statusEl) statusEl.textContent = m.series_status || 'Unknown';
-    } else {
-        // Movie-specific fields
-        document.getElementById('modal-budget').textContent = m.budget || 'Undisclosed';
-        document.getElementById('modal-revenue').textContent = m.revenue || 'Undisclosed';
-        document.getElementById('modal-boxoffice').textContent = m.box_office || 'Undisclosed';
-        document.getElementById('modal-franchise').textContent = m.franchise || 'Standalone';
+        if (networkEl) setMetaGrid('modal-network', m.network);
+        if (seasonsEl) setMetaGrid('modal-seasons', m.seasons ? `${m.seasons} Season${m.seasons !== 1 ? 's' : ''}` : null);
+        if (episodesEl) setMetaGrid('modal-episodes', m.episodes ? `${m.episodes} Episodes` : null);
+        if (statusEl) setMetaGrid('modal-series-status', m.series_status);
     }
+
 
     setMetaGrid('modal-awards', m.awards);
     setMetaGrid('modal-availability', m.availability);
