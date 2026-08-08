@@ -1,12 +1,12 @@
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
-from services.repository.catalog_db import Content
+from sqlalchemy import or_, and_, desc
+from services.repository.catalog_db import Content, ContentGenre, Genre
 from services.recommendation.specifications import (
     Specification,
     MovieOnlySpecification,
     SeriesOnlySpecification,
     TrendingIndiaSpecification,
-    GenreSpecification,
     ThemeSpecification,
     MinRatingSpecification,
     MinPopularitySpecification,
@@ -14,7 +14,28 @@ from services.recommendation.specifications import (
 )
 from services.recommendation.query_builder import CandidateQueryBuilder
 from services.recommendation.pipeline import RecommendationPipeline
+from services.recommendation.stages import (
+    CandidateGenerationStage,
+    EligibilityStage,
+    PopularityScoringStage,
+    ExposureDeduplicationStage
+)
 import datetime
+
+class GenreSpecification(Specification):
+    def __init__(self, genre: str):
+        self.genre = genre
+
+    def apply_filter(self, query: Any) -> Any:
+        return query.join(ContentGenre, ContentGenre.content_id == Content.id) \
+                    .join(Genre, Genre.id == ContentGenre.genre_id) \
+                    .filter(Genre.name.ilike(f"%{self.genre}%"))
+
+_shared_pipeline = RecommendationPipeline()
+_shared_pipeline.register(CandidateGenerationStage())
+_shared_pipeline.register(EligibilityStage())
+_shared_pipeline.register(PopularityScoringStage())
+_shared_pipeline.register(ExposureDeduplicationStage())
 
 class ExposureTracker:
     """Tracks content exposure across shelves to eliminate title overlap."""
@@ -58,8 +79,6 @@ class DeclarativeShelf:
         target_fmt = self.target_format if self.target_format != "all" else format_override
         query_builder = CandidateQueryBuilder(session)
 
-        pipeline = RecommendationPipeline.build_default_7_stage_pipeline()
-        
         context = {
             "query_builder": query_builder,
             "specification": self.specification,
@@ -69,7 +88,7 @@ class DeclarativeShelf:
             "candidate_limit": 150
         }
 
-        items = pipeline.execute([], context)
+        items = _shared_pipeline.execute([], context)
 
         return {
             "id": self.shelf_id,

@@ -1,7 +1,23 @@
 import asyncio
+import time
 from typing import Dict, Any, Optional
 from services.repository.series_repository import SeriesRepository
 from services.recommendation.similarity_engine import SimilarityEngine
+from services.metadata.metadata_sanitizer import MetadataSanitizer
+
+_series_tier2_cache = {}
+
+def _get_series_tier2_cached(series_id):
+    if series_id in _series_tier2_cache:
+        val, ts = _series_tier2_cache[series_id]
+        if time.time() - ts < 120:
+            return val
+        else:
+            del _series_tier2_cache[series_id]
+    return None
+
+def _set_series_tier2_cached(series_id, val):
+    _series_tier2_cache[series_id] = (val, time.time())
 
 class SeriesDetailOrchestrator:
     """
@@ -63,8 +79,21 @@ class SeriesDetailOrchestrator:
         }
 
     async def _fetch_recommendations(self, series_id: int) -> Dict[str, Any]:
-        shelves = self.similarity_engine.get_similar_items(series_id, top_k=15, multi_shelf=True)
+        shelves = await asyncio.to_thread(self.similarity_engine.get_similar_items, series_id, top_k=15, multi_shelf=True)
+        # Filter empty shelves
+        if isinstance(shelves, list):
+            shelves = [s for s in shelves if s.get("items")]
         return {"shelves": shelves}
+
+    async def _populate_tier2(self, series_id: int, series: Dict[str, Any], episodes: list):
+        insights, recommendations = await asyncio.gather(
+            self._fetch_insights_and_graphs(series, episodes),
+            self._fetch_recommendations(series_id)
+        )
+        _set_series_tier2_cached(series_id, {
+            "insights": insights,
+            "recommendations": recommendations
+        })
 
     async def get_series_detail(self, series_id: int) -> Optional[Dict[str, Any]]:
         series = self.series_repo.get_by_id(series_id)
@@ -72,12 +101,15 @@ class SeriesDetailOrchestrator:
             return None
 
         seasons, episodes = await self._fetch_seasons_and_episodes(series)
-        insights, recommendations = await asyncio.gather(
-            self._fetch_insights_and_graphs(series, episodes),
-            self._fetch_recommendations(series_id)
-        )
+        
+        tier2_data = _get_series_tier2_cached(series_id)
+        if not tier2_data:
+            asyncio.create_task(self._populate_tier2(series_id, series, episodes))
+            
+        total_seasons = series.get("total_seasons", 1)
+        runtime_formatted = MetadataSanitizer.format_runtime(total_seasons, 'series')
 
-        return {
+        result = {
             "series": {
                 "id": series.get("id"),
                 "title": series.get("title"),
@@ -88,9 +120,10 @@ class SeriesDetailOrchestrator:
                 "genres": str(series.get("genres", "")).split("|"),
                 "themes": str(series.get("themes", "")).split("|"),
                 "language": series.get("language"),
-                "total_seasons": series.get("total_seasons", 1),
+                "total_seasons": total_seasons,
                 "total_episodes": series.get("total_episodes", len(episodes)),
-                "creator": series.get("creator", "Unknown Creator")
+                "creator": series.get("creator", "Unknown Creator"),
+                "runtime_formatted": runtime_formatted
             },
             "media": {
                 "backdrop_url": series.get("backdrop_url", ""),
@@ -99,15 +132,20 @@ class SeriesDetailOrchestrator:
             "seasons": seasons,
             "episodes": episodes,
             "ratings": {
-                "series_rating": series.get("rating", 8.5),
-                "season_rating_graph": insights.get("season_rating_graph", []),
-                "heatmap": insights.get("episode_heatmap", [])
-            },
-            "recommendations": recommendations,
-            "ai": {
+                "series_rating": MetadataSanitizer.format_rating(float(series.get("rating", 8.5) or 8.5), source='internal')
+            }
+        }
+        
+        if tier2_data:
+            insights = tier2_data.get("insights", {})
+            result["ratings"]["season_rating_graph"] = insights.get("season_rating_graph", [])
+            result["ratings"]["heatmap"] = insights.get("episode_heatmap", [])
+            result["recommendations"] = tier2_data.get("recommendations", {})
+            result["ai"] = {
                 "summary": f"AI Series Insight: {series.get('overview')}",
                 "story_arc": insights.get("ai_story_arc"),
                 "mood_timeline": insights.get("mood_timeline"),
                 "character_journey": insights.get("character_journey")
             }
-        }
+
+        return MetadataSanitizer.sanitize_dto(result)

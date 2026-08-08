@@ -37,47 +37,70 @@ class HeroSelectionService:
         return scored[:count]
 
 
+import threading
+
 class ShelfEngine:
     def __init__(self):
         self.repo = CatalogRepository()
-        self._cache = {}
-        self._cache_ttl = 300
+        self._shelf_cache = {}
+        self._cache_lock = threading.Lock()
+        self._flights = {}
+        self._cond = threading.Condition(self._cache_lock)
+        self._shelf_ttl = 300
+
+    def _generate_shelf_single_flight(self, shelf_def, format_override):
+        cache_key = f"shelf_{shelf_def.shelf_id}_{format_override}"
+        now = datetime.datetime.now().timestamp()
+
+        with self._cache_lock:
+            if cache_key in self._shelf_cache:
+                data, ts = self._shelf_cache[cache_key]
+                if now - ts < self._shelf_ttl:
+                    return data
+            
+            if cache_key in self._flights:
+                flight = self._flights[cache_key]
+                self._cond.wait_for(lambda: flight["done"])
+                return flight["result"]
+
+            flight = {"done": False, "result": None}
+            self._flights[cache_key] = flight
+
+        # Work outside lock
+        exposure = ExposureTracker() # Deduplication is lost across cached shelves but acceptable for performance
+        with self.repo.get_session() as session:
+            shelf_data = shelf_def.generate(session, exposure, format_override=format_override)
+            if shelf_data["items"]:
+                for item in shelf_data["items"]:
+                    if "id" in item and "item_id" not in item:
+                        item["item_id"] = item["id"]
+
+        now = datetime.datetime.now().timestamp()
+        with self._cache_lock:
+            self._shelf_cache[cache_key] = (shelf_data, now)
+            flight["result"] = shelf_data
+            flight["done"] = True
+            self._cond.notify_all()
+            del self._flights[cache_key]
+
+        return shelf_data
 
     def generate_home_shelves(self, user_id: int = None, format: str = "all") -> Dict[str, Any]:
-        cache_key = f"home_{user_id}_{format}"
-        now = datetime.datetime.now().timestamp()
-        if cache_key in self._cache:
-            cached_data, ts = self._cache[cache_key]
-            if now - ts < self._cache_ttl:
-                return cached_data
-
-        exposure = ExposureTracker()
         shelves = []
         hero_candidates = []
+        home_shelves = ShelfRegistry.get_home_shelves()
+        
+        for shelf_def in home_shelves:
+            shelf_data = self._generate_shelf_single_flight(shelf_def, format)
+            if shelf_data and shelf_data.get("items"):
+                shelves.append(shelf_data)
+                hero_candidates.extend(shelf_data["items"])
 
-        with self.repo.get_session() as session:
-            home_shelves = ShelfRegistry.get_home_shelves()
-            for shelf_def in home_shelves:
-                shelf_data = shelf_def.generate(session, exposure, format_override=format)
-                if shelf_data["items"]:
-                    for item in shelf_data["items"]:
-                        if "id" in item and "item_id" not in item:
-                            item["item_id"] = item["id"]
-                    shelves.append(shelf_data)
-                    hero_candidates.extend(shelf_data["items"])
-
-            top_heroes = HeroSelectionService.select_heroes(hero_candidates, count=5)
-            for h in top_heroes:
-                if "id" in h and "item_id" not in h:
-                    h["item_id"] = h["id"]
-
-        result = {
-            "hero": top_heroes[0] if top_heroes else None,
-            "top_heroes": top_heroes,
+        # Hero selection moved to HomeService
+        return {
+            "hero_candidates": hero_candidates,
             "sections": shelves
         }
-        self._cache[cache_key] = (result, now)
-        return result
 
     def generate_genre_shelves(self, genre: str, user_id: int = None) -> Dict[str, Any]:
         exposure = ExposureTracker()

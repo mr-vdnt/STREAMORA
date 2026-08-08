@@ -1,8 +1,24 @@
 import asyncio
+import time
 from typing import Dict, Any, Optional, List
 from services.repository.movie_repository import MovieRepository
 from services.recommendation.similarity_engine import SimilarityEngine
 from services.discovery.tmdb_resolver import TMDBResolver
+from services.metadata.metadata_sanitizer import MetadataSanitizer
+
+_tier2_cache = {}
+
+def _get_tier2_cached(movie_id):
+    if movie_id in _tier2_cache:
+        val, ts = _tier2_cache[movie_id]
+        if time.time() - ts < 120:
+            return val
+        else:
+            del _tier2_cache[movie_id]
+    return None
+
+def _set_tier2_cached(movie_id, val):
+    _tier2_cache[movie_id] = (val, time.time())
 
 class MovieDetailOrchestrator:
     """
@@ -17,11 +33,7 @@ class MovieDetailOrchestrator:
     def _format_runtime(self, mins: Optional[int]) -> Optional[str]:
         if not mins or mins <= 0:
             return None
-        hours = mins // 60
-        remainder = mins % 60
-        if hours > 0:
-            return f"{mins} min • {hours}h {remainder:02d}m"
-        return f"{mins} min"
+        return MetadataSanitizer.format_runtime(mins, 'movie')
 
     async def _fetch_credits(self, movie: Dict[str, Any]) -> Dict[str, Any]:
         raw_director = movie.get("director")
@@ -57,13 +69,7 @@ class MovieDetailOrchestrator:
 
     async def _fetch_ratings(self, movie: Dict[str, Any]) -> Dict[str, Any]:
         rating = float(movie.get("rating", 8.0) or 8.0)
-        return {
-            "imdb": round(rating, 1),
-            "tmdb": round(max(1.0, rating - 0.2), 1),
-            "rotten_tomatoes": f"{int(min(99, rating * 10))}%",
-            "metacritic": f"{int(min(98, rating * 9.5))}/100",
-            "streamora_user_rating": round(rating, 1)
-        }
+        return MetadataSanitizer.format_rating(rating, source='internal')
 
     async def _fetch_awards(self, movie: Dict[str, Any]) -> List[Dict[str, str]]:
         rating = float(movie.get("rating", 8.0) or 8.0)
@@ -145,7 +151,7 @@ class MovieDetailOrchestrator:
         cast_raw = movie.get("cast", "")
         top_actor = cast_raw.split("|")[0].strip() if cast_raw and isinstance(cast_raw, str) else None
 
-        raw_shelves = self.similarity_engine.get_similar_items(movie_id, top_k=15, multi_shelf=True)
+        raw_shelves = await asyncio.to_thread(self.similarity_engine.get_similar_items, movie_id, top_k=15, multi_shelf=True)
         
         # Enrich raw shelves with product-first contextual titles
         contextual_shelves = []
@@ -163,31 +169,46 @@ class MovieDetailOrchestrator:
                 else:
                     shelf_title = s.get("title", f"Related Discoveries")
                 
-                contextual_shelves.append({
-                    "id": f"context_shelf_{idx}",
-                    "title": shelf_title,
-                    "items": items
-                })
+                if items:
+                    contextual_shelves.append({
+                        "id": f"context_shelf_{idx}",
+                        "title": shelf_title,
+                        "items": items
+                    })
 
         return {"shelves": contextual_shelves}
+
+    async def _populate_tier2(self, movie_id: int, movie: Dict[str, Any]):
+        reviews, ai, recommendations = await asyncio.gather(
+            self._fetch_reviews(movie),
+            self._fetch_ai_insights(movie),
+            self._fetch_recommendations(movie)
+        )
+        _set_tier2_cached(movie_id, {
+            "reviews": reviews,
+            "ai": ai,
+            "recommendations": recommendations
+        })
 
     async def get_movie_detail(self, movie_id: int) -> Optional[Dict[str, Any]]:
         movie = self.movie_repo.get_by_id(movie_id)
         if not movie:
             return None
 
-        # Execute parallel sub-service orchestration via asyncio.gather
-        media, credits_data, ratings, awards, providers, trailers, reviews, ai, recommendations = await asyncio.gather(
+        # Execute parallel sub-service orchestration via asyncio.gather for Tier 1
+        media, credits_data, ratings, awards, providers, trailers = await asyncio.gather(
             self._fetch_media_assets(movie),
             self._fetch_credits(movie),
             self._fetch_ratings(movie),
             self._fetch_awards(movie),
             self._fetch_providers(movie),
-            self._fetch_trailers(movie),
-            self._fetch_reviews(movie),
-            self._fetch_ai_insights(movie),
-            self._fetch_recommendations(movie)
+            self._fetch_trailers(movie)
         )
+
+        tier2_data = _get_tier2_cached(movie_id)
+        if not tier2_data:
+            # Trigger Tier 2 to populate cache asynchronously
+            asyncio.create_task(self._populate_tier2(movie_id, movie))
 
         raw_runtime = movie.get("runtime")
         formatted_runtime = self._format_runtime(raw_runtime if isinstance(raw_runtime, int) and raw_runtime > 0 else 142)
@@ -202,7 +223,7 @@ class MovieDetailOrchestrator:
         genres_clean = [g.strip() for g in str(movie.get("genres", "")).split("|") if g.strip()]
         themes_clean = [t.strip() for t in str(movie.get("themes", "")).split("|") if t.strip()]
 
-        return {
+        result = {
             "movie": {
                 "id": movie.get("id"),
                 "title": movie.get("title"),
@@ -224,10 +245,12 @@ class MovieDetailOrchestrator:
             "ratings": ratings,
             "awards": awards,
             "providers": providers,
-            "trailers": trailers,
-            "reviews": reviews,
-            "recommendations": recommendations,
-            "ai": ai
+            "trailers": trailers
         }
+
+        if tier2_data:
+            result.update(tier2_data)
+
+        return MetadataSanitizer.sanitize_dto(result)
 
 

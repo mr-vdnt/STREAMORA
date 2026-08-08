@@ -82,14 +82,20 @@ def get_agent():
     return _agent
 
 
+from fastapi import Response
+import time
+
 @v2_router.get("/home")
-def get_home_v2(request: Request, format: str = "all", current_user: dict = Depends(get_optional_user)):
+async def get_home_v2(request: Request, response: Response, format: str = "all", current_user: dict = Depends(get_optional_user)):
+    start_time = time.time()
     user_id = current_user["id"] if current_user else 32
     payload = get_home_service().get_home_payload(format=format, user_id=user_id)
     
     sections = payload.get("sections", [])
     trending_items = sections[0].get("items", []) if len(sections) > 0 else []
     recommended_items = sections[1].get("items", []) if len(sections) > 1 else []
+
+    response.headers["X-Response-Time-Ms"] = str(int((time.time() - start_time) * 1000))
 
     return {
         "generated_at": datetime.utcnow().isoformat() + "Z",

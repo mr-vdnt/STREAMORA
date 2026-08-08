@@ -902,7 +902,6 @@ class CatalogRepository:
             self.engine = create_engine(db_url)
             
         Base.metadata.create_all(self.engine)
-        self._ensure_schema_up_to_date()
         self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
 
     def _ensure_schema_up_to_date(self):

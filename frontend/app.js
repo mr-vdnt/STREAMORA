@@ -1,5 +1,5 @@
 /* ======================================================================
-   STREAMORA AI — 3D Spatial Cinematic Frontend
+   STREAMORA — Cinematic Frontend
    Netflix × Apple TV × VisionOS Experience
    ====================================================================== */
 
@@ -110,7 +110,7 @@ window.getSimilarRecommendations = function(seedMovie) {
     const seen = new Set();
     
     // Combine all discovered movie datasets
-    const combinedPool = [...(globalMovies || []), ...FALLBACK_MOVIES];
+    const combinedPool = [...(globalMovies || []), ];
     combinedPool.forEach(m => {
         if (m && m.item_id && m.item_id !== seedMovie.item_id && !seen.has(m.item_id)) {
             // Apply currentFormat filtering before scoring and ranking candidates
@@ -173,7 +173,7 @@ window.getSimilarRecommendations = function(seedMovie) {
         
         return {
             movie: m,
-            score: Math.min(99, Math.max(70, 75 + Math.floor(score))),
+            score: score,
             reasoning: reasoning
         };
     });
@@ -183,1491 +183,11 @@ window.getSimilarRecommendations = function(seedMovie) {
 };
 
 // ── Fallback Database ──────────────────────────────────────────────────
-const FALLBACK_MOVIES = [
-    {
-        "item_id": 1,
-        "title": "Inception",
-        "poster_url": "https://image.tmdb.org/t/p/w500/xlaY2zyzMfkhk0HSC5VUwzoZPU1.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/8ZTVqvKDQ8emSGUEMjsS4yHAwrp.jpg",
-        "overview": "Cobb, a skilled thief who commits corporate espionage by infiltrating the subconscious of his targets is offered a chance to regain his old life as payment for a task considered to be impossible: \"inception\", the implantation of another person's idea into a target's subconscious.",
-        "rich_metadata": {
-            "title": "Inception",
-            "year": "2010",
-            "match_percentage": 83,
-            "rating": 8.372,
-            "runtime": "148 min",
-            "director": "Christopher Nolan",
-            "genres": [
-                "Action",
-                "Science Fiction",
-                "Adventure"
-            ],
-            "tags": [
-                "Action",
-                "Science Fiction",
-                "Adventure"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "Cobb, a skilled thief who commits corporate espionage by infiltrating the subconscious of his targets is offered a chance to regain his old life as payment for a task considered to be impossible: \"inception\", the implantation of another person's idea into a target's subconscious.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Heroism",
-                "Justice",
-                "Technology",
-                "Survival"
-            ],
-            "moods": [
-                "Exciting",
-                "Thought-Provoking"
-            ]
-        }
-    },
-    {
-        "item_id": 2,
-        "title": "The Dark Knight",
-        "poster_url": "https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/cfT29Im5VDvjE0RpyKOSdCKZal7.jpg",
-        "overview": "Batman raises the stakes in his war on crime. With the help of Lt. Jim Gordon and District Attorney Harvey Dent, Batman sets out to dismantle the remaining criminal organizations that plague the streets. The partnership proves to be effective, but they soon find themselves prey to a reign of chaos unleashed by a rising criminal mastermind known to the terrified citizens of Gotham as the Joker.",
-        "rich_metadata": {
-            "title": "The Dark Knight",
-            "year": "2008",
-            "match_percentage": 85,
-            "rating": 8.531,
-            "runtime": "152 min",
-            "director": "Christopher Nolan",
-            "genres": [
-                "Action",
-                "Crime",
-                "Thriller"
-            ],
-            "tags": [
-                "Action",
-                "Crime",
-                "Thriller"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "Batman raises the stakes in his war on crime. With the help of Lt. Jim Gordon and District Attorney Harvey Dent, Batman sets out to dismantle the remaining criminal organizations that plague the streets. The partnership proves to be effective, but they soon find themselves prey to a reign of chaos unleashed by a rising criminal mastermind known to the terrified citizens of Gotham as the Joker.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Heroism",
-                "Justice",
-                "Corruption",
-                "Greed"
-            ],
-            "moods": [
-                "Exciting",
-                "Intense"
-            ]
-        }
-    },
-    {
-        "item_id": 3,
-        "title": "Interstellar",
-        "poster_url": "https://image.tmdb.org/t/p/w500/yQvGrMoipbRoddT0ZR8tPoR7NfX.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/2ssWTSVklAEc98frZUQhgtGHx7s.jpg",
-        "overview": "The adventures of a group of explorers who make use of a newly discovered wormhole to surpass the limitations on human space travel and conquer the vast distances involved in an interstellar voyage.",
-        "rich_metadata": {
-            "title": "Interstellar",
-            "year": "2014",
-            "match_percentage": 84,
-            "rating": 8.479,
-            "runtime": "169 min",
-            "director": "Christopher Nolan",
-            "genres": [
-                "Adventure",
-                "Drama",
-                "Science Fiction"
-            ],
-            "tags": [
-                "Adventure",
-                "Drama",
-                "Science Fiction"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "The adventures of a group of explorers who make use of a newly discovered wormhole to surpass the limitations on human space travel and conquer the vast distances involved in an interstellar voyage.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Heroism",
-                "Justice",
-                "Technology",
-                "Survival"
-            ],
-            "moods": [
-                "Exciting",
-                "Thought-Provoking",
-                "Emotional"
-            ]
-        }
-    },
-    {
-        "item_id": 4,
-        "title": "The Matrix",
-        "poster_url": "https://image.tmdb.org/t/p/w500/dXNAPwY7VrqMAo51EKhhCJfaGb5.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/tlm8UkiQsitc8rSuIAscQDCnP8d.jpg",
-        "overview": "Set in the 22nd century, The Matrix tells the story of a computer hacker who joins a group of underground insurgents fighting the vast and powerful computers who now rule the earth.",
-        "rich_metadata": {
-            "title": "The Matrix",
-            "year": "1999",
-            "match_percentage": 82,
-            "rating": 8.25,
-            "runtime": "136 min",
-            "director": "Lana Wachowski",
-            "genres": [
-                "Action",
-                "Science Fiction"
-            ],
-            "tags": [
-                "Action",
-                "Science Fiction"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "Set in the 22nd century, The Matrix tells the story of a computer hacker who joins a group of underground insurgents fighting the vast and powerful computers who now rule the earth.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Heroism",
-                "Justice",
-                "Technology",
-                "Survival"
-            ],
-            "moods": [
-                "Exciting",
-                "Thought-Provoking"
-            ]
-        }
-    },
-    {
-        "item_id": 5,
-        "title": "Avengers: Infinity War",
-        "poster_url": "https://image.tmdb.org/t/p/w500/7WsyChQLEftFiDOVTGkv3hFpyyt.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/mDfJG3LC3Dqb67AZ52x3Z0jU0uB.jpg",
-        "overview": "As the Avengers and their allies have continued to protect the world from threats too large for any one hero to handle, a new danger has emerged from the cosmic shadows: Thanos. A despot of intergalactic infamy, his goal is to collect all six Infinity Stones, artifacts of unimaginable power, and use them to inflict his twisted will on all of reality. Everything the Avengers have fought for has led up to this moment - the fate of Earth and existence itself has never been more uncertain.",
-        "rich_metadata": {
-            "title": "Avengers: Infinity War",
-            "year": "2018",
-            "match_percentage": 82,
-            "rating": 8.238,
-            "runtime": "149 min",
-            "director": "Joe Russo",
-            "genres": [
-                "Adventure",
-                "Action",
-                "Science Fiction"
-            ],
-            "tags": [
-                "Adventure",
-                "Action",
-                "Science Fiction"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "As the Avengers and their allies have continued to protect the world from threats too large for any one hero to handle, a new danger has emerged from the cosmic shadows: Thanos. A despot of intergalactic infamy, his goal is to collect all six Infinity Stones, artifacts of unimaginable power, and use them to inflict his twisted will on all of reality. Everything the Avengers have fought for has led up to this moment - the fate of Earth and existence itself has never been more uncertain.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Heroism",
-                "Justice",
-                "Technology",
-                "Survival"
-            ],
-            "moods": [
-                "Exciting",
-                "Thought-Provoking"
-            ]
-        }
-    },
-    {
-        "item_id": 6,
-        "title": "Pulp Fiction",
-        "poster_url": "https://image.tmdb.org/t/p/w500/vQWk5YBFWF4bZaofAbv0tShwBvQ.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/suaEOtk1N1sgg2MTM7oZd2cfVp3.jpg",
-        "overview": "A burger-loving hit man, his philosophical partner, a drug-addled gangster's moll and a washed-up boxer converge in this sprawling, comedic crime caper. Their adventures unfurl in three stories that ingeniously trip back and forth in time.",
-        "rich_metadata": {
-            "title": "Pulp Fiction",
-            "year": "1994",
-            "match_percentage": 84,
-            "rating": 8.482,
-            "runtime": "154 min",
-            "director": "Quentin Tarantino",
-            "genres": [
-                "Thriller",
-                "Crime",
-                "Comedy"
-            ],
-            "tags": [
-                "Thriller",
-                "Crime",
-                "Comedy"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "A burger-loving hit man, his philosophical partner, a drug-addled gangster's moll and a washed-up boxer converge in this sprawling, comedic crime caper. Their adventures unfurl in three stories that ingeniously trip back and forth in time.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Corruption",
-                "Greed",
-                "Friendship"
-            ],
-            "moods": [
-                "Intense",
-                "Lighthearted"
-            ]
-        }
-    },
-    {
-        "item_id": 7,
-        "title": "The Shawshank Redemption",
-        "poster_url": "https://image.tmdb.org/t/p/w500/9cqNxx0GxF0bflZmeSMuL5tnGzr.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/zfbjgQE1uSd9wiPTX4VzsLi0rGG.jpg",
-        "overview": "Imprisoned in the 1940s for the double murder of his wife and her lover, upstanding banker Andy Dufresne begins a new life at the Shawshank prison, where he puts his accounting skills to work for an amoral warden. During his long stretch in prison, Dufresne comes to be admired by the other inmates -- including an older prisoner named Red -- for his integrity and unquenchable sense of hope.",
-        "rich_metadata": {
-            "title": "The Shawshank Redemption",
-            "year": "1994",
-            "match_percentage": 87,
-            "rating": 8.723,
-            "runtime": "142 min",
-            "director": "Frank Darabont",
-            "genres": [
-                "Drama",
-                "Crime"
-            ],
-            "tags": [
-                "Drama",
-                "Crime"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "Imprisoned in the 1940s for the double murder of his wife and her lover, upstanding banker Andy Dufresne begins a new life at the Shawshank prison, where he puts his accounting skills to work for an amoral warden. During his long stretch in prison, Dufresne comes to be admired by the other inmates -- including an older prisoner named Red -- for his integrity and unquenchable sense of hope.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Sacrifice",
-                "Identity",
-                "Corruption",
-                "Greed"
-            ],
-            "moods": [
-                "Emotional",
-                "Intense"
-            ]
-        }
-    },
-    {
-        "item_id": 8,
-        "title": "The Godfather",
-        "poster_url": "https://image.tmdb.org/t/p/w500/3bhkrj58Vtu7enYsRolD1fZdja1.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/ejdD20cdHNFAYAN2DlqPToXKyzx.jpg",
-        "overview": "Spanning the years 1945 to 1955, a chronicle of the fictional Italian-American Corleone crime family. When organized crime family patriarch, Vito Corleone barely survives an attempt on his life, his youngest son, Michael steps in to take care of the would-be killers, launching a campaign of bloody revenge.",
-        "rich_metadata": {
-            "title": "The Godfather",
-            "year": "1972",
-            "match_percentage": 87,
-            "rating": 8.7,
-            "runtime": "175 min",
-            "director": "Francis Ford Coppola",
-            "genres": [
-                "Drama",
-                "Crime"
-            ],
-            "tags": [
-                "Drama",
-                "Crime"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "Spanning the years 1945 to 1955, a chronicle of the fictional Italian-American Corleone crime family. When organized crime family patriarch, Vito Corleone barely survives an attempt on his life, his youngest son, Michael steps in to take care of the would-be killers, launching a campaign of bloody revenge.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Sacrifice",
-                "Identity",
-                "Corruption",
-                "Greed"
-            ],
-            "moods": [
-                "Emotional",
-                "Intense"
-            ]
-        }
-    },
-    {
-        "item_id": 9,
-        "title": "Forrest Gump",
-        "poster_url": "https://image.tmdb.org/t/p/w500/Cw4hIUIAmSYfK9QfaUW5igp9La.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/66Kn4XWhkuPkJxOJyPEx4U2CUfN.jpg",
-        "overview": "A man with a low IQ has accomplished great things in his life and been present during significant historic events\u2014in each case, far exceeding what anyone imagined he could do. But despite all he has achieved, his one true love eludes him.",
-        "rich_metadata": {
-            "title": "Forrest Gump",
-            "year": "1994",
-            "match_percentage": 84,
-            "rating": 8.464,
-            "runtime": "142 min",
-            "director": "Robert Zemeckis",
-            "genres": [
-                "Comedy",
-                "Drama",
-                "Romance"
-            ],
-            "tags": [
-                "Comedy",
-                "Drama",
-                "Romance"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "A man with a low IQ has accomplished great things in his life and been present during significant historic events\u2014in each case, far exceeding what anyone imagined he could do. But despite all he has achieved, his one true love eludes him.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Sacrifice",
-                "Identity",
-                "Friendship"
-            ],
-            "moods": [
-                "Emotional",
-                "Lighthearted"
-            ]
-        }
-    },
-    {
-        "item_id": 10,
-        "title": "Gladiator",
-        "poster_url": "https://image.tmdb.org/t/p/w500/wN2xWp1eIwCKOD0BHTcErTBv1Uq.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/jhk6D8pim3yaByu1801kMoxXFaX.jpg",
-        "overview": "After the death of Emperor Marcus Aurelius, his devious son takes power and demotes Maximus, one of Rome's most capable generals who Marcus preferred. Eventually, Maximus is forced to become a gladiator and battle to the death against other men for the amusement of paying audiences.",
-        "rich_metadata": {
-            "title": "Gladiator",
-            "year": "2000",
-            "match_percentage": 82,
-            "rating": 8.226,
-            "runtime": "155 min",
-            "director": "Ridley Scott",
-            "genres": [
-                "Action",
-                "Drama",
-                "Adventure"
-            ],
-            "tags": [
-                "Action",
-                "Drama",
-                "Adventure"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "After the death of Emperor Marcus Aurelius, his devious son takes power and demotes Maximus, one of Rome's most capable generals who Marcus preferred. Eventually, Maximus is forced to become a gladiator and battle to the death against other men for the amusement of paying audiences.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Heroism",
-                "Justice",
-                "Sacrifice",
-                "Identity"
-            ],
-            "moods": [
-                "Exciting",
-                "Emotional"
-            ]
-        }
-    },
-    {
-        "item_id": 11,
-        "title": "Spider-Man: Into the Spider-Verse",
-        "poster_url": "https://image.tmdb.org/t/p/w500/iiZZdoQBEYBv6id8su7ImL0oCbD.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/8mnXR9rey5uQ08rZAvzojKWbDQS.jpg",
-        "overview": "Struggling to find his place in the world while juggling school and family, Brooklyn teenager Miles Morales is unexpectedly bitten by a radioactive spider and develops unfathomable powers just like the one and only Spider-Man. While wrestling with the implications of his new abilities, Miles discovers a super collider created by the madman Wilson \"Kingpin\" Fisk, causing others from across the Spider-Verse to be inadvertently transported to his dimension.",
-        "rich_metadata": {
-            "title": "Spider-Man: Into the Spider-Verse",
-            "year": "2018",
-            "match_percentage": 83,
-            "rating": 8.393,
-            "runtime": "117 min",
-            "director": "Bob Persichetti",
-            "genres": [
-                "Animation",
-                "Action",
-                "Adventure",
-                "Science Fiction"
-            ],
-            "tags": [
-                "Animation",
-                "Action",
-                "Adventure",
-                "Science Fiction"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "Struggling to find his place in the world while juggling school and family, Brooklyn teenager Miles Morales is unexpectedly bitten by a radioactive spider and develops unfathomable powers just like the one and only Spider-Man. While wrestling with the implications of his new abilities, Miles discovers a super collider created by the madman Wilson \"Kingpin\" Fisk, causing others from across the Spider-Verse to be inadvertently transported to his dimension.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Heroism",
-                "Justice",
-                "Technology",
-                "Survival"
-            ],
-            "moods": [
-                "Exciting",
-                "Thought-Provoking",
-                "Joyful"
-            ]
-        }
-    },
-    {
-        "item_id": 12,
-        "title": "Parasite",
-        "poster_url": "https://image.tmdb.org/t/p/w500/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/wCuUKiRaz0wEESsYqmQy005xvTE.jpg",
-        "overview": "All unemployed, Ki-taek's family takes peculiar interest in the wealthy and glamorous Parks for their livelihood until they get entangled in an unexpected incident.",
-        "rich_metadata": {
-            "title": "Parasite",
-            "year": "2019",
-            "match_percentage": 84,
-            "rating": 8.492,
-            "runtime": "133 min",
-            "director": "Bong Joon Ho",
-            "genres": [
-                "Comedy",
-                "Thriller",
-                "Drama"
-            ],
-            "tags": [
-                "Comedy",
-                "Thriller",
-                "Drama"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "All unemployed, Ki-taek's family takes peculiar interest in the wealthy and glamorous Parks for their livelihood until they get entangled in an unexpected incident.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Sacrifice",
-                "Identity",
-                "Corruption",
-                "Greed"
-            ],
-            "moods": [
-                "Emotional",
-                "Intense",
-                "Lighthearted"
-            ]
-        }
-    },
-    {
-        "item_id": 13,
-        "title": "Whiplash",
-        "poster_url": "https://image.tmdb.org/t/p/w500/7fn624j5lj3xTme2SgiLCeuedmO.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/wbQa0EnWUyRzQ5d1pHLNRlmsCUP.jpg",
-        "overview": "Under the direction of a ruthless instructor, a talented young drummer begins to pursue perfection at any cost, even his humanity.",
-        "rich_metadata": {
-            "title": "Whiplash",
-            "year": "2014",
-            "match_percentage": 83,
-            "rating": 8.375,
-            "runtime": "107 min",
-            "director": "Damien Chazelle",
-            "genres": [
-                "Drama",
-                "Music",
-                "Thriller"
-            ],
-            "tags": [
-                "Drama",
-                "Music",
-                "Thriller"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "Under the direction of a ruthless instructor, a talented young drummer begins to pursue perfection at any cost, even his humanity.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Sacrifice",
-                "Identity",
-                "Corruption",
-                "Greed"
-            ],
-            "moods": [
-                "Emotional",
-                "Intense"
-            ]
-        }
-    },
-    {
-        "item_id": 14,
-        "title": "Dune",
-        "poster_url": "https://image.tmdb.org/t/p/w500/gDzOcq0pfeCeqMBwKIJlSmQpjkZ.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/zRKQW58MBEY078AxkHxEJzUskCl.jpg",
-        "overview": "Paul Atreides, a brilliant and gifted young man born into a great destiny beyond his understanding, must travel to the most dangerous planet in the universe to ensure the future of his family and his people. As malevolent forces explode into conflict over the planet's exclusive supply of the most precious resource in existence-a commodity capable of unlocking humanity's greatest potential-only those who can conquer their fear will survive.",
-        "rich_metadata": {
-            "title": "Dune",
-            "year": "2021",
-            "match_percentage": 77,
-            "rating": 7.78,
-            "runtime": "155 min",
-            "director": "Denis Villeneuve",
-            "genres": [
-                "Science Fiction",
-                "Adventure"
-            ],
-            "tags": [
-                "Science Fiction",
-                "Adventure"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "Paul Atreides, a brilliant and gifted young man born into a great destiny beyond his understanding, must travel to the most dangerous planet in the universe to ensure the future of his family and his people. As malevolent forces explode into conflict over the planet's exclusive supply of the most precious resource in existence-a commodity capable of unlocking humanity's greatest potential-only those who can conquer their fear will survive.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Heroism",
-                "Justice",
-                "Technology",
-                "Survival"
-            ],
-            "moods": [
-                "Exciting",
-                "Thought-Provoking"
-            ]
-        }
-    },
-    {
-        "item_id": 15,
-        "title": "Oppenheimer",
-        "poster_url": "https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/neeNHeXjMF5fXoCJRsOmkNGC7q.jpg",
-        "overview": "The story of J. Robert Oppenheimer's role in the development of the atomic bomb during World War II.",
-        "rich_metadata": {
-            "title": "Oppenheimer",
-            "year": "2023",
-            "match_percentage": 80,
-            "rating": 8.025,
-            "runtime": "181 min",
-            "director": "Christopher Nolan",
-            "genres": [
-                "Drama",
-                "History"
-            ],
-            "tags": [
-                "Drama",
-                "History"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "The story of J. Robert Oppenheimer's role in the development of the atomic bomb during World War II.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Sacrifice",
-                "Identity",
-                "Destiny"
-            ],
-            "moods": [
-                "Emotional",
-                "Captivating"
-            ]
-        }
-    },
-    {
-        "item_id": 16,
-        "title": "Alien",
-        "poster_url": "https://image.tmdb.org/t/p/w500/vfrQk5IPloGg1v9Rzbh2Eg3VGyM.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/AmR3JG1VQVxU8TfAvljUhfSFUOx.jpg",
-        "overview": "During its return to the earth, commercial spaceship Nostromo intercepts a distress signal from a distant planet. When a three-member team of the crew discovers a chamber containing thousands of eggs on the planet, a creature inside one of the eggs attacks an explorer. The entire crew is unaware of the impending nightmare set to descend upon them when the alien parasite planted inside its unfortunate host is birthed.",
-        "rich_metadata": {
-            "title": "Alien",
-            "year": "1979",
-            "match_percentage": 81,
-            "rating": 8.17,
-            "runtime": "117 min",
-            "director": "Ridley Scott",
-            "genres": [
-                "Horror",
-                "Science Fiction"
-            ],
-            "tags": [
-                "Horror",
-                "Science Fiction"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "During its return to the earth, commercial spaceship Nostromo intercepts a distress signal from a distant planet. When a three-member team of the crew discovers a chamber containing thousands of eggs on the planet, a creature inside one of the eggs attacks an explorer. The entire crew is unaware of the impending nightmare set to descend upon them when the alien parasite planted inside its unfortunate host is birthed.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Technology",
-                "Survival",
-                "Destiny"
-            ],
-            "moods": [
-                "Thought-Provoking",
-                "Captivating"
-            ]
-        }
-    },
-    {
-        "item_id": 17,
-        "title": "Blade Runner 2049",
-        "poster_url": "https://image.tmdb.org/t/p/w500/gajva2L0rPYkEWjzgFlBXCAVBE5.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/mVr0UiqyltcfqxbAUcLl9zWL8ah.jpg",
-        "overview": "Thirty years after the events of the first film, a new blade runner, LAPD Officer K, unearths a long-buried secret that has the potential to plunge what's left of society into chaos. K's discovery leads him on a quest to find Rick Deckard, a former LAPD blade runner who has been missing for 30 years.",
-        "rich_metadata": {
-            "title": "Blade Runner 2049",
-            "year": "2017",
-            "match_percentage": 75,
-            "rating": 7.595,
-            "runtime": "164 min",
-            "director": "Denis Villeneuve",
-            "genres": [
-                "Science Fiction",
-                "Drama"
-            ],
-            "tags": [
-                "Science Fiction",
-                "Drama"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "Thirty years after the events of the first film, a new blade runner, LAPD Officer K, unearths a long-buried secret that has the potential to plunge what's left of society into chaos. K's discovery leads him on a quest to find Rick Deckard, a former LAPD blade runner who has been missing for 30 years.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Technology",
-                "Survival",
-                "Sacrifice",
-                "Identity"
-            ],
-            "moods": [
-                "Thought-Provoking",
-                "Emotional"
-            ]
-        }
-    },
-    {
-        "item_id": 18,
-        "title": "American Pie",
-        "poster_url": "https://image.tmdb.org/t/p/w500/5P68by2Thn8wHAziyWGEw2O7hco.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/z9DFGaWj4G4kZUWLZ6ESs1NP1Fp.jpg",
-        "overview": "At a high-school party, four friends find that losing their collective virginity isn't as easy as they had thought. But they still believe that they need to do so before college. To motivate themselves, they enter a pact to all \"score\" by their senior prom.",
-        "rich_metadata": {
-            "title": "American Pie",
-            "year": "1999",
-            "match_percentage": 66,
-            "rating": 6.609,
-            "runtime": "95 min",
-            "director": "Paul Weitz",
-            "genres": [
-                "Comedy",
-                "Romance"
-            ],
-            "tags": [
-                "Comedy",
-                "Romance"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "At a high-school party, four friends find that losing their collective virginity isn't as easy as they had thought. But they still believe that they need to do so before college. To motivate themselves, they enter a pact to all \"score\" by their senior prom.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Friendship",
-                "Destiny",
-                "Survival"
-            ],
-            "moods": [
-                "Lighthearted",
-                "Captivating"
-            ]
-        }
-    },
-    {
-        "item_id": 19,
-        "title": "Inglourious Basterds",
-        "poster_url": "https://image.tmdb.org/t/p/w500/3Gb6G2amMuKZmmCpRqM4N67s8eE.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/hwNtEmmugU5Yd7hpfprNWI0DGIn.jpg",
-        "overview": "In Nazi-occupied France during World War II, a group of Jewish-American soldiers known as \"The Basterds\" are chosen specifically to spread fear throughout the Third Reich by scalping and brutally killing Nazis. The Basterds, lead by Lt. Aldo Raine soon cross paths with a French-Jewish teenage girl who runs a movie theater in Paris which is targeted by the soldiers.",
-        "rich_metadata": {
-            "title": "Inglourious Basterds",
-            "year": "2009",
-            "match_percentage": 82,
-            "rating": 8.216,
-            "runtime": "153 min",
-            "director": "Quentin Tarantino",
-            "genres": [
-                "Drama",
-                "Thriller",
-                "War"
-            ],
-            "tags": [
-                "Drama",
-                "Thriller",
-                "War"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "In Nazi-occupied France during World War II, a group of Jewish-American soldiers known as \"The Basterds\" are chosen specifically to spread fear throughout the Third Reich by scalping and brutally killing Nazis. The Basterds, lead by Lt. Aldo Raine soon cross paths with a French-Jewish teenage girl who runs a movie theater in Paris which is targeted by the soldiers.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Sacrifice",
-                "Identity",
-                "Corruption",
-                "Greed"
-            ],
-            "moods": [
-                "Emotional",
-                "Intense"
-            ]
-        }
-    },
-    {
-        "item_id": 20,
-        "title": "The Prestige",
-        "poster_url": "https://image.tmdb.org/t/p/w500/Ag2B2KHKQPukjH7WutmgnnSNurZ.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/z3br1ub7spqGMkxgjgJSdM4DC21.jpg",
-        "overview": "A mysterious story of two magicians whose intense rivalry leads them on a life-long battle for supremacy -- full of obsession, deceit and jealousy with dangerous and deadly consequences.",
-        "rich_metadata": {
-            "title": "The Prestige",
-            "year": "2006",
-            "match_percentage": 82,
-            "rating": 8.209,
-            "runtime": "130 min",
-            "director": "Christopher Nolan",
-            "genres": [
-                "Drama",
-                "Mystery",
-                "Science Fiction"
-            ],
-            "tags": [
-                "Drama",
-                "Mystery",
-                "Science Fiction"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "A mysterious story of two magicians whose intense rivalry leads them on a life-long battle for supremacy -- full of obsession, deceit and jealousy with dangerous and deadly consequences.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Technology",
-                "Survival",
-                "Sacrifice",
-                "Identity"
-            ],
-            "moods": [
-                "Thought-Provoking",
-                "Emotional",
-                "Intense"
-            ]
-        }
-    },
-    {
-        "item_id": 21,
-        "title": "Django Unchained",
-        "poster_url": "https://image.tmdb.org/t/p/w500/7oWY8VDWW7thTzWh3OKYRkWUlD5.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/2oZklIzUbvZXXzIFzv7Hi68d6xf.jpg",
-        "overview": "With the help of a German bounty hunter, a freed slave sets out to rescue his wife from a brutal Mississippi plantation owner.",
-        "rich_metadata": {
-            "title": "Django Unchained",
-            "year": "2012",
-            "match_percentage": 81,
-            "rating": 8.192,
-            "runtime": "165 min",
-            "director": "Quentin Tarantino",
-            "genres": [
-                "Drama",
-                "Western"
-            ],
-            "tags": [
-                "Drama",
-                "Western"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "With the help of a German bounty hunter, a freed slave sets out to rescue his wife from a brutal Mississippi plantation owner.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Sacrifice",
-                "Identity",
-                "Destiny"
-            ],
-            "moods": [
-                "Emotional",
-                "Captivating"
-            ]
-        }
-    },
-    {
-        "item_id": 22,
-        "title": "GoodFellas",
-        "poster_url": "https://image.tmdb.org/t/p/w500/9OkCLM73MIU2CrKZbqiT8Ln1wY2.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/gILte6Zd7m1YneIr6MVhh30S9pr.jpg",
-        "overview": "The true story of Henry Hill, a half-Irish, half-Sicilian Brooklyn kid who is adopted by neighbourhood gangsters at an early age and climbs the ranks of a Mafia family under the guidance of Jimmy Conway.",
-        "rich_metadata": {
-            "title": "GoodFellas",
-            "year": "1990",
-            "match_percentage": 85,
-            "rating": 8.5,
-            "runtime": "145 min",
-            "director": "Martin Scorsese",
-            "genres": [
-                "Drama",
-                "Crime"
-            ],
-            "tags": [
-                "Drama",
-                "Crime"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "The true story of Henry Hill, a half-Irish, half-Sicilian Brooklyn kid who is adopted by neighbourhood gangsters at an early age and climbs the ranks of a Mafia family under the guidance of Jimmy Conway.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Sacrifice",
-                "Identity",
-                "Corruption",
-                "Greed"
-            ],
-            "moods": [
-                "Emotional",
-                "Intense"
-            ]
-        }
-    },
-    {
-        "item_id": 23,
-        "title": "Titanic",
-        "poster_url": "https://image.tmdb.org/t/p/w500/9xjZS2rlVxm8SFx8kPC3aIGCOYQ.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/xnHVX37XZEp33hhCbYlQFq7ux1J.jpg",
-        "overview": "101-year-old Rose DeWitt Bukater tells the story of her life aboard the Titanic, 84 years later. A young Rose boards the ship with her mother and fianc\u00e9. Meanwhile, Jack Dawson and Fabrizio De Rossi win third-class tickets aboard the ship. Rose tells the whole story from Titanic's departure through to its death\u2014on its first and last voyage\u2014on April 15, 1912.",
-        "rich_metadata": {
-            "title": "Titanic",
-            "year": "1997",
-            "match_percentage": 79,
-            "rating": 7.902,
-            "runtime": "194 min",
-            "director": "James Cameron",
-            "genres": [
-                "Drama",
-                "Romance"
-            ],
-            "tags": [
-                "Drama",
-                "Romance"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "101-year-old Rose DeWitt Bukater tells the story of her life aboard the Titanic, 84 years later. A young Rose boards the ship with her mother and fianc\u00e9. Meanwhile, Jack Dawson and Fabrizio De Rossi win third-class tickets aboard the ship. Rose tells the whole story from Titanic's departure through to its death\u2014on its first and last voyage\u2014on April 15, 1912.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Sacrifice",
-                "Identity",
-                "Destiny"
-            ],
-            "moods": [
-                "Emotional",
-                "Captivating"
-            ]
-        }
-    },
-    {
-        "item_id": 24,
-        "title": "Saving Private Ryan",
-        "poster_url": "https://image.tmdb.org/t/p/w500/uqx37cS8cpHg8U35f9U5IBlrCV3.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/bdD39MpSVhKjxarTxLSfX6baoMP.jpg",
-        "overview": "As U.S. troops storm the beaches of Normandy, three brothers lie dead on the battlefield, with a fourth trapped behind enemy lines. Ranger captain John Miller and seven men are tasked with penetrating German-held territory and bringing the boy home.",
-        "rich_metadata": {
-            "title": "Saving Private Ryan",
-            "year": "1998",
-            "match_percentage": 82,
-            "rating": 8.228,
-            "runtime": "169 min",
-            "director": "Steven Spielberg",
-            "genres": [
-                "War",
-                "Drama",
-                "History"
-            ],
-            "tags": [
-                "War",
-                "Drama",
-                "History"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "As U.S. troops storm the beaches of Normandy, three brothers lie dead on the battlefield, with a fourth trapped behind enemy lines. Ranger captain John Miller and seven men are tasked with penetrating German-held territory and bringing the boy home.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Sacrifice",
-                "Identity",
-                "Destiny"
-            ],
-            "moods": [
-                "Emotional",
-                "Captivating"
-            ]
-        }
-    },
-    {
-        "item_id": 25,
-        "title": "The Silence of the Lambs",
-        "poster_url": "https://image.tmdb.org/t/p/w500/uS9m8OBk1A8eM9I042bx8XXpqAq.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/aYcnDyLMnpKce1FOYUpZrXtgUye.jpg",
-        "overview": "Clarice Starling is a top student at the FBI's training academy.  Jack Crawford wants Clarice to interview Dr. Hannibal Lecter, a brilliant psychiatrist who is also a violent psychopath, serving life behind bars for various acts of murder and cannibalism.  Crawford believes that Lecter may have insight into a case and that Starling, as an attractive young woman, may be just the bait to draw him out.",
-        "rich_metadata": {
-            "title": "The Silence of the Lambs",
-            "year": "1991",
-            "match_percentage": 83,
-            "rating": 8.344,
-            "runtime": "119 min",
-            "director": "Jonathan Demme",
-            "genres": [
-                "Crime",
-                "Thriller",
-                "Drama"
-            ],
-            "tags": [
-                "Crime",
-                "Thriller",
-                "Drama"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "Clarice Starling is a top student at the FBI's training academy.  Jack Crawford wants Clarice to interview Dr. Hannibal Lecter, a brilliant psychiatrist who is also a violent psychopath, serving life behind bars for various acts of murder and cannibalism.  Crawford believes that Lecter may have insight into a case and that Starling, as an attractive young woman, may be just the bait to draw him out.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Sacrifice",
-                "Identity",
-                "Corruption",
-                "Greed"
-            ],
-            "moods": [
-                "Emotional",
-                "Intense"
-            ]
-        }
-    },
-    {
-        "item_id": 26,
-        "title": "Toy Story",
-        "poster_url": "https://image.tmdb.org/t/p/w500/uXDfjJbdP4ijW5hWSBrPrlKpxab.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/3Rfvhy1Nl6sSGJwyjb0QiZzZYlB.jpg",
-        "overview": "Led by Woody, Andy's toys live happily in his room until Andy's birthday brings Buzz Lightyear onto the scene. Afraid of losing his place in Andy's heart, Woody plots against Buzz. But when circumstances separate Buzz and Woody from their owner, the duo eventually learns to put aside their differences.",
-        "rich_metadata": {
-            "title": "Toy Story",
-            "year": "1995",
-            "match_percentage": 79,
-            "rating": 7.98,
-            "runtime": "81 min",
-            "director": "John Lasseter",
-            "genres": [
-                "Family",
-                "Comedy",
-                "Animation",
-                "Adventure"
-            ],
-            "tags": [
-                "Family",
-                "Comedy",
-                "Animation",
-                "Adventure"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "Led by Woody, Andy's toys live happily in his room until Andy's birthday brings Buzz Lightyear onto the scene. Afraid of losing his place in Andy's heart, Woody plots against Buzz. But when circumstances separate Buzz and Woody from their owner, the duo eventually learns to put aside their differences.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Heroism",
-                "Justice",
-                "Friendship",
-                "Love"
-            ],
-            "moods": [
-                "Exciting",
-                "Lighthearted",
-                "Joyful"
-            ]
-        }
-    },
-    {
-        "item_id": 27,
-        "title": "Spider-Man: No Way Home",
-        "poster_url": "https://image.tmdb.org/t/p/w500/1g0dhYtq4irTY1GPXvft6k4YLjm.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/AeK2MPOpYrOOgZNfFnfwp0L8tNn.jpg",
-        "overview": "Peter Parker is unmasked and no longer able to separate his normal life from the high-stakes of being a super-hero. When he asks for help from Doctor Strange the stakes become even more dangerous, forcing him to discover what it truly means to be Spider-Man.",
-        "rich_metadata": {
-            "title": "Spider-Man: No Way Home",
-            "year": "2021",
-            "match_percentage": 79,
-            "rating": 7.934,
-            "runtime": "148 min",
-            "director": "Jon Watts",
-            "genres": [
-                "Action",
-                "Adventure",
-                "Science Fiction"
-            ],
-            "tags": [
-                "Action",
-                "Adventure",
-                "Science Fiction"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "Peter Parker is unmasked and no longer able to separate his normal life from the high-stakes of being a super-hero. When he asks for help from Doctor Strange the stakes become even more dangerous, forcing him to discover what it truly means to be Spider-Man.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Heroism",
-                "Justice",
-                "Technology",
-                "Survival"
-            ],
-            "moods": [
-                "Exciting",
-                "Thought-Provoking"
-            ]
-        }
-    },
-    {
-        "item_id": 28,
-        "title": "Black Panther",
-        "poster_url": "https://image.tmdb.org/t/p/w500/uxzzxijgPIY7slzFvMotPv8wjKA.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/19Ed4XgjahPm4U8JT7SnntERIlt.jpg",
-        "overview": "King T'Challa returns home to the reclusive, technologically advanced African nation of Wakanda to serve as his country's new leader. However, T'Challa soon finds that he is challenged for the throne by factions within his own country as well as without. Using powers reserved to Wakandan kings, T'Challa assumes the Black Panther mantle to join with ex-girlfriend Nakia, the queen-mother, his princess-kid sister, members of the Dora Milaje (the Wakandan 'special forces') and an American secret agent, to prevent Wakanda from being dragged into a world war.",
-        "rich_metadata": {
-            "title": "Black Panther",
-            "year": "2018",
-            "match_percentage": 73,
-            "rating": 7.364,
-            "runtime": "135 min",
-            "director": "Ryan Coogler",
-            "genres": [
-                "Action",
-                "Adventure",
-                "Science Fiction"
-            ],
-            "tags": [
-                "Action",
-                "Adventure",
-                "Science Fiction"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "King T'Challa returns home to the reclusive, technologically advanced African nation of Wakanda to serve as his country's new leader. However, T'Challa soon finds that he is challenged for the throne by factions within his own country as well as without. Using powers reserved to Wakandan kings, T'Challa assumes the Black Panther mantle to join with ex-girlfriend Nakia, the queen-mother, his princess-kid sister, members of the Dora Milaje (the Wakandan 'special forces') and an American secret agent, to prevent Wakanda from being dragged into a world war.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Heroism",
-                "Justice",
-                "Technology",
-                "Survival"
-            ],
-            "moods": [
-                "Exciting",
-                "Thought-Provoking"
-            ]
-        }
-    },
-    {
-        "item_id": 29,
-        "title": "The Lord of the Rings: The Fellowship of the Ring",
-        "poster_url": "https://image.tmdb.org/t/p/w500/6oom5QYQ2yQTMJIbnvbkBL9cHo6.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/oiwc338EoBgS4sEI2ixAny4KQKg.jpg",
-        "overview": "Young hobbit Frodo Baggins, after inheriting a mysterious ring from his uncle Bilbo, must leave his home in order to keep it from falling into the hands of its evil creator. Along the way, a fellowship is formed to protect the ringbearer and make sure that the ring arrives at its final destination: Mt. Doom, the only place where it can be destroyed.",
-        "rich_metadata": {
-            "title": "The Lord of the Rings: The Fellowship of the Ring",
-            "year": "2001",
-            "match_percentage": 84,
-            "rating": 8.436,
-            "runtime": "179 min",
-            "director": "Peter Jackson",
-            "genres": [
-                "Adventure",
-                "Fantasy",
-                "Action"
-            ],
-            "tags": [
-                "Adventure",
-                "Fantasy",
-                "Action"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "Young hobbit Frodo Baggins, after inheriting a mysterious ring from his uncle Bilbo, must leave his home in order to keep it from falling into the hands of its evil creator. Along the way, a fellowship is formed to protect the ringbearer and make sure that the ring arrives at its final destination: Mt. Doom, the only place where it can be destroyed.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Heroism",
-                "Justice",
-                "Destiny"
-            ],
-            "moods": [
-                "Exciting",
-                "Captivating"
-            ]
-        }
-    },
-    {
-        "item_id": 30,
-        "title": "The Lord of the Rings: The Two Towers",
-        "poster_url": "https://image.tmdb.org/t/p/w500/5VTN0pR8gcqV3EPUHHfMGnJYN9L.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/6G73mNyooWAEQTpckPSnFxFoNmc.jpg",
-        "overview": "Frodo Baggins and the other members of the Fellowship continue on their sacred quest to destroy the One Ring--but on separate paths. Their destinies lie at two towers--Orthanc Tower in Isengard, where the corrupt wizard Saruman awaits, and Sauron's fortress at Barad-dur, deep within the dark lands of Mordor. Frodo and Sam are trekking to Mordor to destroy the One Ring of Power while Gimli, Legolas and Aragorn search for the orc-captured Merry and Pippin. All along, nefarious wizard Saruman awaits the Fellowship members at the Orthanc Tower in Isengard.",
-        "rich_metadata": {
-            "title": "The Lord of the Rings: The Two Towers",
-            "year": "2002",
-            "match_percentage": 84,
-            "rating": 8.421,
-            "runtime": "179 min",
-            "director": "Peter Jackson",
-            "genres": [
-                "Adventure",
-                "Fantasy",
-                "Action"
-            ],
-            "tags": [
-                "Adventure",
-                "Fantasy",
-                "Action"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "Frodo Baggins and the other members of the Fellowship continue on their sacred quest to destroy the One Ring--but on separate paths. Their destinies lie at two towers--Orthanc Tower in Isengard, where the corrupt wizard Saruman awaits, and Sauron's fortress at Barad-dur, deep within the dark lands of Mordor. Frodo and Sam are trekking to Mordor to destroy the One Ring of Power while Gimli, Legolas and Aragorn search for the orc-captured Merry and Pippin. All along, nefarious wizard Saruman awaits the Fellowship members at the Orthanc Tower in Isengard.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Heroism",
-                "Justice",
-                "Destiny"
-            ],
-            "moods": [
-                "Exciting",
-                "Captivating"
-            ]
-        }
-    },
-    {
-        "item_id": 31,
-        "title": "The Lord of the Rings: The Return of the King",
-        "poster_url": "https://image.tmdb.org/t/p/w500/rCzpDGLbOoPwLjy3OAm5NUPOTrC.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/2u7zbn8EudG6kLlBzUYqP8RyFU4.jpg",
-        "overview": "As armies mass for a final battle that will decide the fate of the world--and powerful, ancient forces of Light and Dark compete to determine the outcome--one member of the Fellowship of the Ring is revealed as the noble heir to the throne of the Kings of Men. Yet, the sole hope for triumph over evil lies with a brave hobbit, Frodo, who, accompanied by his loyal friend Sam and the hideous, wretched Gollum, ventures deep into the very dark heart of Mordor on his seemingly impossible quest to destroy the Ring of Power.\u200b",
-        "rich_metadata": {
-            "title": "The Lord of the Rings: The Return of the King",
-            "year": "2003",
-            "match_percentage": 85,
-            "rating": 8.5,
-            "runtime": "201 min",
-            "director": "Peter Jackson",
-            "genres": [
-                "Adventure",
-                "Fantasy",
-                "Action"
-            ],
-            "tags": [
-                "Adventure",
-                "Fantasy",
-                "Action"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "As armies mass for a final battle that will decide the fate of the world--and powerful, ancient forces of Light and Dark compete to determine the outcome--one member of the Fellowship of the Ring is revealed as the noble heir to the throne of the Kings of Men. Yet, the sole hope for triumph over evil lies with a brave hobbit, Frodo, who, accompanied by his loyal friend Sam and the hideous, wretched Gollum, ventures deep into the very dark heart of Mordor on his seemingly impossible quest to destroy the Ring of Power.\u200b",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Heroism",
-                "Justice",
-                "Destiny"
-            ],
-            "moods": [
-                "Exciting",
-                "Captivating"
-            ]
-        }
-    },
-    {
-        "item_id": 32,
-        "title": "Spirited Away",
-        "poster_url": "https://image.tmdb.org/t/p/w500/39wmItIWsg5sZMyRUHLkWBcuVCM.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/dyJvKsNs2KP8qQnAXbRwDjblViy.jpg",
-        "overview": "A young girl, Chihiro, becomes trapped in a strange new world of spirits. When her parents undergo a mysterious transformation, she must call upon the courage she never knew she had to free her family.",
-        "rich_metadata": {
-            "title": "Spirited Away",
-            "year": "2001",
-            "match_percentage": 85,
-            "rating": 8.534,
-            "runtime": "125 min",
-            "director": "Hayao Miyazaki",
-            "genres": [
-                "Animation",
-                "Family",
-                "Fantasy"
-            ],
-            "tags": [
-                "Animation",
-                "Family",
-                "Fantasy"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "A young girl, Chihiro, becomes trapped in a strange new world of spirits. When her parents undergo a mysterious transformation, she must call upon the courage she never knew she had to free her family.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Love",
-                "Growing Up",
-                "Destiny"
-            ],
-            "moods": [
-                "Joyful",
-                "Captivating"
-            ]
-        }
-    },
-    {
-        "item_id": 33,
-        "title": "Your Name.",
-        "poster_url": "https://image.tmdb.org/t/p/w500/q719jXXEzOoYaps6babgKnONONX.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/mMtUybQ6hL24FXo0F3Z4j2KG7kZ.jpg",
-        "overview": "High schoolers Mitsuha and Taki are complete strangers living separate lives. But one night, they suddenly switch places. Mitsuha wakes up in Taki\u2019s body, and he in hers. This bizarre occurrence continues to happen randomly, and the two must adjust their lives around each other.",
-        "rich_metadata": {
-            "title": "Your Name.",
-            "year": "2016",
-            "match_percentage": 84,
-            "rating": 8.481,
-            "runtime": "106 min",
-            "director": "Makoto Shinkai",
-            "genres": [
-                "Animation",
-                "Romance",
-                "Drama"
-            ],
-            "tags": [
-                "Animation",
-                "Romance",
-                "Drama"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "High schoolers Mitsuha and Taki are complete strangers living separate lives. But one night, they suddenly switch places. Mitsuha wakes up in Taki\u2019s body, and he in hers. This bizarre occurrence continues to happen randomly, and the two must adjust their lives around each other.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Sacrifice",
-                "Identity",
-                "Love",
-                "Growing Up"
-            ],
-            "moods": [
-                "Emotional",
-                "Joyful"
-            ]
-        }
-    },
-    {
-        "item_id": 34,
-        "title": "Breaking Bad",
-        "poster_url": "https://image.tmdb.org/t/p/w500/ztkUQFLlC19CCMYHW9o1zWhJRNq.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/tsRy63Mu5cu8etL1X7ZLyf7UP1M.jpg",
-        "overview": "Walter White, a New Mexico chemistry teacher, is diagnosed with Stage III cancer and given a prognosis of only two years left to live. He becomes filled with a sense of fearlessness and an unrelenting desire to secure his family's financial future at any cost as he enters the dangerous world of drugs and crime.",
-        "rich_metadata": {
-            "title": "Breaking Bad",
-            "year": "2008",
-            "match_percentage": 89,
-            "rating": 8.946,
-            "runtime": "5 Seasons min",
-            "director": "Vince Gilligan",
-            "genres": [
-                "Drama",
-                "Crime"
-            ],
-            "tags": [
-                "Drama",
-                "Crime"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "Walter White, a New Mexico chemistry teacher, is diagnosed with Stage III cancer and given a prognosis of only two years left to live. He becomes filled with a sense of fearlessness and an unrelenting desire to secure his family's financial future at any cost as he enters the dangerous world of drugs and crime.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Sacrifice",
-                "Identity",
-                "Corruption",
-                "Greed"
-            ],
-            "moods": [
-                "Emotional",
-                "Intense"
-            ]
-        }
-    },
-    {
-        "item_id": 35,
-        "title": "Game of Thrones",
-        "poster_url": "https://image.tmdb.org/t/p/w500/1XS1oqL89opfnbLl8WnZY1O1uJx.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/2OMB0ynKlyIenMJWI2Dy9IWT4c.jpg",
-        "overview": "Seven noble families fight for control of the mythical land of Westeros. Friction between the houses leads to full-scale war. All while a very ancient evil awakens in the farthest north. Amidst the war, a neglected military order of misfits, the Night's Watch, is all that stands between the realms of men and icy horrors beyond.",
-        "rich_metadata": {
-            "title": "Game of Thrones",
-            "year": "2011",
-            "match_percentage": 84,
-            "rating": 8.464,
-            "runtime": "8 Seasons min",
-            "director": "David Benioff",
-            "genres": [
-                "Sci-Fi & Fantasy",
-                "Drama",
-                "Action & Adventure"
-            ],
-            "tags": [
-                "Sci-Fi & Fantasy",
-                "Drama",
-                "Action & Adventure"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "Seven noble families fight for control of the mythical land of Westeros. Friction between the houses leads to full-scale war. All while a very ancient evil awakens in the farthest north. Amidst the war, a neglected military order of misfits, the Night's Watch, is all that stands between the realms of men and icy horrors beyond.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Heroism",
-                "Justice",
-                "Technology",
-                "Survival"
-            ],
-            "moods": [
-                "Exciting",
-                "Thought-Provoking",
-                "Emotional"
-            ]
-        }
-    },
-    {
-        "item_id": 36,
-        "title": "Stranger Things",
-        "poster_url": "https://image.tmdb.org/t/p/w500/uOOtwVbSr4QDjAGIifLDwpb2Pdl.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/56v2KjBlU4XaOv9rVYEQypROD7P.jpg",
-        "overview": "When a young boy vanishes, a small town uncovers a mystery involving secret experiments, terrifying supernatural forces, and one strange little girl.",
-        "rich_metadata": {
-            "title": "Stranger Things",
-            "year": "2016",
-            "match_percentage": 85,
-            "rating": 8.562,
-            "runtime": "5 Seasons min",
-            "director": "Ross Duffer",
-            "genres": [
-                "Action & Adventure",
-                "Mystery",
-                "Sci-Fi & Fantasy"
-            ],
-            "tags": [
-                "Action & Adventure",
-                "Mystery",
-                "Sci-Fi & Fantasy"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "When a young boy vanishes, a small town uncovers a mystery involving secret experiments, terrifying supernatural forces, and one strange little girl.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Heroism",
-                "Justice",
-                "Technology",
-                "Survival"
-            ],
-            "moods": [
-                "Exciting",
-                "Thought-Provoking",
-                "Intense"
-            ]
-        }
-    },
-    {
-        "item_id": 37,
-        "title": "Better Call Saul",
-        "poster_url": "https://image.tmdb.org/t/p/w500/zjg4jpK1Wp2kiRvtt5ND0kznako.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/og2jKploGHYnCz68vV1nRSEE0xV.jpg",
-        "overview": "Six years before Saul Goodman meets Walter White. We meet him when the man who will become Saul Goodman is known as Jimmy McGill, a small-time lawyer searching for his destiny, and, more immediately, hustling to make ends meet. Working alongside, and, often, against Jimmy, is \u201cfixer\u201d Mike Ehrmantraut. The series tracks Jimmy\u2019s transformation into Saul Goodman, the man who puts \u201ccriminal\u201d in \u201ccriminal lawyer\".",
-        "rich_metadata": {
-            "title": "Better Call Saul",
-            "year": "2015",
-            "match_percentage": 87,
-            "rating": 8.706,
-            "runtime": "6 Seasons min",
-            "director": "Vince Gilligan",
-            "genres": [
-                "Crime",
-                "Drama"
-            ],
-            "tags": [
-                "Crime",
-                "Drama"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "Six years before Saul Goodman meets Walter White. We meet him when the man who will become Saul Goodman is known as Jimmy McGill, a small-time lawyer searching for his destiny, and, more immediately, hustling to make ends meet. Working alongside, and, often, against Jimmy, is \u201cfixer\u201d Mike Ehrmantraut. The series tracks Jimmy\u2019s transformation into Saul Goodman, the man who puts \u201ccriminal\u201d in \u201ccriminal lawyer\".",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Sacrifice",
-                "Identity",
-                "Corruption",
-                "Greed"
-            ],
-            "moods": [
-                "Emotional",
-                "Intense"
-            ]
-        }
-    },
-    {
-        "item_id": 38,
-        "title": "The Sopranos",
-        "poster_url": "https://image.tmdb.org/t/p/w500/rTc7ZXdroqjkKivFPvCPX0Ru7uw.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/lNpkvX2s8LGB0mjGODMT4o6Up7j.jpg",
-        "overview": "The story of New Jersey-based Italian-American mobster Tony Soprano and the difficulties he faces as he tries to balance the conflicting requirements of his home life and the criminal organization he heads. Those difficulties are often highlighted through his ongoing professional relationship with psychiatrist Jennifer Melfi. The show features Tony's family members and Mafia associates in prominent roles and story arcs, most notably his wife Carmela and his cousin and prot\u00e9g\u00e9 Christopher Moltisanti.",
-        "rich_metadata": {
-            "title": "The Sopranos",
-            "year": "1999",
-            "match_percentage": 86,
-            "rating": 8.672,
-            "runtime": "6 Seasons min",
-            "director": "David Chase",
-            "genres": [
-                "Crime",
-                "Drama"
-            ],
-            "tags": [
-                "Crime",
-                "Drama"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "The story of New Jersey-based Italian-American mobster Tony Soprano and the difficulties he faces as he tries to balance the conflicting requirements of his home life and the criminal organization he heads. Those difficulties are often highlighted through his ongoing professional relationship with psychiatrist Jennifer Melfi. The show features Tony's family members and Mafia associates in prominent roles and story arcs, most notably his wife Carmela and his cousin and prot\u00e9g\u00e9 Christopher Moltisanti.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Sacrifice",
-                "Identity",
-                "Corruption",
-                "Greed"
-            ],
-            "moods": [
-                "Emotional",
-                "Intense"
-            ]
-        }
-    },
-    {
-        "item_id": 39,
-        "title": "Succession",
-        "poster_url": "https://image.tmdb.org/t/p/w500/z0XiwdrCQ9yVIr4O0pxzaAYRxdW.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/bcdUYUFk8GdpZJPiSAas9UeocLH.jpg",
-        "overview": "Follow the lives of the Roy family as they contemplate their future once their aging father begins to step back from the media and entertainment conglomerate they control.",
-        "rich_metadata": {
-            "title": "Succession",
-            "year": "2018",
-            "match_percentage": 82,
-            "rating": 8.294,
-            "runtime": "4 Seasons min",
-            "director": "Jesse Armstrong",
-            "genres": [
-                "Drama",
-                "Comedy"
-            ],
-            "tags": [
-                "Drama",
-                "Comedy"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "Follow the lives of the Roy family as they contemplate their future once their aging father begins to step back from the media and entertainment conglomerate they control.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Sacrifice",
-                "Identity",
-                "Friendship"
-            ],
-            "moods": [
-                "Emotional",
-                "Lighthearted"
-            ]
-        }
-    },
-    {
-        "item_id": 40,
-        "title": "The Crown",
-        "poster_url": "https://image.tmdb.org/t/p/w500/1M876KPjulVwppEpldhdc8V4o68.jpg",
-        "backdrop_url": "https://image.tmdb.org/t/p/w1280/8VXhcrl5z2I1zEU9X3pkkNrZlD.jpg",
-        "overview": "The gripping, decades-spanning inside story of Her Majesty Queen Elizabeth II and the Prime Ministers who shaped Britain's post-war destiny.   The Crown tells the inside story of two of the most famous addresses in the world \u2013 Buckingham Palace and 10 Downing Street \u2013 and the intrigues, love lives and machinations behind the great events that shaped the second half of the 20th century. Two houses, two courts, one Crown.",
-        "rich_metadata": {
-            "title": "The Crown",
-            "year": "2016",
-            "match_percentage": 81,
-            "rating": 8.187,
-            "runtime": "6 Seasons min",
-            "director": "Peter Morgan",
-            "genres": [
-                "Drama"
-            ],
-            "tags": [
-                "Drama"
-            ],
-            "audience_type": "Family/General",
-            "story_summary": "The gripping, decades-spanning inside story of Her Majesty Queen Elizabeth II and the Prime Ministers who shaped Britain's post-war destiny.   The Crown tells the inside story of two of the most famous addresses in the world \u2013 Buckingham Palace and 10 Downing Street \u2013 and the intrigues, love lives and machinations behind the great events that shaped the second half of the 20th century. Two houses, two courts, one Crown.",
-            "why_recommended": "Matches your preferred genres.",
-            "themes": [
-                "Sacrifice",
-                "Identity",
-                "Destiny"
-            ],
-            "moods": [
-                "Emotional",
-                "Captivating"
-            ]
-        }
-    }
-];
+const EMPTY_CONTENT_STATE = {
+    hero: null,
+    shelves: [],
+    categories: []
+};
 
 // ── Format Discovery & Modulo Heuristic ─────────────────────────────────
 window.currentFormat = 'all';
@@ -2152,6 +672,7 @@ function initApp() {
     }
     // Bind format selectors dynamically to bypass inline CSP blocks
     const allTab = document.getElementById('format-tab-all');
+    if (allTab) allTab.style.display = 'none';
     const movieTab = document.getElementById('format-tab-movie');
     const seriesTab = document.getElementById('format-tab-series');
     if (allTab) {
@@ -2436,13 +957,13 @@ function getMovieLanguages(movie) {
 
 function createBotRecommendationHTML(movie) {
     const m = movie.rich_metadata || {};
-    const title = movie.title || 'Unknown';
+    const title = movie.title || '';
     const poster = movie.poster_url || placeholder(title);
     const score = m.match_percentage || randScore();
     const rating = m.rating || '8.0';
     const genres = (m.genres || m.tags || ['Drama']).slice(0, 3).join(', ');
     const runtime = m.runtime || '120 min';
-    const reason = m.why_recommended || 'Highly matched to your interest and viewing behavior.';
+    const reason = m.why_recommended || m.why_recommended;
     
     return `
         <div class="chat-rec-card" onclick="navigateToMovie(${movie.item_id})" style="display: flex; gap: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: var(--r-md); padding: 10px; margin-top: 10px; cursor: pointer; transition: transform var(--t-fast); align-items: flex-start;">
@@ -2450,7 +971,7 @@ function createBotRecommendationHTML(movie) {
             <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px;">
                 <div style="font-weight: 700; color: white; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left;">${title}</div>
                 <div style="display: flex; gap: 8px; align-items: center; font-size: 0.75rem; flex-wrap: wrap;">
-                    <span style="color: var(--match-green); font-weight: 700;">★ ${score}% Match</span>
+                    <span style="color: var(--match-green); font-weight: 700;"></span>
                     <span style="color: #f5c518; font-weight: 700;">IMDb ${rating}</span>
                     <span style="color: var(--text-muted);">${runtime}</span>
                 </div>
@@ -2553,7 +1074,7 @@ async function handleSend() {
                             }
                             chatHistory.scrollTop = chatHistory.scrollHeight;
                         } else if (event.type === "metric") {
-                            console.log(`[Streamora AI Metric] ${event.key}: ${event.value}`);
+                            console.log(`[Streamora Metric] ${event.key}: ${event.value}`);
                         }
                     } catch (e) {
                         console.error("Parse error on stream chunk", e, dataStr);
@@ -2947,7 +1468,7 @@ window.savePageTheme = function(theme) {
 // ── Downloads Tab ────────────────────────────────────────────────────
 window.simulateDownload = function(id) {
     const movie = globalMovies.find(m => parseInt(m.item_id) === parseInt(id)) || 
-                  FALLBACK_MOVIES.find(m => parseInt(m.item_id) === parseInt(id));
+                  [].find(m => parseInt(m.item_id) === parseInt(id));
     if (!movie) return;
 
     let downloads = JSON.parse(localStorage.getItem('streamora_downloads') || '[]');
@@ -3206,14 +1727,14 @@ async function fetchAndRender(query, rowTitle, isHero = false) {
     // Fallback logic if we have no movies or empty results
     if (!movies || !Array.isArray(movies) || movies.length === 0) {
         const qLower = query.toLowerCase();
-        let filtered = FALLBACK_MOVIES.filter(m => {
+        let filtered = [].filter(m => {
             return m.rich_metadata.genres.some(g => qLower.includes(g.toLowerCase()) || g.toLowerCase().includes(qLower)) ||
                    m.overview.toLowerCase().includes(qLower) ||
                    m.title.toLowerCase().includes(qLower);
         });
         
         if (filtered.length === 0) {
-            filtered = FALLBACK_MOVIES.sort(() => 0.5 - Math.random()).slice(0, 5);
+            filtered = [].sort(() => 0.5 - Math.random()).slice(0, 5);
         }
         movies = filtered;
     }
@@ -3235,7 +1756,7 @@ async function fetchAndRender(query, rowTitle, isHero = false) {
     // If format filtering & deduplication leaves us empty, fill with format-aligned fallbacks
     if (dedupedMovies.length === 0) {
         const qLower = query.toLowerCase();
-        let fallbackList = FALLBACK_MOVIES.filter(m => {
+        let fallbackList = [].filter(m => {
             const matchesQuery = m.rich_metadata.genres.some(g => qLower.includes(g.toLowerCase()) || g.toLowerCase().includes(qLower)) ||
                                  m.overview.toLowerCase().includes(qLower) ||
                                  m.title.toLowerCase().includes(qLower);
@@ -3246,7 +1767,7 @@ async function fetchAndRender(query, rowTitle, isHero = false) {
         });
         
         if (fallbackList.length === 0) {
-            fallbackList = FALLBACK_MOVIES.filter(m => {
+            fallbackList = [].filter(m => {
                 const matchesFormat = window.currentFormat === 'all' || 
                                       (window.currentFormat === 'movie' && !window.isSeries(m)) || 
                                       (window.currentFormat === 'series' && window.isSeries(m));
@@ -3266,11 +1787,11 @@ async function fetchAndRender(query, rowTitle, isHero = false) {
         globalMovies = [...globalMovies, ...movies];
         
         if (isHero) {
-            const formatMatchedFallback = FALLBACK_MOVIES.find(m => {
+            const formatMatchedFallback = [].find(m => {
                 return window.currentFormat === 'all' ||
                        (window.currentFormat === 'movie' && !window.isSeries(m)) ||
                        (window.currentFormat === 'series' && window.isSeries(m));
-            }) || FALLBACK_MOVIES[0];
+            }) || null;
             const heroMovie = movies[0] || formatMatchedFallback;
             renderHero(heroMovie);
             appendRow(rowTitle, movies.slice(1));
@@ -3420,88 +1941,23 @@ function renderCategorySelectionGrid() {
     `;
     
     const categoriesData = [
-        { name: 'Action', color: 'rgba(239, 68, 68, 0.5)', icon: '🎬', type: 'both' },
-        { name: 'Adventure', color: 'rgba(245, 158, 11, 0.5)', icon: '🧭', type: 'both' },
-        { name: 'Animation', color: 'rgba(59, 130, 246, 0.5)', icon: '🧸', type: 'both' },
-        { name: 'Anime', color: 'rgba(236, 72, 153, 0.5)', icon: '🌸', type: 'both' },
-        { name: 'Biography', color: 'rgba(16, 185, 129, 0.5)', icon: '📜', type: 'movie' },
-        { name: 'Comedy', color: 'rgba(236, 72, 153, 0.5)', icon: '😂', type: 'both' },
-        { name: 'Crime', color: 'rgba(107, 114, 128, 0.5)', icon: '🕵️', type: 'both' },
-        { name: 'Dark Comedy', color: 'rgba(17, 24, 39, 0.8)', icon: '💀', type: 'movie' },
-        { name: 'Disaster', color: 'rgba(220, 38, 38, 0.5)', icon: '🌋', type: 'movie' },
-        { name: 'Documentary', color: 'rgba(6, 182, 212, 0.5)', icon: '📹', type: 'both' },
-        { name: 'Drama', color: 'rgba(139, 92, 246, 0.5)', icon: '🎭', type: 'both' },
-        { name: 'Family', color: 'rgba(16, 185, 12 emerald, 0.5)', icon: '👨‍👩‍👧‍👦', type: 'both' },
-        { name: 'Fantasy', color: 'rgba(236, 72, 153, 0.5)', icon: '🐉', type: 'both' },
-        { name: 'Historical', color: 'rgba(202, 138, 4, 0.5)', icon: '🏰', type: 'both' },
-        { name: 'History', color: 'rgba(120, 53, 15, 0.5)', icon: '🏛️', type: 'movie' },
-        { name: 'Holiday', color: 'rgba(239, 68, 68, 0.5)', icon: '🎄', type: 'movie' },
-        { name: 'Horror', color: 'rgba(17, 24, 39, 0.8)', icon: '👻', type: 'both' },
-        { name: 'Independent', color: 'rgba(107, 114, 128, 0.5)', icon: '🎥', type: 'movie' },
-        { name: 'Kids', color: 'rgba(245, 158, 11, 0.5)', icon: '🎈', type: 'both' },
-        { name: 'Martial Arts', color: 'rgba(185, 28, 28, 0.5)', icon: '🥋', type: 'movie' },
-        { name: 'Medical', color: 'rgba(13, 148, 136, 0.5)', icon: '🩺', type: 'both' },
-        { name: 'Military', color: 'rgba(63, 73, 61, 0.5)', icon: '🪖', type: 'movie' },
-        { name: 'Music', color: 'rgba(139, 92, 246, 0.5)', icon: '🎵', type: 'both' },
-        { name: 'Musical', color: 'rgba(236, 72, 153, 0.5)', icon: '🎹', type: 'movie' },
-        { name: 'Mystery', color: 'rgba(79, 70, 229, 0.5)', icon: '🔍', type: 'both' },
-        { name: 'Neo-Noir', color: 'rgba(15, 23, 42, 0.8)', icon: '🕶️', type: 'movie' },
-        { name: 'Political', color: 'rgba(71, 85, 105, 0.5)', icon: '🏛️', type: 'both' },
-        { name: 'Psychological', color: 'rgba(99, 102, 241, 0.5)', icon: '🧠', type: 'both' },
-        { name: 'Reality', color: 'rgba(234, 179, 8, 0.5)', icon: '🌟', type: 'series' },
-        { name: 'Romance', color: 'rgba(244, 63, 94, 0.5)', icon: '💖', type: 'both' },
-        { name: 'Road Movie', color: 'rgba(217, 119, 6, 0.5)', icon: '🚗', type: 'movie' },
-        { name: 'Satire', color: 'rgba(236, 72, 153, 0.5)', icon: '🤡', type: 'movie' },
-        { name: 'Sci-Fi', color: 'rgba(139, 92, 246, 0.5)', icon: '🚀', type: 'both' },
-        { name: 'Short Films', color: 'rgba(6, 182, 212, 0.5)', icon: '🎞️', type: 'movie' },
-        { name: 'Sitcom', color: 'rgba(245, 158, 11, 0.5)', icon: '🛋️', type: 'series' },
-        { name: 'Slice of Life', color: 'rgba(16, 185, 129, 0.5)', icon: '🍃', type: 'series' },
-        { name: 'Sports', color: 'rgba(16, 185, 129, 0.5)', icon: '⚽', type: 'movie' },
-        { name: 'Spy', color: 'rgba(30, 41, 59, 0.5)', icon: '🕶️', type: 'both' },
-        { name: 'Superhero', color: 'rgba(2, 132, 199, 0.5)', icon: '🦸', type: 'both' },
-        { name: 'Supernatural', color: 'rgba(139, 92, 246, 0.5)', icon: '🔮', type: 'both' },
-        { name: 'Survival', color: 'rgba(21, 128, 61, 0.5)', icon: '🏕️', type: 'movie' },
-        { name: 'Suspense', color: 'rgba(153, 27, 27, 0.5)', icon: '🤫', type: 'both' },
-        { name: 'Teen', color: 'rgba(236, 72, 153, 0.5)', icon: '🎒', type: 'both' },
-        { name: 'Thriller', color: 'rgba(153, 27, 27, 0.5)', icon: '🔪', type: 'both' },
-        { name: 'Time Travel', color: 'rgba(234, 88, 12, 0.5)', icon: '⏳', type: 'both' },
-        { name: 'True Crime', color: 'rgba(107, 114, 128, 0.5)', icon: '🔎', type: 'both' },
-        { name: 'War', color: 'rgba(120, 53, 15, 0.5)', icon: '🪖', type: 'movie' },
-        { name: 'Western', color: 'rgba(180, 83, 9, 0.5)', icon: '🤠', type: 'movie' },
-        { name: 'Zombie', color: 'rgba(21, 128, 61, 0.5)', icon: '🧟', type: 'both' },
-        { name: 'Noir', color: 'rgba(2, 6, 23, 0.8)', icon: '🕶️', type: 'movie' },
-        { name: 'Cyberpunk', color: 'rgba(217, 70, 239, 0.5)', icon: '🌆', type: 'both' },
-        { name: 'Steampunk', color: 'rgba(202, 138, 4, 0.5)', icon: '⚙️', type: 'both' },
-        { name: 'Space Opera', color: 'rgba(37, 99, 235, 0.5)', icon: '🌌', type: 'both' },
-        { name: 'Coming of Age', color: 'rgba(22, 163, 74, 0.5)', icon: '🌱', type: 'movie' },
-        { name: 'Courtroom', color: 'rgba(13, 148, 136, 0.5)', icon: '⚖️', type: 'movie' },
-        { name: 'Heist', color: 'rgba(30, 41, 59, 0.5)', icon: '💰', type: 'movie' },
-        { name: 'Found Footage', color: 'rgba(55, 65, 81, 0.5)', icon: '📹', type: 'movie' },
-        { name: 'Monster', color: 'rgba(153, 27, 27, 0.5)', icon: '👹', type: 'movie' },
-        { name: 'Post-Apocalyptic', color: 'rgba(124, 45, 18, 0.5)', icon: '☣️', type: 'both' },
-        { name: 'Dystopian', color: 'rgba(30, 41, 59, 0.5)', icon: '👁️', type: 'both' },
-        { name: 'Mythology', color: 'rgba(245, 158, 11, 0.5)', icon: '🏛️', type: 'movie' },
-        { name: 'Epic', color: 'rgba(217, 119, 6, 0.5)', icon: '⚔️', type: 'both' },
-        { name: 'Classic', color: 'rgba(202, 138, 4, 0.5)', icon: '🎞️', type: 'movie' },
-        { name: 'Cult Classics', color: 'rgba(139, 92, 246, 0.5)', icon: '🍿', type: 'movie' },
-        { name: 'Experimental', color: 'rgba(6, 182, 212, 0.5)', icon: '🌀', type: 'movie' },
-        { name: 'Global Cinema', color: 'rgba(37, 99, 235, 0.5)', icon: '🌍', type: 'both' },
-        { name: 'Bollywood', color: 'rgba(245, 197, 24, 0.5)', icon: '🇮🇳', type: 'both' },
-        { name: 'Hollywood', color: 'rgba(59, 130, 246, 0.5)', icon: '🇺🇸', type: 'both' },
-        { name: 'Korean', color: 'rgba(236, 72, 153, 0.5)', icon: '🇰🇷', type: 'both' },
-        { name: 'Japanese', color: 'rgba(239, 68, 68, 0.5)', icon: '🇯🇵', type: 'both' },
-        { name: 'Chinese', color: 'rgba(239, 68, 68, 0.5)', icon: '🇨🇳', type: 'both' },
-        { name: 'Indian Regional', color: 'rgba(16, 185, 129, 0.5)', icon: '🇮🇳', type: 'both' },
-        { name: 'French', color: 'rgba(59, 130, 246, 0.5)', icon: '🇫🇷', type: 'both' },
-        { name: 'Spanish', color: 'rgba(239, 68, 68, 0.5)', icon: '🇪🇸', type: 'both' },
-        { name: 'Italian', color: 'rgba(16, 185, 129, 0.5)', icon: '🇮🇹', type: 'both' },
-        { name: 'German', color: 'rgba(245, 158, 11, 0.5)', icon: '🇩🇪', type: 'both' },
-        { name: 'Nordic', color: 'rgba(6, 182, 212, 0.5)', icon: '❄️', type: 'both' },
-        { name: 'Middle Eastern', color: 'rgba(217, 119, 6, 0.5)', icon: '🕌', type: 'both' },
-        { name: 'African Cinema', color: 'rgba(16, 185, 129, 0.5)', icon: '🌍', type: 'both' },
-        { name: 'Latin American', color: 'rgba(244, 63, 94, 0.5)', icon: '💃', type: 'both' },
-        { name: 'Australian', color: 'rgba(21, 128, 61, 0.5)', icon: '🦘', type: 'both' }
-    ];
+    { name: "Action & Adventure" },
+    { name: "Anime" },
+    { name: "Children & Family Movies" },
+    { name: "Classic Movies" },
+    { name: "Comedies" },
+    { name: "Documentaries" },
+    { name: "Dramas" },
+    { name: "Horror Movies" },
+    { name: "Independent Movies" },
+    { name: "International Movies" },
+    { name: "Music" },
+    { name: "Romantic Movies" },
+    { name: "Sci-Fi & Fantasy" },
+    { name: "Sports Movies" },
+    { name: "Thrillers" },
+    { name: "TV Shows" }
+];
 
     const filteredCategories = categoriesData.filter(c => {
         if (currentFormat === 'all') return true;
@@ -3604,7 +2060,7 @@ async function loadSingleCategoryPage(categoryName) {
 
 function createMovieCardHTML(movie) {
     const m = movie.rich_metadata || {};
-    const t = movie.title || 'Unknown';
+    const t = movie.title || '';
     const poster = movie.poster_url || placeholder(t);
     const backdrop = movie.backdrop_url || poster;
     const score = m.match_percentage || randScore();
@@ -3640,7 +2096,7 @@ function createMovieCardHTML(movie) {
             <div class="card-expand__body">
                 <div class="card-expand__title">${t}</div>
                 <div class="card-expand__meta">
-                    <span class="card-expand__pct">${score}% Match</span>
+                    <span class="card-expand__pct"></span>
                     <span class="card-expand__type" style="color: var(--streamora-cyan); font-weight: 600; margin: 0 4px;">${isSeries(movie) ? 'TV Series' : 'Movie'}</span>
                     ${m.year ? `<span>${m.year}</span>` : ''}
                     ${m.runtime ? `<span>${m.runtime}</span>` : ''}
@@ -3998,7 +2454,7 @@ window.executeSearchPageQuery = async function(query) {
     // Local fallback if instant search returned nothing
     if (!instantMovies.length) {
         const q = query.toLowerCase();
-        instantMovies = FALLBACK_MOVIES.filter(m => {
+        instantMovies = [].filter(m => {
             const fmt = window.currentFormat === 'all' ||
                         (window.currentFormat === 'movie'  && !window.isSeries(m)) ||
                         (window.currentFormat === 'series' &&  window.isSeries(m));
@@ -4112,11 +2568,11 @@ function renderSearchEmptyState() {
     try { recent = JSON.parse(localStorage.getItem('streamora_recent_searches') || '[]'); } catch(e) {}
 
     // Genre chips from fallback data
-    const allGenres = [...new Set(FALLBACK_MOVIES.flatMap(m => (m.rich_metadata && m.rich_metadata.genres) || []))].slice(0, 14);
+    const allGenres = [...new Set([].flatMap(m => (m.rich_metadata && m.rich_metadata.genres) || []))].slice(0, 14);
 
     // Content split
-    const trendingMovies = FALLBACK_MOVIES.filter(m => !window.isSeries(m)).slice(0, 8);
-    const popularSeries  = FALLBACK_MOVIES.filter(m =>  window.isSeries(m)).slice(0, 8);
+    const trendingMovies = [].filter(m => !window.isSeries(m)).slice(0, 8);
+    const popularSeries  = [].filter(m =>  window.isSeries(m)).slice(0, 8);
     const showMovies     = window.currentFormat !== 'series';
     const showSeries     = window.currentFormat !== 'movie';
 
@@ -4159,7 +2615,7 @@ function renderSearchEmptyState() {
                              onmouseout="this.style.transform='scale(1)'">
                             <div style="position:relative; border-radius:var(--r-sm); overflow:hidden; aspect-ratio:2/3; border:1px solid var(--glass-border);">
                                 <img src="${movie.poster_url}" alt="${movie.title}" style="width:100%; height:100%; object-fit:cover;" onerror="this.src=''">
-                                <div style="position:absolute; top:6px; left:6px; background:rgba(0,0,0,0.75); color:var(--match-green); font-size:0.68rem; font-weight:700; padding:2px 5px; border-radius:3px;">${score}%</div>
+                                
                             </div>
                             <div style="font-size:0.75rem; font-weight:600; color:rgba(255,255,255,0.9); margin-top:6px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${movie.title}</div>
                         </div>`;
@@ -4194,7 +2650,7 @@ function renderResults(movies, mainTitle, isHome = false) {
     }
 
     if (filteredMovies.length === 0) {
-        filteredMovies = FALLBACK_MOVIES.filter(m => {
+        filteredMovies = [].filter(m => {
             return window.currentFormat === 'all' || 
                    (window.currentFormat === 'movie' && !window.isSeries(m)) || 
                    (window.currentFormat === 'series' && window.isSeries(m));
@@ -4229,12 +2685,12 @@ function renderResults(movies, mainTitle, isHome = false) {
 function renderHero(movie) {
     if (!movie) { heroSection.style.display = 'none'; return; }
     const m = movie.rich_metadata || {};
-    const title = movie.title || 'Unknown';
+    const title = movie.title || '';
     const bg = movie.backdrop_url || movie.poster_url || placeholder(title);
     const poster = movie.poster_url || placeholder(title);
     const score = m.match_percentage || randScore();
     const rating = m.rating || '8.2';
-    const synopsis = m.story_summary || movie.overview || 'A cinematic masterpiece recommended by Streamora AI.';
+    const synopsis = m.story_summary || movie.overview || movie.overview || '';
     const genres = (m.genres || m.tags || ['Drama']).slice(0, 4).map(g => `<span class="gpill">${g}</span>`).join('');
     const castString = getMovieCast(title) || 'Cast details unavailable';
     const languages = getMovieLanguages(movie);
@@ -4253,7 +2709,7 @@ function renderHero(movie) {
                 <!-- Left Column: Details -->
                 <div class="hero__left">
                     <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 12px; justify-content: flex-start;">
-                        <span class="hero__match" style="margin-bottom: 0; box-shadow: 0 4px 12px rgba(6,182,212,0.25);">★ ${score}% Streamora Match</span>
+                        <span class="hero__match" style="margin-bottom: 0; box-shadow: 0 4px 12px rgba(6,182,212,0.25);"></span>
                         <span style="color: #f5c518; font-weight: 700; font-size: 0.95rem; background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: var(--r-sm); border: 1px solid rgba(255,255,255,0.1);">IMDb ${rating}</span>
                     </div>
                     <h1 class="hero__title" onclick="navigateToMovie(${movie.item_id})" style="cursor: pointer;">${title}</h1>
@@ -4378,7 +2834,7 @@ function appendRow(title, movies) {
 
     const cards = movies.map((movie, i) => {
         const m = movie.rich_metadata || {};
-        const t = movie.title || 'Unknown';
+        const t = movie.title || '';
         const poster = movie.poster_url || placeholder(t);
         const backdrop = movie.backdrop_url || poster;
         const score = m.match_percentage || randScore();
@@ -4405,7 +2861,7 @@ function appendRow(title, movies) {
                 <div class="card-expand__body">
                     <div class="card-expand__title">${t}</div>
                     <div class="card-expand__meta">
-                        <span class="card-expand__pct">${score}% Match</span>
+                        <span class="card-expand__pct"></span>
                         ${m.year ? `<span>${m.year}</span>` : ''}
                         ${m.runtime ? `<span>${m.runtime}</span>` : ''}
                     </div>
@@ -4463,7 +2919,7 @@ function attachTilt(card) {
     
     card.addEventListener('mouseenter', () => {
         const id = parseInt(card.dataset.id);
-        const movie = globalMovies.find(m => m.item_id === id) || FALLBACK_MOVIES.find(m => m.item_id === id);
+        const movie = globalMovies.find(m => m.item_id === id) || [].find(m => m.item_id === id);
         if (movie) {
             window.updateAmbientBackground(movie.backdrop_url || movie.poster_url);
         }
@@ -4611,9 +3067,9 @@ function renderModalData(m, id) {
     
     // Cache title for history breadcrumbs
     window.modalMovieTitleCache = window.modalMovieTitleCache || {};
-    window.modalMovieTitleCache[id] = m.title || 'Unknown';
+    window.modalMovieTitleCache[id] = m.title || '';
 
-    document.getElementById('modal-title').textContent = m.title || 'Unknown';
+    document.getElementById('modal-title').textContent = m.title || '';
     
     const posterUrl = m.poster_url || placeholder(m.title);
     const bgUrl = m.backdrop_url || posterUrl;
@@ -4653,7 +3109,7 @@ function renderModalData(m, id) {
     tempImg.src = bgUrl;
     
     const typeLabel = isSeries({ item_id: id, rich_metadata: m, title: m.title }) ? 'TV Series' : 'Movie';
-    document.getElementById('modal-match').innerHTML = `${m.match_percentage || 85}% Match <span style="margin-left: 8px; padding: 2px 6px; background: rgba(6, 182, 212, 0.15); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: 4px; color: var(--streamora-cyan); font-size: 0.8rem; font-weight: 700; display: inline-block;">${typeLabel}</span>`;
+    document.getElementById('modal-match').innerHTML = ` <span style="margin-left: 8px; padding: 2px 6px; background: rgba(6, 182, 212, 0.15); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: 4px; color: var(--streamora-cyan); font-size: 0.8rem; font-weight: 700; display: inline-block;">${typeLabel}</span>`;
     document.getElementById('modal-year').textContent = m.year || '';
     document.getElementById('modal-rating').textContent = m.rating ? `IMDb ${m.rating}` : '';
     document.getElementById('modal-runtime').textContent = m.runtime_formatted || (m.runtime ? `${m.runtime} min` : '');
@@ -4662,7 +3118,7 @@ function renderModalData(m, id) {
     document.getElementById('modal-audience').textContent = m.audience_type || 'General';
     
     document.getElementById('modal-synopsis').textContent = m.story_summary || m.overview || 'No overview available.';
-    document.getElementById('modal-why').textContent = m.why_recommended || 'Highly correlated with your preferences.';
+    document.getElementById('modal-why').textContent = m.why_recommended;
     
     // Clean metadata grid suppression: omit fields if unknown, none, disclosed, or empty
     function setMetaGrid(id, val) {
@@ -4711,7 +3167,7 @@ function renderModalData(m, id) {
     setMetaGrid('modal-awards', m.awards);
     setMetaGrid('modal-availability', m.availability);
 
-    const seedMovie = globalMovies.find(item => item.item_id === id) || FALLBACK_MOVIES.find(item => item.item_id === id) || { item_id: id, rich_metadata: m, title: m.title };
+    const seedMovie = globalMovies.find(item => item.item_id === id) || [].find(item => item.item_id === id) || { item_id: id, rich_metadata: m, title: m.title };
 
     // Render Audience Match Tags
     const audienceMatchContainer = document.getElementById('modal-audience-match');
@@ -4873,7 +3329,7 @@ function renderModalData(m, id) {
 
     addToHistory({
         item_id: id,
-        title: m.title || 'Unknown',
+        title: m.title || '',
         poster_url: posterUrl,
         backdrop_url: bgUrl,
         rich_metadata: m
@@ -4970,7 +3426,7 @@ window.fetchModalContent = async function(id, type = 'movie', pushState = false)
         renderModalData(m, id);
     } catch (err) {
         console.warn(`Movie detail API failed for ID ${id}, using local fallback:`, err);
-        const movie = globalMovies.find(item => item.item_id === id) || FALLBACK_MOVIES.find(item => item.item_id === id);
+        const movie = globalMovies.find(item => item.item_id === id) || [].find(item => item.item_id === id);
         if (movie) {
             const m = movie.rich_metadata || {};
             const fallbackDetails = {
@@ -4996,7 +3452,7 @@ window.fetchModalContent = async function(id, type = 'movie', pushState = false)
                 language_severity: m.language_severity || "Mild",
                 adult: m.adult || false,
                 similar_movies: m.similar_movies || [
-                    { item_id: 1, title: "Spider-Man: No Way Home", poster_url: "https://image.tmdb.org/t/p/original/1g0dhYtq4irTY1GPXvft6k4YLjm.jpg", score: 85 }
+                    { item_id: 1, title: "Spider-Man: No Way Home", poster_url: "https://image.tmdb.org/t/p/original/1g0dhYtq4irTY1GPXvft6k4YLjm.jpg": 85 }
                 ]
             };
             window.currentModalMovieData = fallbackDetails;
@@ -5012,7 +3468,7 @@ window.fetchModalContent = async function(id, type = 'movie', pushState = false)
 window.toggleFavorite = function(id) {
     const idNum = parseInt(id);
     const movie = globalMovies.find(m => parseInt(m.item_id) === idNum) || 
-                  FALLBACK_MOVIES.find(m => parseInt(m.item_id) === idNum) || 
+                  [].find(m => parseInt(m.item_id) === idNum) || 
                   myList.find(m => parseInt(m.item_id) === idNum);
     if (!movie) return;
     
@@ -5079,13 +3535,9 @@ function toggleSave(id) {
 // ══════════════════════════════════════════════════════════════════════
 //  UTILITIES
 // ══════════════════════════════════════════════════════════════════════
-function getScore(m) {
-    return (m.rich_metadata || {}).match_percentage || 80;
-}
 
-function randScore() {
-    return Math.floor(Math.random() * 12 + 85);
-}
+
+
 
 function placeholder(title) {
     const clean = encodeURIComponent((title || 'Movie').split(' (')[0].substring(0, 20));
@@ -5311,7 +3763,7 @@ window.openDrawerOption = function(option) {
         case 'logout':
             html = `
                 <h2>🚪 Log Out</h2>
-                <p style="color:var(--text-secondary); margin-bottom:24px; line-height:1.5;">Are you sure you want to log out of Streamora AI?</p>
+                <p style="color:var(--text-secondary); margin-bottom:24px; line-height:1.5;">Are you sure you want to log out?</p>
                 <div style="display:flex; gap:12px;">
                     <button class="modal-submit-btn" onclick="performLogOut()" style="background:#ef4444; color:white; margin-top:0;">Log Out</button>
                     <button class="modal-submit-btn" onclick="closeDrawerModalDirect()" style="background:rgba(255,255,255,0.08); color:white; margin-top:0;">Cancel</button>
@@ -5514,7 +3966,7 @@ window.loadMoreModalSimilar = function() {
             if (!window.modalExpandedSeedIds.has(rId)) {
                 // Find this movie item in global database
                 const nextSeed = globalMovies.find(m => parseInt(m.item_id) === rId) || 
-                                 FALLBACK_MOVIES.find(m => parseInt(m.item_id) === rId);
+                                 [].find(m => parseInt(m.item_id) === rId);
                 if (nextSeed) {
                     window.modalExpandedSeedIds.add(rId);
                     const newRecs = window.getSimilarRecommendations(nextSeed);
@@ -5529,7 +3981,7 @@ window.loadMoreModalSimilar = function() {
         
         // Fallback to random global movies if similarity traversal is completely exhausted
         if (!newSeedFound && window.modalPendingRecs.length === 0) {
-            const allMovies = [...(globalMovies || []), ...FALLBACK_MOVIES];
+            const allMovies = [...(globalMovies || []), ];
             const fallbackRecs = allMovies
                 .filter(m => !window.modalRenderedIds.has(parseInt(m.item_id)))
                 .slice(0, 10)
