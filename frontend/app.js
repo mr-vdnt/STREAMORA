@@ -3452,7 +3452,7 @@ window.fetchModalContent = async function(id, type = 'movie', pushState = false)
                 language_severity: m.language_severity || "Mild",
                 adult: m.adult || false,
                 similar_movies: m.similar_movies || [
-                    { item_id: 1, title: "Spider-Man: No Way Home", poster_url: "https://image.tmdb.org/t/p/original/1g0dhYtq4irTY1GPXvft6k4YLjm.jpg": 85 }
+                    { item_id: 1, title: "Spider-Man: No Way Home", poster_url: "https://image.tmdb.org/t/p/original/1g0dhYtq4irTY1GPXvft6k4YLjm.jpg" }
                 ]
             };
             window.currentModalMovieData = fallbackDetails;
