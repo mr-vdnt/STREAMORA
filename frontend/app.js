@@ -959,8 +959,7 @@ function createBotRecommendationHTML(movie) {
     const m = movie.rich_metadata || {};
     const title = movie.title || '';
     const poster = movie.poster_url || placeholder(title);
-    const score = m.match_percentage || randScore();
-    const rating = m.rating || '8.0';
+    const rating = m.rating ? `★ ${m.rating}` : '';
     const genres = (m.genres || m.tags || ['Drama']).slice(0, 3).join(', ');
     const runtime = m.runtime || '120 min';
     const reason = m.why_recommended || m.why_recommended;
@@ -2063,7 +2062,8 @@ function createMovieCardHTML(movie) {
     const t = movie.title || '';
     const poster = movie.poster_url || placeholder(t);
     const backdrop = movie.backdrop_url || poster;
-    const score = m.match_percentage || randScore();
+    const ratingVal = m.rating || movie.rating || '';
+    const badgeHTML = ratingVal ? `<div class="card-3d__badge">★ ${ratingVal}</div>` : '';
     const genres = (m.tags || []).slice(0, 3).map(g => `<span>${g}</span>`).join('');
     const saved = isInMyList(movie.item_id);
 
@@ -2079,7 +2079,7 @@ function createMovieCardHTML(movie) {
                 <div class="img-placeholder"><div class="blur-skeleton"></div></div>
                 <img src="${poster}" alt="${t}" loading="lazy" onload="window.imageLoaded(this)" onerror="window.imageLoadError(this, '${escapedTitle}')">
             </div>
-            <div class="card-3d__badge">${score}%</div>
+            ${badgeHTML}
             <button class="card-heart-btn" data-id="${movie.item_id}" onclick="event.stopPropagation(); window.toggleFavorite(${movie.item_id});" aria-label="${saved ? 'Remove from favorites' : 'Add to favorites'}" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.15); border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; color: ${saved ? 'var(--streamora-cyan)' : 'white'}; cursor: pointer; z-index: 5; transition: all var(--t-fast);" onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform='scale(1)'">
                 ${saved 
                     ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="var(--streamora-cyan)" stroke="var(--streamora-cyan)" stroke-width="1.5"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`
@@ -2833,11 +2833,8 @@ function appendRow(title, movies) {
     sec.className = 'row-section';
 
     const cards = movies.map((movie, i) => {
-        const m = movie.rich_metadata || {};
-        const t = movie.title || '';
-        const poster = movie.poster_url || placeholder(t);
-        const backdrop = movie.backdrop_url || poster;
-        const score = m.match_percentage || randScore();
+        const ratingVal = m.rating || movie.rating || '';
+        const badgeHTML = ratingVal ? `<div class="card-3d__badge">★ ${ratingVal}</div>` : '';
         const genres = (m.tags || []).slice(0, 3).map(g => `<span>${g}</span>`).join('');
         const saved = isInMyList(movie.item_id);
         const tUrl = movie.trailer_url || m.trailer_url || '';
@@ -2847,7 +2844,7 @@ function appendRow(title, movies) {
         <div class="card-wrap" data-idx="${i}" style="cursor: pointer;">
             <div class="card-3d" data-id="${movie.item_id}" tabindex="0">
                 <img src="${poster}" alt="${t}" loading="lazy" onerror="this.src='${placeholder(t)}'">
-                <div class="card-3d__badge">${score}%</div>
+                ${badgeHTML}
                 <button class="card-heart-btn" data-id="${movie.item_id}" onclick="event.stopPropagation(); window.toggleFavorite(${movie.item_id});" aria-label="${saved ? 'Remove from favorites' : 'Add to favorites'}" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.15); border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; color: ${saved ? 'var(--streamora-cyan)' : 'white'}; cursor: pointer; z-index: 5; transition: all var(--t-fast);" onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform='scale(1)'">
                     ${saved 
                         ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="var(--streamora-cyan)" stroke="var(--streamora-cyan)" stroke-width="1.5"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`
