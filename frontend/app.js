@@ -1632,18 +1632,36 @@ async function loadHomePage() {
     window.shownItems = []; 
 
     const format = window.currentFormat || 'all';
-    let endpoint = `/api/v2/home?format=${format}`;
+    const endpoint = `/api/v2/home?format=${format}`;
+
+    const removeSkeletons = () => {
+        const skels = document.querySelectorAll('.skeleton-row');
+        skels.forEach(s => s.remove());
+    };
+
+    const renderErrorState = (msg) => {
+        removeSkeletons();
+        contentRows.innerHTML = `
+            <div style="text-align:center; padding:80px 20px; color:var(--text-secondary);">
+                <div style="font-size:3rem; margin-bottom:16px;">🎬</div>
+                <h2 style="color:white; font-size:1.5rem; margin-bottom:8px;">Unable to load Streamora</h2>
+                <p style="margin-bottom:24px; font-size:0.95rem;">${msg || 'Please check server connection or retry.'}</p>
+                <button onclick="loadHomePage()" style="padding:10px 24px; background:var(--streamora-cyan); color:black; font-weight:700; border:none; border-radius:var(--r-pill); cursor:pointer;">Retry</button>
+            </div>
+        `;
+    };
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
 
     try {
-        const resp = await authFetch(endpoint);
+        const resp = await authFetch(endpoint, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
         if (resp.ok) {
             const data = await resp.json();
+            removeSkeletons();
             
-            // Remove skeletons
-            const skels = document.querySelectorAll('.skeleton-row');
-            skels.forEach(s => s.remove());
-            
-            // Register movies to global pool and shown items
             const registerMovies = (items) => {
                 if (!items) return;
                 items.forEach(m => {
@@ -1665,18 +1683,24 @@ async function loadHomePage() {
                 data.sections.forEach((sec, i) => {
                     if (sec.items && sec.items.length > 0) {
                         registerMovies(sec.items);
-                        // Delay rendering to avoid blocking main thread
                         setTimeout(() => {
                             appendRow(sec.title, sec.items);
                         }, i * 50);
                     }
                 });
+            } else {
+                renderErrorState("No content available right now.");
             }
         } else {
-            console.warn("Failed to load home page sections.");
+            renderErrorState(`Server returned HTTP ${resp.status}`);
         }
     } catch (e) {
-        console.error("Home loading error:", e);
+        clearTimeout(timeoutId);
+        if (e.name === 'AbortError') {
+            renderErrorState("Request timed out. Please try again.");
+        } else {
+            renderErrorState(e.message);
+        }
     }
 }
 
