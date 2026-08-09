@@ -507,12 +507,19 @@
         </nav>
     </aside>
 
-    <!-- ═══ Drawer Option Sub-Modals ═══ -->
-    <div class="drawer-modal-overlay" id="drawer-modal-overlay" onclick="closeDrawerModal(event)">
-        <div class="drawer-modal">
-            <button class="drawer-modal__close" id="drawer-modal-close" onclick="closeDrawerModalDirect()">✕</button>
-            <div class="drawer-modal__content" id="drawer-modal-content">
-                <!-- Injected dynamically by app.js -->
+    <!-- ═══ Preference Onboarding Modal ═══ -->
+    <div class="drawer-modal-overlay" id="onboarding-modal-overlay" style="display:none; z-index:9999;">
+        <div class="drawer-modal" style="max-width:640px; padding:32px; text-align:center;">
+            <h2 style="font-size:1.8rem; margin-bottom:8px;">✨ Customize Your Streamora Experience</h2>
+            <p style="color:var(--text-secondary); margin-bottom:24px; font-size:0.95rem;">Select 3 to 8 categories you want to see more of:</p>
+            
+            <div id="onboarding-categories-grid" style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-bottom:28px;">
+                <!-- 16 Categories populated by app.js -->
+            </div>
+            
+            <div style="display:flex; gap:12px; justify-content:center;">
+                <button class="modal-submit-btn" id="save-onboarding-btn" onclick="window.submitOnboarding()" style="margin-top:0; background:var(--streamora-cyan); color:black; font-weight:700; width:auto; padding:12px 32px;">Save & Continue</button>
+                <button class="modal-submit-btn" onclick="window.skipOnboarding()" style="margin-top:0; background:rgba(255,255,255,0.08); color:white; width:auto; padding:12px 24px;">Skip for now</button>
             </div>
         </div>
     </div>

@@ -4439,3 +4439,65 @@ window.handleCardLeave = function(cardWrap) {
         cardWrap.classList.remove('playing-trailer');
     }, 200);
 };
+
+// ── Preference Onboarding Handler ──────────────────────────────────────
+window.selectedOnboardingCategories = new Set();
+
+window.openOnboardingModal = function() {
+    const overlay = document.getElementById('onboarding-modal-overlay');
+    const container = document.getElementById('onboarding-categories-grid');
+    if (!overlay || !container) return;
+    
+    window.selectedOnboardingCategories.clear();
+    container.innerHTML = EXPLORE_CATEGORIES.map(cat => `
+        <button class="onboarding-chip" onclick="window.toggleOnboardingCategory('${cat.replace(/'/g, "\\'")}', this)"
+                style="padding:10px 18px; border-radius:var(--r-pill); background:var(--glass-bg-2); border:1px solid var(--glass-border); color:white; cursor:pointer; transition:all var(--t-fast); font-size:0.9rem;">
+            ${cat}
+        </button>
+    `).join('');
+    
+    overlay.style.display = 'flex';
+};
+
+window.toggleOnboardingCategory = function(cat, btn) {
+    if (window.selectedOnboardingCategories.has(cat)) {
+        window.selectedOnboardingCategories.delete(cat);
+        btn.style.background = 'var(--glass-bg-2)';
+        btn.style.borderColor = 'var(--glass-border)';
+        btn.style.color = 'white';
+    } else {
+        if (window.selectedOnboardingCategories.size >= 8) return;
+        window.selectedOnboardingCategories.add(cat);
+        btn.style.background = 'var(--streamora-cyan)';
+        btn.style.borderColor = 'var(--streamora-cyan)';
+        btn.style.color = 'black';
+        btn.style.fontWeight = '700';
+    }
+};
+
+window.submitOnboarding = async function() {
+    const selected = Array.from(window.selectedOnboardingCategories);
+    if (selected.length < 3) {
+        alert("Please select at least 3 categories to continue.");
+        return;
+    }
+    
+    try {
+        await authFetch('/api/v2/user/onboarding', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ selected_categories: selected, disliked_categories: [] })
+        });
+    } catch (e) {
+        console.warn("Onboarding save warning:", e);
+    }
+    
+    window.skipOnboarding();
+    loadHomePage();
+};
+
+window.skipOnboarding = function() {
+    const overlay = document.getElementById('onboarding-modal-overlay');
+    if (overlay) overlay.style.display = 'none';
+};
+

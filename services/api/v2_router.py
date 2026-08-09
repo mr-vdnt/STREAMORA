@@ -2,13 +2,23 @@ from fastapi import APIRouter, Request, Depends
 from typing import Dict, Any
 from datetime import datetime
 
-from services.auth.permissions import get_optional_user
+from services.auth.permissions import get_optional_user, get_current_user
+from services.security.user_data import save_user_onboarding, get_user_preferences, record_user_event
 from services.discovery.home_service import HomeService
 from services.repository.catalog_db import CatalogRepository
 from services.recommendation.similarity_engine import SimilarityEngine
 from services.recommendation.explanation_engine import ExplanationEngine
 from services.agent.core import OrchestratorAgent
 from pydantic import BaseModel
+from typing import List, Optional
+
+class OnboardingPayload(BaseModel):
+    selected_categories: List[str]
+    disliked_categories: Optional[List[str]] = []
+
+class EventPayload(BaseModel):
+    event_type: str
+    categories: List[str]
 
 v2_router = APIRouter(prefix="/api/v2")
 
@@ -110,6 +120,24 @@ async def get_home_v2(request: Request, response: Response, format: str = "all",
         "collections": payload.get("collections", []),
         "sections": sections
     }
+
+
+@v2_router.post("/user/onboarding")
+async def save_onboarding_v2(payload: OnboardingPayload, current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    return save_user_onboarding(user_id, payload.selected_categories, payload.disliked_categories)
+
+
+@v2_router.post("/user/events")
+async def record_event_v2(payload: EventPayload, current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    return record_user_event(user_id, payload.event_type, payload.categories)
+
+
+@v2_router.get("/user/preferences")
+async def get_preferences_v2(current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    return get_user_preferences(user_id)
 
 
 @v2_router.get("/genre/{genre}")
