@@ -88,7 +88,7 @@ import time
 @v2_router.get("/home")
 async def get_home_v2(request: Request, response: Response, format: str = "all", current_user: dict = Depends(get_optional_user)):
     start_time = time.time()
-    user_id = current_user["id"] if current_user else 32
+    user_id = current_user["id"] if (current_user and isinstance(current_user, dict) and "id" in current_user) else None
     payload = get_home_service().get_home_payload(format=format, user_id=user_id)
     
     sections = payload.get("sections", [])

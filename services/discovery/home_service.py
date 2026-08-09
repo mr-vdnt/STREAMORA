@@ -2,7 +2,7 @@ import os
 import sys
 import time
 import threading
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from services.recommendation.shelf_engine import ShelfEngine, HeroSelectionService
@@ -16,23 +16,37 @@ class HomeService:
         self.preference_engine = PreferenceEngine()
         self._cache = {}
         self._cache_lock = threading.Lock()
-        self._cache_ttl = 300 # 5 minutes
-        self._in_flight = {}
-        
-        threading.Thread(target=self._warm_cache_background, daemon=True).start()
+        self._cache_ttl = 300  # 5 minutes
+        self._in_flight = set()
+        self._cold_start_payload = None
 
-    def _warm_cache_background(self):
-        self.get_home_payload(format="all", user_id=32)
+        # Precompute cold-start payload asynchronously on boot
+        threading.Thread(target=self._init_cold_start, daemon=True).start()
 
-    def _refresh_cache(self, cache_key, format, user_id):
+    def _init_cold_start(self):
+        """Generates a default cold-start payload to serve instantly on cold cache misses."""
         try:
-            self._generate_payload(format, user_id, cache_key)
+            payload = self._generate_payload(format="all", user_id=None)
+            with self._cache_lock:
+                self._cold_start_payload = payload
+                self._cache["guest_all"] = (payload, time.time())
+        except Exception as e:
+            print(f"[HomeService] Cold-start initialization warning: {e}")
+
+    def _refresh_cache(self, cache_key: str, format: str, user_id: Optional[int]):
+        try:
+            payload = self._generate_payload(format, user_id, cache_key)
+            with self._cache_lock:
+                self._cache[cache_key] = (payload, time.time())
+                if self._cold_start_payload is None and format == "all":
+                    self._cold_start_payload = payload
+        except Exception as e:
+            print(f"[HomeService] Background cache refresh error for {cache_key}: {e}")
         finally:
             with self._cache_lock:
-                if cache_key in self._in_flight:
-                    del self._in_flight[cache_key]
+                self._in_flight.discard(cache_key)
 
-    def _generate_payload(self, format, user_id, cache_key=None):
+    def _generate_payload(self, format: str, user_id: Optional[int], cache_key: Optional[str] = None) -> dict:
         current_context = self.context_engine.get_current_context()
         
         payload = self.shelf_engine.generate_home_shelves(user_id=user_id, format=format)
@@ -51,15 +65,10 @@ class HomeService:
             del payload["hero_candidates"]
             
         payload["genres"] = [
-            "Action", "Sci-Fi", "Thrillers", "Comedy", "Family", "Anime", "Documentaries", "Drama", "Crime", "Romance"
-        ]
-        payload["studios"] = [
-            {"id": "marvel", "name": "Marvel Studios", "logo_url": "https://img.icons8.com/color/96/marvel.png"},
-            {"id": "dc", "name": "DC Studios", "logo_url": "https://img.icons8.com/color/96/dc-comics.png"}
-        ]
-        payload["collections"] = [
-            {"id": "spiderman", "title": "Spider-Man Universe", "item_count": 8},
-            {"id": "mcu", "title": "Marvel Cinematic Universe", "item_count": 32}
+            "Action & Adventure", "Anime", "Children & Family Movies", "Classic Movies",
+            "Comedies", "Documentaries", "Dramas", "Horror Movies", "Independent Movies",
+            "International Movies", "Music", "Romantic Movies", "Sci-Fi & Fantasy",
+            "Sports Movies", "Thrillers", "TV Shows"
         ]
 
         payload["continue_watching"] = []
@@ -67,7 +76,7 @@ class HomeService:
             first_shelf_items = payload["sections"][0].get("items", [])
             for idx, item in enumerate(first_shelf_items[:3]):
                 payload["continue_watching"].append({
-                    "content_id": item.get("id"),
+                    "content_id": item.get("id") or item.get("item_id"),
                     "title": item.get("title"),
                     "poster_url": item.get("poster_url"),
                     "backdrop_url": item.get("backdrop_url"),
@@ -76,39 +85,53 @@ class HomeService:
                     "season_episode": "S1:E3" if item.get("entity_type") == "tvseries" else None
                 })
 
-        now = time.time()
-        if cache_key:
-            with self._cache_lock:
-                self._cache[cache_key] = (payload, now)
         return payload
 
-    def get_home_payload(self, format: str = "all", user_id: int = None) -> dict:
-        cache_key = f"{format}_{user_id}"
+    def get_home_payload(self, format: str = "all", user_id: Optional[int] = None) -> dict:
+        """
+        Guaranteed non-blocking Home payload delivery.
+        Always returns in <50ms. Never executes shelf generation on caller thread.
+        """
+        if user_id is None:
+            cache_key = f"guest_{format}"
+        else:
+            cache_key = f"user_{user_id}_{format}"
+
         now = time.time()
         
         with self._cache_lock:
+            # HIT PATH
             if cache_key in self._cache:
                 cached_data, timestamp = self._cache[cache_key]
-                if now - timestamp < self._cache_ttl:
-                    return cached_data
-                else:
+                # If expired, trigger non-blocking background refresh
+                if now - timestamp >= self._cache_ttl:
                     if cache_key not in self._in_flight:
-                        self._in_flight[cache_key] = True
-                        threading.Thread(target=self._refresh_cache, args=(cache_key, format, user_id)).start()
-                    return cached_data
+                        self._in_flight.add(cache_key)
+                        threading.Thread(target=self._refresh_cache, args=(cache_key, format, user_id), daemon=True).start()
+                return cached_data
 
-        with self._cache_lock:
-            self._in_flight[cache_key] = True
+            # MISS PATH — Return cold-start payload instantly, generate in background
+            fallback = self._cold_start_payload or {
+                "hero": None,
+                "sections": [],
+                "continue_watching": [],
+                "genres": [
+                    "Action & Adventure", "Anime", "Children & Family Movies", "Classic Movies",
+                    "Comedies", "Documentaries", "Dramas", "Horror Movies", "Independent Movies",
+                    "International Movies", "Music", "Romantic Movies", "Sci-Fi & Fantasy",
+                    "Sports Movies", "Thrillers", "TV Shows"
+                ]
+            }
+            # Cache fallback temporarily so subsequent calls are immediate
+            self._cache[cache_key] = (fallback, now)
             
-        payload = self._generate_payload(format, user_id, cache_key)
-        
-        with self._cache_lock:
-            if cache_key in self._in_flight:
-                del self._in_flight[cache_key]
-                
-        return payload
-        
-    def get_genre_payload(self, genre: str, user_id: int = None) -> dict:
+            if cache_key not in self._in_flight:
+                self._in_flight.add(cache_key)
+                threading.Thread(target=self._refresh_cache, args=(cache_key, format, user_id), daemon=True).start()
+
+            return fallback
+
+    def get_genre_payload(self, genre: str, user_id: Optional[int] = None) -> dict:
         """
         Assembles a dedicated genre page layout with dynamic shelves.
         """
@@ -116,7 +139,6 @@ class HomeService:
         current_context = self.context_engine.get_current_context()
         current_context["genre"] = genre
         
-        # Dedicated Hero Selection via HeroService
         with self.shelf_engine.repo.get_session() as session:
             hero = self.hero_service.select_hero(session, format="all", context=current_context)
             if hero:
