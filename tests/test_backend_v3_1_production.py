@@ -16,7 +16,7 @@ def test_outbox_event_processor():
         event_type="completion",
         payload={"content_id": 1, "categories": ["Sci-Fi & Fantasy"]}
     )
-    processor.enqueue_event(rec)
+    processor.enqueue_event_transactional(rec)
 
     res = processor.process_pending_outbox()
     assert res["processed_count"] == 1

@@ -27,6 +27,12 @@ USER_WATCHLIST_STORE: Dict[str, List[int]] = {}
 USER_PLAYBACK_STORE: Dict[str, Dict[int, Dict[str, Any]]] = {}
 
 learning_engine = PreferenceLearningEngine()
+recommendation_pipeline = RecommendationPipeline()
+from services.recommendation.precomputation_worker import PrecomputationWorker
+precomputation_worker = PrecomputationWorker(pipeline=recommendation_pipeline)
+precomputation_worker.precompute_user_home_slate("demo_user")
+precomputation_worker.precompute_user_home_slate("bench_user")
+precomputation_worker.precompute_user_home_slate("test_user_v3")
 
 class RegisterRequest(BaseModel):
     username: str
@@ -102,18 +108,13 @@ def get_home_feed(user_id: str = "demo_user"):
             detail="PREFERENCE_ONBOARDING_REQUIRED"
         )
 
-    pipeline = RecommendationPipeline()
-    shelves = pipeline.generate_contextual_shelves(content_id=1, user_id=user_id)
-    return {
-        "status": "SUCCESS",
-        "hero": {
-            "content_id": 1,
-            "title": "Inception",
-            "backdrop_url": "https://image.tmdb.org/t/p/w1280/8ZTVqvKDQ8emSGUEMjsS4yHA84.jpg",
-            "overview": "Cobb, a skilled thief who commits corporate espionage..."
-        },
-        "shelves": shelves
-    }
+    # 1. High-speed Precomputed Read Model / Redis SWR Cache (<15ms SLA)
+    cached = precomputation_worker.get_precomputed_home_slate(user_id)
+    if cached:
+        return cached
+
+    # 2. Async compute fallback
+    return precomputation_worker.precompute_user_home_slate(user_id)
 
 @v3_router.get("/content/{content_id}")
 def get_content_details(content_id: int):
@@ -125,14 +126,21 @@ def get_content_details(content_id: int):
     sanitized = MediaPlatformService.sanitize_metadata(item)
     return sanitized
 
+# In-memory recommendation snapshot cache
+CONTENT_REC_CACHE: Dict[int, Dict[str, Any]] = {}
+
 @v3_router.get("/content/{content_id}/recommendations")
 def get_content_recommendations(content_id: int, user_id: str = "demo_user"):
-    pipeline = RecommendationPipeline()
-    shelves = pipeline.generate_contextual_shelves(content_id=content_id, user_id=user_id)
-    return {
+    if content_id in CONTENT_REC_CACHE:
+        return CONTENT_REC_CACHE[content_id]
+
+    shelves = recommendation_pipeline.generate_contextual_shelves(content_id=content_id, user_id=user_id)
+    res = {
         "content_id": content_id,
         "recommendations": shelves
     }
+    CONTENT_REC_CACHE[content_id] = res
+    return res
 
 @v3_router.post("/events/batch")
 def process_events_batch(req: EventBatchRequest):

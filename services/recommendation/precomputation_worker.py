@@ -22,6 +22,7 @@ class PrecomputationWorker:
         duration_ms = (time.time() - start_time) * 1000
 
         snapshot = {
+            "status": "SUCCESS",
             "user_id": user_id,
             "generated_at": time.time(),
             "duration_ms": round(duration_ms, 2),
