@@ -1635,7 +1635,8 @@ async function loadHomePage() {
     const endpoint = `/api/v2/home?format=${format}`;
 
     const removeSkeletons = () => {
-        const skels = document.querySelectorAll('.skeleton-row');
+        clearSkeletons();
+        const skels = document.querySelectorAll('.skeleton-row, #skeleton-row-section, .skeleton');
         skels.forEach(s => s.remove());
     };
 
@@ -2055,7 +2056,8 @@ async function loadSingleCategoryPage(categoryName) {
             const data = await resp.json();
             
             // Remove skeletons
-            const skels = document.querySelectorAll('.skeleton-row');
+            clearSkeletons();
+            const skels = document.querySelectorAll('.skeleton-row, #skeleton-row-section, .skeleton');
             skels.forEach(s => s.remove());
             
             if (data.hero) {
