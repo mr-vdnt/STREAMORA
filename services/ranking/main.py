@@ -41,6 +41,17 @@ num_users: int = 0
 num_items: int = 0
 model = None
 
+def get_sentence_transformer_model():
+    global model
+    if model is None:
+        try:
+            from sentence_transformers import SentenceTransformer
+            model = SentenceTransformer('all-MiniLM-L6-v2')
+            print("  [OK] SentenceTransformer model loaded lazily")
+        except Exception as e:
+            print(f"  [ERROR] Failed to load SentenceTransformer: {e}")
+    return model
+
 
 class FeedbackEvent(BaseModel):
     user_id: int
@@ -88,13 +99,8 @@ async def startup_event():
     # ── DeepFM (re-ranking) ─────────────────────────────────────────
     print("  [OK] DeepFM disabled to save 150MB RAM on Render")
 
-    # ── SentenceTransformer ─────────────────────────────────────────
-    try:
-        from sentence_transformers import SentenceTransformer
-        model = SentenceTransformer('all-MiniLM-L6-v2')
-        print("  [OK] SentenceTransformer model loaded")
-    except Exception as e:
-        print(f"  [ERROR] Failed to load SentenceTransformer: {e}")
+    # ── SentenceTransformer (Lazy) ───────────────────────────────────
+    print("  [OK] SentenceTransformer deferred to lazy request initialization")
 
     # ── Movie metadata ──────────────────────────────────────────────
     if os.path.exists("data/raw/movies.csv"):
@@ -159,8 +165,9 @@ def search_semantic(request: SearchRequest):
                 retrieval_scores.append(0.0) # Dist 0 for perfect deterministic match
                 
         # Phase 2: Semantic Search (FAISS)
-        if faiss_index is not None and model is not None:
-            query_emb = model.encode([request.query], convert_to_numpy=True).astype('float32')
+        st_model = get_sentence_transformer_model()
+        if faiss_index is not None and st_model is not None:
+            query_emb = st_model.encode([request.query], convert_to_numpy=True).astype('float32')
             search_k = 150  # Pull large candidate pool for robust re-ranking
             distances, indices = faiss_index.search(query_emb, search_k)
             

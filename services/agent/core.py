@@ -15,8 +15,15 @@ except ImportError:
 
 from services.repository.movie_repository import MovieRepository
 
-repo = MovieRepository()
-movies_db = repo.get_all()
+_repo = None
+_movies_db = None
+
+def get_movies_db():
+    global _repo, _movies_db
+    if _movies_db is None:
+        _repo = MovieRepository()
+        _movies_db = _repo.get_all()
+    return _movies_db
 
 def _get_movie_metadata(row):
     title = row.get('title', 'Unknown')
@@ -67,7 +74,7 @@ class OrchestratorAgent:
         if self._query_engine is None:
             print("Lazy Loading Query Intelligence Engine...")
             from services.agent.query_intelligence import QueryIntelligenceEngine
-            self._query_engine = QueryIntelligenceEngine(movies_db)
+            self._query_engine = QueryIntelligenceEngine(get_movies_db())
         return self._query_engine
 
     def process_query(self, user_id: int, query: str, exclude_ids: list[int] = None, req_id: str = None) -> dict:
