@@ -95,7 +95,9 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="STREAMORA AI - Secure Orchestrator Agent", lifespan=lifespan)
 
 from services.api.v2_router import v2_router
+from services.api.v3_router import v3_router
 app.include_router(v2_router)
+app.include_router(v3_router)
 # Telemetry & Structured Logging
 from services.platform.telemetry import setup_telemetry
 setup_telemetry(app)
