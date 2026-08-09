@@ -111,17 +111,10 @@ class HomeService:
                 return cached_data
 
             # MISS PATH — Return cold-start payload instantly, generate in background
-            fallback = self._cold_start_payload or {
-                "hero": None,
-                "sections": [],
-                "continue_watching": [],
-                "genres": [
-                    "Action & Adventure", "Anime", "Children & Family Movies", "Classic Movies",
-                    "Comedies", "Documentaries", "Dramas", "Horror Movies", "Independent Movies",
-                    "International Movies", "Music", "Romantic Movies", "Sci-Fi & Fantasy",
-                    "Sports Movies", "Thrillers", "TV Shows"
-                ]
-            }
+            if self._cold_start_payload is None:
+                self._cold_start_payload = self._generate_payload(format="all", user_id=None)
+            fallback = self._cold_start_payload
+            
             # Cache fallback temporarily so subsequent calls are immediate
             self._cache[cache_key] = (fallback, now)
             
