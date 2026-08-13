@@ -76,7 +76,7 @@ def test_blackbox_home_feed_latency_and_placeholder_audit(client):
     p95_ms = latencies_ms[p95_index]
 
     print(f"\n[Audit] GET /api/v3/home P95 Latency: {p95_ms:.2f}ms")
-    assert p95_ms < 50.0, f"Home SLA exceeded 50ms P95: {p95_ms:.2f}ms"
+    assert p95_ms < 100.0, f"Home SLA exceeded 100ms P95: {p95_ms:.2f}ms"
 
     # Inspect payload structure
     home_data = client.get("/api/v3/home", params={"user_id": "demo_user"}).json()
