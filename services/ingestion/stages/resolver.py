@@ -67,8 +67,26 @@ class EntityResolverStage(PipelineStage):
     def _resolve(self, normalized: NormalizedContentDTO) -> ResolutionResult:
         """Multi-signal entity resolution."""
         with self._repo.get_session() as session:
-            # Signal 1: ExternalIdentifier match (highest confidence)
+            # Signal 1: Canonical IMDb ExternalIdentifier match (highest confidence)
+            imdb_id = normalized.external_ids.get("imdb")
+            if imdb_id:
+                clean_imdb_id = imdb_id if str(imdb_id).startswith("tt") else f"tt{imdb_id}"
+                existing_imdb = session.query(ExternalIdentifier).filter(
+                    ExternalIdentifier.provider_name == "imdb",
+                    ExternalIdentifier.external_id == clean_imdb_id
+                ).first()
+                if existing_imdb:
+                    return ResolutionResult(
+                        action="update",
+                        existing_content_id=existing_imdb.content_id,
+                        confidence=1.0,
+                        match_signals=[f"external_id:imdb={clean_imdb_id}"],
+                    )
+
+            # Signal 1b: Provider ExternalIdentifier match
             for provider, ext_id in normalized.external_ids.items():
+                if provider == "imdb":
+                    continue
                 existing = session.query(ExternalIdentifier).filter(
                     ExternalIdentifier.provider_name == provider,
                     ExternalIdentifier.external_id == str(ext_id)

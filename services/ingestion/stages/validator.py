@@ -89,7 +89,16 @@ class ValidatorStage(PipelineStage):
             except (ValueError, TypeError):
                 warnings.append(f"Popularity is not numeric: {popularity}")
 
-        # --- Business Rules ---
+        # --- Business Rules & Synthetic Placeholder Rejection ---
+        FORBIDDEN_PLACEHOLDERS = {"unknown director", "undisclosed", "85% match", "tbd", "unknown", "n/a", "none"}
+        if title and str(title).strip().lower() in FORBIDDEN_PLACEHOLDERS:
+            errors.append(f"Title contains forbidden synthetic placeholder: '{title}'")
+
+        director = data.get("director") or data.get("director_name")
+        if director and str(director).strip().lower() in FORBIDDEN_PLACEHOLDERS:
+            warnings.append(f"Stripping synthetic director placeholder: '{director}'")
+            data.pop("director", None)
+
         runtime = data.get("runtime")
         if runtime is not None:
             try:

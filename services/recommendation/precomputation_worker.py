@@ -217,11 +217,18 @@ class PrecomputationWorker:
         self._snapshots[f"{user_id}:{format_filter}"] = snapshot
         return snapshot
 
-    def get_precomputed_home_slate(self, user_id: str, format_filter: str = "all") -> Optional[Dict[str, Any]]:
+    def get_precomputed_home_slate(self, user_id: str, format_filter: str = "all") -> Dict[str, Any]:
         key = f"{user_id}:{format_filter}"
         snapshot = self._snapshots.get(key)
         if not snapshot:
-            return None
+            # Fall back to global cold-start snapshot
+            global_key = f"global:{format_filter}"
+            snapshot = self._snapshots.get(global_key)
+            if not snapshot:
+                # Fast bootstrap for cold cache — never return None or leave UI blank
+                snapshot = self.precompute_user_home_slate("global", format_filter)
+            return snapshot
+
         generated_at = snapshot.get("generated_at")
         if not generated_at:
             return snapshot
@@ -229,7 +236,9 @@ class PrecomputationWorker:
             created = datetime.fromisoformat(generated_at.replace("Z", "+00:00"))
             age = (datetime.now(timezone.utc) - created).total_seconds()
             if age > self._snapshot_ttl_seconds:
-                return None
+                # Refresh snapshot asynchronously/in background and return existing in the interim
+                self.precompute_user_home_slate(str(user_id), format_filter)
+                return self._snapshots.get(key) or snapshot
         except (TypeError, ValueError):
             return snapshot
         return snapshot

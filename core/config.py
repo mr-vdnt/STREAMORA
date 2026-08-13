@@ -1,5 +1,5 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, SecretStr
 from functools import lru_cache
 from typing import Optional, List, Union
 
@@ -22,6 +22,17 @@ class RedisSettings(BaseSettings):
 class TMDBSettings(BaseSettings):
     tmdb_api_key: Optional[str] = Field(default=None, validation_alias="TMDB_API_KEY")
     tmdb_base_url: str = "https://api.themoviedb.org/3"
+
+class IMDbSettings(BaseSettings):
+    imdb_enabled: bool = Field(default=False, validation_alias="IMDB_ENABLED")
+    imdb_api_endpoint: str = Field(default="https://dataexchange.us-east-1.amazonaws.com", validation_alias="IMDB_API_ENDPOINT")
+    imdb_api_key: Optional[SecretStr] = Field(default=None, validation_alias="IMDB_API_KEY")
+    imdb_dataset_id: Optional[str] = Field(default=None, validation_alias="IMDB_DATASET_ID")
+    imdb_revision_id: Optional[str] = Field(default=None, validation_alias="IMDB_REVISION_ID")
+    imdb_asset_id: Optional[str] = Field(default=None, validation_alias="IMDB_ASSET_ID")
+    aws_access_key_id: Optional[SecretStr] = Field(default=None, validation_alias="AWS_ACCESS_KEY_ID")
+    aws_secret_access_key: Optional[SecretStr] = Field(default=None, validation_alias="AWS_SECRET_ACCESS_KEY")
+    aws_region: str = Field(default="us-east-1", validation_alias="AWS_REGION")
 
 class TelemetrySettings(BaseSettings):
     enable_telemetry: bool = Field(default=False, validation_alias="ENABLE_TELEMETRY")
@@ -73,6 +84,7 @@ class Settings(BaseSettings):
     db: DatabaseSettings = DatabaseSettings()
     redis: RedisSettings = RedisSettings()
     tmdb: TMDBSettings = TMDBSettings()
+    imdb: IMDbSettings = IMDbSettings()
     telemetry: TelemetrySettings = TelemetrySettings()
     security: SecuritySettings = SecuritySettings()
     search: SearchSettings = SearchSettings()

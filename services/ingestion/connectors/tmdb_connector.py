@@ -18,6 +18,8 @@ from services.ingestion.dtos import RawPayloadDTO
 
 logger = logging.getLogger("streamora.ingestion.connectors.tmdb")
 
+from services.ingestion.connectors.imdb_connector import CircuitBreaker, RateLimiter
+
 TMDB_API_BASE = "https://api.themoviedb.org/3"
 
 
@@ -25,8 +27,10 @@ class TMDBConnector(BaseConnector):
     """Data connector for TMDB (The Movie Database) API v3."""
 
     def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key or getattr(settings.tmdb, "api_key", None)
+        self.api_key = api_key or getattr(settings.tmdb, "tmdb_api_key", None) or getattr(settings.tmdb, "api_key", None)
         self.client = httpx.AsyncClient(timeout=15.0)
+        self.circuit_breaker = CircuitBreaker(failure_threshold=5, recovery_timeout_sec=60.0)
+        self.rate_limiter = RateLimiter(rate_limit_per_sec=4.0)
 
     def get_manifest(self) -> ConnectorManifest:
         return ConnectorManifest(

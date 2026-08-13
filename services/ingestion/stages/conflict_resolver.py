@@ -123,17 +123,23 @@ class ConflictResolverStage(PipelineStage):
             art = content.artwork_rel
             stats = content.statistics_rel
 
-            # --- Metadata fields ---
+            # --- Metadata fields (IMDb is canonical authority) ---
+            is_imdb_source = normalized.source_connector == "imdb"
             if meta:
-                self._compare_field(changed, "title", meta.title, normalized.title)
-                self._compare_field(changed, "original_title", meta.original_title, normalized.original_title)
-                self._compare_completeness(changed, "overview", meta.overview, normalized.overview)
+                if is_imdb_source or not meta.title:
+                    self._compare_field(changed, "title", meta.title, normalized.title)
+                if is_imdb_source or not meta.original_title:
+                    self._compare_field(changed, "original_title", meta.original_title, normalized.original_title)
+                if is_imdb_source or not meta.overview:
+                    self._compare_completeness(changed, "overview", meta.overview, normalized.overview)
                 self._compare_completeness(changed, "tagline", meta.tagline, normalized.tagline)
-                self._compare_field(changed, "release_date", meta.release_date, normalized.release_date)
-                self._compare_field(changed, "runtime", meta.runtime, normalized.runtime)
+                if is_imdb_source or not meta.release_date:
+                    self._compare_field(changed, "release_date", meta.release_date, normalized.release_date)
+                if is_imdb_source or not meta.runtime:
+                    self._compare_field(changed, "runtime", meta.runtime, normalized.runtime)
                 self._compare_field(changed, "language", meta.language, normalized.language)
 
-            # --- Artwork fields ---
+            # --- Artwork fields (TMDB preferred for backdrops) ---
             if art:
                 self._compare_completeness(changed, "poster_url", art.poster_url, normalized.poster_url)
                 self._compare_completeness(changed, "backdrop_url", art.backdrop_url, normalized.backdrop_url)
@@ -141,7 +147,8 @@ class ConflictResolverStage(PipelineStage):
             # --- Statistics fields (never downgrade) ---
             if stats:
                 self._compare_no_downgrade(changed, "popularity", stats.popularity, normalized.popularity)
-                self._compare_no_downgrade(changed, "average_rating", stats.average_rating, normalized.average_rating)
+                if is_imdb_source or not stats.average_rating:
+                    self._compare_no_downgrade(changed, "average_rating", stats.average_rating, normalized.average_rating)
                 self._compare_field(changed, "vote_count", stats.vote_count, normalized.vote_count)
 
         return changed

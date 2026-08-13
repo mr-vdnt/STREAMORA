@@ -61,6 +61,26 @@ class SeasonDTO:
     episodes: List[EpisodeDTO] = field(default_factory=list)
 
 
+class IngestionState(Enum):
+    """Explicit 10-state lifecycle for DAP content processing."""
+    DISCOVERED = "DISCOVERED"
+    IDENTITY_RESOLVED = "IDENTITY_RESOLVED"
+    CANONICAL_ENRICHMENT_PENDING = "CANONICAL_ENRICHMENT_PENDING"
+    CANONICAL_ENRICHED = "CANONICAL_ENRICHED"
+    VALIDATED = "VALIDATED"
+    PERSISTED = "PERSISTED"
+    INDEX_PENDING = "INDEX_PENDING"
+    INDEXED = "INDEXED"
+    READY = "READY"
+
+    # Terminal failure states
+    IDENTITY_FAILED = "IDENTITY_FAILED"
+    CANONICAL_ENRICHMENT_FAILED = "CANONICAL_ENRICHMENT_FAILED"
+    VALIDATION_FAILED = "VALIDATION_FAILED"
+    PERSISTENCE_FAILED = "PERSISTENCE_FAILED"
+    INDEXING_FAILED = "INDEXING_FAILED"
+
+
 @dataclass
 class NormalizedContentDTO:
     """Output of the normalizer — canonical shape."""
@@ -73,6 +93,7 @@ class NormalizedContentDTO:
     tagline: Optional[str] = None
     release_date: Optional[str] = None
     runtime: Optional[int] = None
+    runtime_seconds: Optional[int] = None  # Canonical runtime in seconds
     language: str = "en"
     genres: List[str] = field(default_factory=list)
     poster_url: Optional[str] = None
@@ -80,6 +101,9 @@ class NormalizedContentDTO:
     popularity: float = 0.0
     average_rating: float = 0.0
     vote_count: int = 0
+    imdb_rating: Optional[float] = None
+    imdb_vote_count: Optional[int] = None
+    imdb_url: Optional[str] = None
     cast: List[PersonDTO] = field(default_factory=list)
     crew: List[PersonDTO] = field(default_factory=list)
     # Series-specific
@@ -87,9 +111,11 @@ class NormalizedContentDTO:
     total_episodes: Optional[int] = None
     in_production: Optional[bool] = None
     seasons: Optional[List[SeasonDTO]] = None
-    # Provenance
+    # Provenance & Lifecycle
     source_connector: str = ""
     source_payload_hash: str = ""
+    provenance: Dict[str, str] = field(default_factory=dict)  # Field-level provider tracking
+    enrichment_state: str = IngestionState.DISCOVERED.value
 
 
 @dataclass

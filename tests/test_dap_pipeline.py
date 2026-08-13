@@ -268,3 +268,71 @@ async def test_e2e_dap_pipeline(repo, sample_tmdb_movie):
     result_dup = await pipeline.process_raw_payload(raw_dto, job_id=1)
     assert result_dup.success is True
     assert result_dup.action in ("skipped", "updated")
+
+
+# --- 7. IMDb Canonical Precedence & Security Tests ---
+
+@pytest.mark.anyio
+async def test_imdb_connector_circuit_breaker():
+    from services.ingestion.connectors.imdb_connector import IMDbConnector
+    connector = IMDbConnector()
+
+    assert connector.get_manifest().name == "imdb"
+    assert connector.circuit_breaker.state == "CLOSED"
+
+    # Test fallback payload when disabled/unconfigured
+    payload = await connector.fetch_by_id("tt1375666", "movie")
+    assert payload is not None
+    assert payload.connector_name == "imdb"
+    assert payload.external_id == "tt1375666"
+
+    await connector.close()
+
+
+@pytest.mark.anyio
+async def test_normalizer_imdb_runtime_seconds():
+    normalizer = NormalizerStage()
+    imdb_raw = {
+        "id": "tt1375666",
+        "canonicalId": "tt1375666",
+        "titleText": {"text": "Inception IMDb Authority"},
+        "runtime": {"seconds": 8880},  # 148 minutes
+        "ratingsSummary": {"aggregateRating": 8.8, "voteCount": 2400000},
+        "genres": {"genres": [{"text": "Action"}, {"text": "Sci-Fi"}]},
+    }
+    msg = PipelineMessage(
+        message_type=MessageType.VALIDATED,
+        job_id=1,
+        connector_name="imdb",
+        external_id="tt1375666",
+        entity_type="movie",
+        payload=imdb_raw,
+    )
+    res = await normalizer.process(msg)
+    assert res.message_type == MessageType.NORMALIZED
+    norm: NormalizedContentDTO = res.payload
+
+    assert norm.title == "Inception IMDb Authority"
+    assert norm.runtime_seconds == 8880
+    assert norm.runtime == 148
+    assert norm.imdb_rating == 8.8
+    assert norm.provenance["title"] == "imdb"
+    assert norm.provenance["runtime_seconds"] == "imdb"
+
+
+@pytest.mark.anyio
+async def test_validator_reject_synthetic_placeholders():
+    validator = ValidatorStage()
+
+    # Reject synthetic title
+    msg_fake_title = PipelineMessage(
+        message_type=MessageType.RAW_PAYLOAD,
+        job_id=1,
+        connector_name="tmdb",
+        external_id="123",
+        entity_type="movie",
+        payload={"id": 123, "title": "Unknown Director"},
+    )
+    res = await validator.process(msg_fake_title)
+    assert res.message_type == MessageType.FAILED
+    assert "synthetic placeholder" in res.error

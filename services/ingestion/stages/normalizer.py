@@ -33,7 +33,9 @@ class NormalizerStage(PipelineStage):
         connector = message.connector_name
 
         try:
-            if connector == "tmdb":
+            if connector == "imdb":
+                normalized = self._normalize_imdb(raw_data, message.entity_type)
+            elif connector == "tmdb":
                 normalized = self._normalize_tmdb(raw_data, message.entity_type)
             else:
                 normalized = self._normalize_generic(raw_data, message.entity_type, connector)
@@ -66,6 +68,116 @@ class NormalizerStage(PipelineStage):
                 metadata={**message.metadata, "failure_stage": "normalization"},
                 trace_id=message.trace_id,
             )
+
+    def _normalize_imdb(self, data: dict, entity_type: str) -> NormalizedContentDTO:
+        """Normalize canonical IMDb API GraphQL / AWS Data Exchange response."""
+        imdb_id = data.get("canonicalId") or data.get("id", "")
+        if imdb_id and not str(imdb_id).startswith("tt"):
+            imdb_id = f"tt{imdb_id}"
+
+        title_text = data.get("titleText", {})
+        title = title_text.get("text") if isinstance(title_text, dict) else (data.get("title") or "Untitled")
+
+        orig_text = data.get("originalTitleText", {})
+        original_title = orig_text.get("text") if isinstance(orig_text, dict) else title
+
+        # Release date
+        rel_date = data.get("releaseDate", {})
+        release_date = ""
+        if isinstance(rel_date, dict) and rel_date.get("year"):
+            y = rel_date["year"]
+            m = str(rel_date.get("month") or 1).zfill(2)
+            d = str(rel_date.get("day") or 1).zfill(2)
+            release_date = f"{y}-{m}-{d}"
+        elif isinstance(data.get("release_date"), str):
+            release_date = data["release_date"]
+
+        # Runtime seconds
+        runtime_sec = None
+        if "runtime" in data and isinstance(data["runtime"], dict):
+            runtime_sec = data["runtime"].get("seconds")
+        elif isinstance(data.get("runtime_seconds"), int):
+            runtime_sec = data["runtime_seconds"]
+        elif isinstance(data.get("runtime"), int):
+            runtime_sec = data["runtime"] * 60
+
+        runtime_min = (runtime_sec // 60) if runtime_sec else None
+
+        # Ratings
+        ratings = data.get("ratingsSummary", {})
+        imdb_rating = float(ratings.get("aggregateRating") or 0.0) if isinstance(ratings, dict) else float(data.get("imdb_rating") or 0.0)
+        imdb_vote_count = int(ratings.get("voteCount") or 0) if isinstance(ratings, dict) else int(data.get("imdb_vote_count") or 0)
+
+        # Genres
+        genres_node = data.get("genres", {})
+        raw_g_list = genres_node.get("genres", []) if isinstance(genres_node, dict) else data.get("genres", [])
+        genres = [g.get("text") if isinstance(g, dict) else str(g) for g in raw_g_list if g]
+
+        # Plot
+        plots = data.get("plots", {}).get("edges", []) if isinstance(data.get("plots"), dict) else []
+        overview = ""
+        if plots and isinstance(plots[0], dict):
+            overview = plots[0].get("node", {}).get("text", {}).get("plainText", "")
+        elif isinstance(data.get("overview"), str):
+            overview = data["overview"]
+
+        # Credits
+        credits_edges = data.get("credits", {}).get("edges", []) if isinstance(data.get("credits"), dict) else []
+        cast: List[PersonDTO] = []
+        crew: List[PersonDTO] = []
+
+        for edge in credits_edges:
+            node = edge.get("node", {})
+            p_name = node.get("name", {}).get("nameText", {}).get("text", "")
+            cat = str(node.get("category", {}).get("text", "")).lower()
+            if not p_name:
+                continue
+            if "actor" in cat or "actress" in cat:
+                cast.append(PersonDTO(name=p_name, role="actor", character_name=node.get("characters")))
+            elif "director" in cat:
+                crew.append(PersonDTO(name=p_name, role="director"))
+            elif "writer" in cat:
+                crew.append(PersonDTO(name=p_name, role="writer"))
+
+        imdb_url = f"https://www.imdb.com/title/{imdb_id}/" if imdb_id else None
+
+        provenance = {
+            "title": "imdb",
+            "release_date": "imdb",
+            "runtime_seconds": "imdb",
+            "imdb_rating": "imdb",
+            "imdb_vote_count": "imdb",
+            "genres": "imdb",
+            "overview": "imdb",
+            "cast": "imdb",
+            "crew": "imdb",
+            "imdb_url": "imdb",
+        }
+
+        from services.ingestion.dtos import IngestionState
+        enrichment_state = IngestionState.CANONICAL_ENRICHED.value if (title and imdb_id) else IngestionState.CANONICAL_ENRICHMENT_PENDING.value
+
+        return NormalizedContentDTO(
+            external_ids={"imdb": imdb_id} if imdb_id else {},
+            entity_type=entity_type,
+            title=title,
+            original_title=original_title,
+            overview=overview,
+            release_date=release_date,
+            runtime=runtime_min,
+            runtime_seconds=runtime_sec,
+            genres=genres,
+            average_rating=imdb_rating,
+            vote_count=imdb_vote_count,
+            imdb_rating=imdb_rating,
+            imdb_vote_count=imdb_vote_count,
+            imdb_url=imdb_url,
+            cast=cast,
+            crew=crew,
+            source_connector="imdb",
+            provenance=provenance,
+            enrichment_state=enrichment_state,
+        )
 
     def _normalize_tmdb(self, data: dict, entity_type: str) -> NormalizedContentDTO:
         """Normalize a TMDB API response into canonical format."""
@@ -115,6 +227,14 @@ class NormalizerStage(PipelineStage):
         if not is_movie and "seasons" in data:
             seasons = self._extract_seasons(data["seasons"])
 
+        provenance = {
+            "poster_url": "tmdb",
+            "backdrop_url": "tmdb",
+            "popularity": "tmdb",
+        }
+        from services.ingestion.dtos import IngestionState
+        enrichment_state = IngestionState.CANONICAL_ENRICHMENT_PENDING.value if "imdb" not in external_ids else IngestionState.IDENTITY_RESOLVED.value
+
         return NormalizedContentDTO(
             external_ids=external_ids,
             entity_type=entity_type,
@@ -124,6 +244,7 @@ class NormalizerStage(PipelineStage):
             tagline=data.get("tagline"),
             release_date=release_date,
             runtime=runtime,
+            runtime_seconds=(runtime * 60) if runtime else None,
             language=data.get("original_language", "en"),
             genres=genres,
             poster_url=poster_url,
@@ -139,6 +260,8 @@ class NormalizerStage(PipelineStage):
             seasons=seasons,
             source_connector="tmdb",
             source_payload_hash="",
+            provenance=provenance,
+            enrichment_state=enrichment_state,
         )
 
     def _normalize_generic(self, data: dict, entity_type: str, connector: str) -> NormalizedContentDTO:
