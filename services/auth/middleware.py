@@ -45,6 +45,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
             r"^/api/v2/genre/.*$",
             r"^/api/v2/search/.*$",
             r"^/api/v2/autocomplete.*$",
+            r"^/api/v3/.*$",
             r"^/home$",
             r"^/movies$",
             r"^/series$",
@@ -69,7 +70,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 "/search", "/api/v2/search", "/chat",      # Search & Chat query endpoints
             }
 
-            if request.url.path in CSRF_EXEMPT or request.url.path.startswith("/api/v2/search"):
+            if request.url.path in CSRF_EXEMPT or request.url.path.startswith("/api/v2/search") or request.url.path.startswith("/api/v3/"):
                 pass
             else:
                 csrf_cookie = request.cookies.get("csrf_token")
