@@ -368,3 +368,36 @@ window.loadCategoriesTab = renderCategoriesPage;
 window.navigateToCategory = openCategory;
 window.executeSearchPageQuery = executeDiscoverySearch;
 window.streamoraOpenCategory = openCategory;
+
+function navigateToMovie(id) {
+    const numId = Number(id);
+    if (!numId) return;
+    // Try to detect content type from cached home data
+    let type = 'movie';
+    try {
+        const rows = document.getElementById('content-rows');
+        if (rows) {
+            const card = rows.querySelector(`[data-id="${numId}"]`);
+            if (card) {
+                const normalized = card.dataset.type;
+                if (normalized === 'series' || normalized === 'tvseries' || normalized === 'tv') {
+                    type = 'series';
+                }
+            }
+        }
+    } catch (_) { /* ignore */ }
+    
+    if (window.modalManager && typeof window.modalManager.open === 'function') {
+        window.modalManager.open(numId, type, true);
+    } else if (typeof window.fetchModalContent === 'function') {
+        // Fallback: open modal overlay manually and fetch content
+        const overlay = document.getElementById('movie-detail-modal');
+        if (overlay) {
+            overlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+        window.fetchModalContent(numId, type, true);
+    }
+}
+
+window.navigateToMovie = navigateToMovie;

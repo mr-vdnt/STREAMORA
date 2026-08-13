@@ -131,10 +131,15 @@ class HomeService:
         payload = self.shelf_engine.generate_genre_shelves(genre=genre, user_id=user_id)
         current_context = self.context_engine.get_current_context()
         current_context["genre"] = genre
-        
-        with self.shelf_engine.repo.get_session() as session:
-            hero = self.hero_service.select_hero(session, format="all", context=current_context)
-            if hero:
-                payload["hero"] = hero
-            
+
+        # Select a hero from the genre-specific items if available
+        sections = payload.get("sections", [])
+        hero_candidates = []
+        for section in sections:
+            for item in section.get("items", []):
+                if item.get("backdrop_url") or item.get("poster_url"):
+                    hero_candidates.append(item)
+        if hero_candidates:
+            payload["hero"] = hero_candidates[0]
+
         return payload

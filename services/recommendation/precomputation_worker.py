@@ -46,6 +46,46 @@ class PrecomputationWorker:
         year = release_date[:4] if release_date and len(release_date) >= 4 else ""
         runtime = metadata.runtime if metadata else 0
 
+        genres: List[str] = []
+        if metadata:
+            genres_val = getattr(metadata, "genres", None)
+            if genres_val:
+                if isinstance(genres_val, list):
+                    genres = [str(g) for g in genres_val if g]
+                elif isinstance(genres_val, str):
+                    genres = [g.strip() for g in genres_val.split("|") if g.strip()]
+        if not genres and content:
+            genres_val = getattr(content, "genres", None)
+            if genres_val:
+                if isinstance(genres_val, list):
+                    genres = [str(g) for g in genres_val if g]
+                elif isinstance(genres_val, str):
+                    genres = [g.strip() for g in genres_val.split("|") if g.strip()]
+        if not genres and content:
+            from sqlalchemy.orm import object_session
+            from sqlalchemy import text
+            session = object_session(content)
+            if session:
+                try:
+                    from services.repository.catalog_db import ContentGenre, Genre
+                    cg_genres = [
+                        name for (name,) in session.query(Genre.name)
+                        .join(ContentGenre, ContentGenre.genre_id == Genre.id)
+                        .filter(ContentGenre.content_id == content.id)
+                        .all()
+                    ]
+                    if cg_genres:
+                        genres = cg_genres
+                    else:
+                        res = session.execute(
+                            text("SELECT genres FROM content WHERE slug = :slug OR id = :id"),
+                            {"slug": content.slug, "id": content.id}
+                        ).fetchone()
+                        if res and res[0]:
+                            genres = [x.strip() for x in str(res[0]).split("|") if x.strip()]
+                except Exception:
+                    pass
+
         return {
             "item_id": content.id,
             "id": content.id,
@@ -59,14 +99,14 @@ class PrecomputationWorker:
             "poster_url": artwork.poster_url if artwork else "",
             "backdrop_url": artwork.backdrop_url if artwork else "",
             "overview": metadata.overview if metadata else "",
-            "genres": [],
+            "genres": genres,
             "rich_metadata": {
                 "title": metadata.title if metadata else "Untitled",
                 "year": year,
                 "runtime": runtime or 0,
                 "rating": round(float(stats.average_rating or 0.0), 1) if stats else 0.0,
                 "content_type": "series" if content.entity_type in {"tvseries", "series", "tv"} else "movie",
-                "genres": [],
+                "genres": genres,
             },
         }
 
@@ -99,7 +139,7 @@ class PrecomputationWorker:
 
     def _build_fast_snapshot(self, user_id: str, format_filter: str = "all") -> Dict[str, Any]:
         started = time.perf_counter()
-        catalog = self._query_top_content(limit=36)
+        catalog = self._query_top_content(limit=60)
 
         if format_filter == "movie":
             catalog = [x for x in catalog if x["content_type"] == "movie"]
@@ -112,6 +152,15 @@ class PrecomputationWorker:
         hero_pool = catalog[:8]
         hero = hero_pool[0] if hero_pool else None
 
+        # Build genre-based sections for diversity
+        genre_buckets: Dict[str, List[Dict[str, Any]]] = {}
+        for item in catalog:
+            item_genres = item.get("genres") or item.get("rich_metadata", {}).get("genres") or []
+            if isinstance(item_genres, str):
+                item_genres = [g.strip() for g in item_genres.split("|") if g.strip()]
+            for g in item_genres[:2]:  # limit to first 2 genres per item
+                genre_buckets.setdefault(g, []).append(item)
+
         sections: List[Dict[str, Any]] = []
         if hero_pool:
             sections.append({"id": "recommended", "title": "Top Picks for You", "type": "carousel", "items": hero_pool[:12]})
@@ -119,8 +168,36 @@ class PrecomputationWorker:
             sections.append({"id": "movies", "title": "Popular Movies", "type": "carousel", "items": movies[:12]})
         if series:
             sections.append({"id": "series", "title": "Popular TV Series", "type": "carousel", "items": series[:12]})
+
+        # Add genre-based shelves (up to 4 genre rows with at least 3 items each)
+        seen_item_ids = set()
+        for sec in sections:
+            for it in sec.get("items", []):
+                seen_item_ids.add(it.get("item_id") or it.get("id"))
+
+        genre_sections_added = 0
+        for genre_name, genre_items in sorted(genre_buckets.items(), key=lambda kv: -len(kv[1])):
+            if genre_sections_added >= 4:
+                break
+            # De-duplicate: prefer items not already shown in hero/movies/series rows
+            unique_items = [it for it in genre_items if (it.get("item_id") or it.get("id")) not in seen_item_ids]
+            if len(unique_items) < 3:
+                unique_items = genre_items[:12]  # fall back to all items in genre
+            if len(unique_items) >= 3:
+                sections.append({
+                    "id": f"genre_{genre_name.lower().replace(' ', '_').replace('&', 'and')}",
+                    "title": genre_name,
+                    "type": "carousel",
+                    "items": unique_items[:12],
+                })
+                for it in unique_items[:12]:
+                    seen_item_ids.add(it.get("item_id") or it.get("id"))
+                genre_sections_added += 1
+
         if catalog:
-            sections.append({"id": "trending", "title": "Trending Now", "type": "carousel", "items": catalog[:12]})
+            # 'Trending Now' uses a reversed rotation for variety
+            trending = list(reversed(catalog[:12]))
+            sections.append({"id": "trending", "title": "Trending Now", "type": "carousel", "items": trending})
 
         elapsed_ms = round((time.perf_counter() - started) * 1000, 2)
         return {

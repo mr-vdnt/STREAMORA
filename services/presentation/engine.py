@@ -30,7 +30,7 @@ class PresentationEngine:
             "rating": str(row.get('rating', ''))
         }
         
-    def present(self, query: str, intent: str, recommendation_package: Any, user_id: str = "anonymous", query_contract: dict = None) -> Dict[str, Any]:
+    def present(self, query: str, intent: str, recommendation_package: Any, user_id: str = "anonymous", query_contract: dict = None, profile: str = None) -> Dict[str, Any]:
         """
         Takes the Phase 5 output and formats it for Phase 6 presentation.
         """
@@ -80,8 +80,8 @@ class PresentationEngine:
             })
             
         # 2. Get Presentation Profile (Phase 7 Personalization)
-        profile_str = "concise"
-        if self.adapter:
+        profile_str = profile or "concise"
+        if not profile and self.adapter:
             profile_str = self.adapter.get_presentation_profile(user_id)
             
         # 3. Plan Response Strategy
@@ -91,7 +91,11 @@ class PresentationEngine:
         template = self.template_selector.select_template(render_plan)
         
         # 4. Generate Natural Language
-        llm_text, llm_ms = self.generator.generate(query, template, render_plan)
+        gen_res = self.generator.generate(query, template, render_plan)
+        if isinstance(gen_res, tuple):
+            llm_text, llm_ms = gen_res
+        else:
+            llm_text, llm_ms = gen_res, 0
         
         # 5. Validate LLM Response
         if render_plan["strategy"] != "deterministic":
@@ -116,7 +120,7 @@ class PresentationEngine:
             }
         }
 
-    def present_stream(self, query: str, intent: str, recommendation_package: Any, user_id: str = "anonymous", query_contract: dict = None):
+    def present_stream(self, query: str, intent: str, recommendation_package: Any, user_id: str = "anonymous", query_contract: dict = None, profile: str = None):
         """
         Takes the Phase 5 output and formats it as a stream for Phase 6 presentation.
         Yields an initial payload with structured JSON data, then yields token events.
@@ -163,8 +167,8 @@ class PresentationEngine:
                 "explanation": ui_explanation
             })
             
-        profile_str = "concise"
-        if self.adapter:
+        profile_str = profile or "concise"
+        if not profile and self.adapter:
             profile_str = self.adapter.get_presentation_profile(user_id)
             
         render_plan = self.planner.plan(query, intent, response_data, profile_str)
