@@ -79,7 +79,7 @@ class CandidateFusionEngine:
         scored_candidates.sort(key=lambda x: x["rank_score"], reverse=True)
 
         # 4. Enforce 80/20 Exploitation vs Exploration Split
-        exploitation_count = int(top_k * 0.80)
+        exploitation_count = max(1, int(top_k * 0.80)) if top_k > 1 else top_k
         exploration_count = top_k - exploitation_count
 
         final_slate = scored_candidates[:exploitation_count]

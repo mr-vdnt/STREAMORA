@@ -24,20 +24,6 @@ PORT = 8899
 SERVER_URL = f"http://127.0.0.1:{PORT}"
 
 
-@pytest.fixture(scope="module", autouse=True)
-def run_server():
-    """Spin up local FastAPI Uvicorn server on PORT 8899 for real Chromium browser testing."""
-    os.environ["ENVIRONMENT"] = "test"
-    config = uvicorn.Config(app, host="127.0.0.1", port=PORT, log_level="warning")
-    server = uvicorn.Server(config)
-
-    thread = threading.Thread(target=server.run, daemon=True)
-    thread.start()
-    time.sleep(1.5)  # Allow server to initialize
-    yield
-    server.should_exit = True
-
-
 @pytest.fixture
 def anyio_backend():
     return 'asyncio'
