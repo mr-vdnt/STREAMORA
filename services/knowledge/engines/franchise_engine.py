@@ -1,55 +1,53 @@
-from __future__ import annotations
-import re
-from typing import Any, Dict, List
-from services.knowledge.contracts import BaseInferenceEngine
-from services.knowledge.dtos import KnowledgeFactDTO, KnowledgeRelationshipDTO
-from services.knowledge.taxonomy import FactCategory, Predicate, SourceWeight
+"""
+Franchise & Canonical Universe Engine for Streamora KIP.
 
-class FranchiseEngine(BaseInferenceEngine):
-    """
-    Detects franchise universe clusters, sequel/prequel relationships, and timeline ordering.
-    """
+Maps relationships between content entities:
+- Sequel / Prequel
+- Shared Canonical Universe
+- Thematic Twin
+"""
+from typing import Dict, List, Optional
+from services.knowledge.dtos import KnowledgeRelationshipDTO
 
-    KNOWN_FRANCHISES = {
-        "spider-man": "Spider-Man Universe",
-        "batman": "Batman Universe",
-        "star wars": "Star Wars Universe",
-        "avengers": "Marvel Cinematic Universe",
-        "harry potter": "Wizarding World",
-        "lord of the rings": "Middle-earth Universe",
-        "matrix": "The Matrix Universe"
+
+class FranchiseEngine:
+    """Manages franchise boundaries and universe graph relationships."""
+
+    UNIVERSE_CLUSTERS = {
+        "mcu": ["Iron Man", "Avengers", "Thor", "Captain America", "Spider-Man", "Doctor Strange", "Guardians of the Galaxy"],
+        "dc": ["Batman", "Superman", "Justice League", "Wonder Woman", "The Dark Knight"],
+        "star_wars": ["Star Wars", "The Empire Strikes Back", "Return of the Jedi", "The Mandalorian"],
+        "nolan_sci_fi": ["Inception", "Interstellar", "Tenet"]
     }
 
-    @property
-    def engine_name(self) -> str:
-        return "FranchiseEngine"
+    def detect_relationships(self, source_content_id: int, source_title: str, catalog: List[Dict]) -> List[KnowledgeRelationshipDTO]:
+        relationships: List[KnowledgeRelationshipDTO] = []
+        source_title_lower = source_title.lower()
 
-    @property
-    def model_version(self) -> str:
-        return "1.0.0"
+        for item in catalog:
+            target_id = item["id"]
+            if target_id == source_content_id:
+                continue
 
-    async def infer(
-        self, 
-        content_id: int, 
-        content_data: Dict[str, Any], 
-        existing_facts: List[KnowledgeFactDTO]
-    ) -> List[KnowledgeFactDTO]:
-        produced: List[KnowledgeFactDTO] = []
-        title = str(content_data.get("title") or "").lower()
-        overview = str(content_data.get("overview") or "").lower()
+            target_title = item["title"]
+            target_title_lower = target_title.lower()
 
-        for kw, franchise_name in self.KNOWN_FRANCHISES.items():
-            if kw in title or kw in overview:
-                produced.append(KnowledgeFactDTO(
-                    content_id=content_id,
-                    category=FactCategory.SETTING.value,
-                    predicate=Predicate.LOCATED_IN,
-                    value=f"franchise-{franchise_name.lower().replace(' ', '-')}",
-                    confidence=0.95,
-                    source_weight=SourceWeight.NLP_EXTRACTOR.value,
-                    source_provider=self.engine_name,
-                    inference_model="franchise_cluster_v1",
-                    model_version=self.model_version
-                ))
+            # Check Universe Clusters
+            for cluster_name, titles in self.UNIVERSE_CLUSTERS.items():
+                in_source = any(t.lower() in source_title_lower for t in titles)
+                in_target = any(t.lower() in target_title_lower for t in titles)
 
-        return produced
+                if in_source and in_target:
+                    rel_type = "shared_universe"
+                    if (" 2" in target_title or " 3" in target_title or "returns" in target_title_lower) and source_title_lower in target_title_lower:
+                        rel_type = "sequel"
+                    
+                    relationships.append(KnowledgeRelationshipDTO(
+                        source_content_id=source_content_id,
+                        target_content_id=target_id,
+                        relationship_type=rel_type,
+                        strength=0.95,
+                        provenance=f"franchise_cluster:{cluster_name}"
+                    ))
+
+        return relationships
