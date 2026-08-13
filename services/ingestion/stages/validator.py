@@ -65,12 +65,14 @@ class ValidatorStage(PipelineStage):
 
         # --- Required Fields ---
         title = data.get("title") or data.get("name")
+        if not title and isinstance(data.get("titleText"), dict):
+            title = data["titleText"].get("text")
         if not title:
             errors.append("Missing required field: title/name")
 
-        external_id = data.get("id") or data.get("tmdb_id")
+        external_id = data.get("id") or data.get("canonicalId") or data.get("tmdb_id")
         if not external_id:
-            errors.append("Missing required field: id/tmdb_id")
+            errors.append("Missing required field: id/canonicalId/tmdb_id")
 
         # --- Data Type Assertions ---
         rating = data.get("vote_average") or data.get("rating")

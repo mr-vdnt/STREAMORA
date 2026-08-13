@@ -62,7 +62,7 @@ class SeasonDTO:
 
 
 class IngestionState(Enum):
-    """Explicit 10-state lifecycle for DAP content processing."""
+    """Explicit 9 progressive states + 5 failure states lifecycle for DAP content processing."""
     DISCOVERED = "DISCOVERED"
     IDENTITY_RESOLVED = "IDENTITY_RESOLVED"
     CANONICAL_ENRICHMENT_PENDING = "CANONICAL_ENRICHMENT_PENDING"
