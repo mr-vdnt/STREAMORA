@@ -7,6 +7,7 @@ Features:
 - Enforces 80/20 Exploitation vs Exploration split for serendipity.
 - Attaches explicit, human-readable rationale nodes to output items.
 """
+import math
 import random
 from typing import Dict, List, Any
 from services.recommendation.fusion.candidate_generators import (
@@ -76,7 +77,7 @@ class CandidateFusionEngine:
                 fused_map[cid]["signals"].append(cand["signal"])
                 fused_map[cid]["base_score"] += cand["signal"]["strength"] * 0.5
 
-        # 2. Score candidates against User Preference Vector
+        # 2. Score candidates against User Preference Vector & attach single-pass features
         scored_candidates = []
         for cid, candidate in fused_map.items():
             item = candidate["item"]
@@ -84,32 +85,54 @@ class CandidateFusionEngine:
             
             # User preference affinity score
             pref_score = sum(user_preference_vector.get(g, 0.50) for g in genres) / max(1, len(genres))
+            base_score = candidate["base_score"]
+            relevance_score = (base_score * 0.60) + (pref_score * 0.40)
             
-            final_score = (candidate["base_score"] * 0.60) + (pref_score * 0.40)
-            
-            # Primary signal description as rationale node
+            # Single-pass traceability metadata
             primary_rationale = candidate["signals"][0]["description"]
+            sources = list({s["type"] for s in candidate["signals"]})
             
             item_copy = item.copy()
+            item_copy["relevance_score"] = round(relevance_score, 4)
             item_copy["rationale"] = primary_rationale
             item_copy["fusion_signals"] = candidate["signals"]
-            item_copy["rank_score"] = round(final_score, 4)
+            item_copy["candidate_sources"] = sources
+            item_copy["rank_score"] = round(relevance_score, 4)
             
             scored_candidates.append(item_copy)
 
-        # 3. Sort candidates by final score (Exploitation)
-        scored_candidates.sort(key=lambda x: x["rank_score"], reverse=True)
+        # 3. Apply Calibrated Maximal Marginal Relevance (MMR) Diversification
+        # score(i) = lambda * relevance(i) + (1 - lambda) * novelty(i) - diversity_penalty(i, selected)
+        mmr_lambda = 0.75
+        final_slate: List[Dict[str, Any]] = []
+        unselected = scored_candidates.copy()
 
-        # 4. Enforce 80/20 Exploitation vs Exploration Split
-        exploitation_count = max(1, int(top_k * 0.80)) if top_k > 1 else top_k
-        exploration_count = top_k - exploitation_count
+        while unselected and len(final_slate) < top_k:
+            best_item = None
+            best_mmr_score = -999.0
 
-        final_slate = scored_candidates[:exploitation_count]
-        remaining = scored_candidates[exploitation_count:]
+            for cand in unselected:
+                rel = cand["relevance_score"]
+                pop = cand.get("popularity", 10.0)
+                novelty = 1.0 / (1.0 + math.log1p(max(0.1, pop)))
+                
+                # Diversity penalty relative to already selected slate items
+                cand_genres = set(g.lower() for g in cand.get("genres", []))
+                overlap_penalty = 0.0
+                if final_slate:
+                    selected_genres = set().union(*[set(g.lower() for g in s.get("genres", [])) for s in final_slate])
+                    overlap_cnt = len(cand_genres.intersection(selected_genres))
+                    overlap_penalty = 0.15 * overlap_cnt
 
-        if remaining:
-            exploration_items = random.sample(remaining, min(exploration_count, len(remaining)))
-            final_slate.extend(exploration_items)
+                mmr_score = (mmr_lambda * rel) + ((1.0 - mmr_lambda) * novelty) - overlap_penalty
+                if mmr_score > best_mmr_score:
+                    best_mmr_score = mmr_score
+                    best_item = cand
+
+            if best_item:
+                best_item["mmr_score"] = round(best_mmr_score, 4)
+                final_slate.append(best_item)
+                unselected.remove(best_item)
 
         # Fallback if catalog candidates are low: fill with remaining catalog items
         if len(final_slate) < top_k:
