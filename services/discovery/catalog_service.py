@@ -5,7 +5,7 @@ from typing import Optional, List, Dict, Any
 
 # Ensure CatalogRepository can be imported
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-from services.repository.catalog_db import CatalogRepository
+from services.repository.movie_repository import MovieRepository
 
 class DiscoveryQuery(BaseModel):
     genre: Optional[str] = None
@@ -18,7 +18,7 @@ class DiscoveryQuery(BaseModel):
 
 class CatalogService:
     def __init__(self):
-        self.repo = CatalogRepository()
+        self.repo = MovieRepository()
         
         # Simple cache for discovery responses
         self._cache = {}

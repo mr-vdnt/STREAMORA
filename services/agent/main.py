@@ -290,24 +290,23 @@ def autocomplete(request: Request, q: str, current_user: dict = Depends(get_opti
     if len(q) < 2:
         return []
     try:
-        repo = MovieRepository()
-        movies_db = repo.get_all()
-        q_lower = q.lower()
-        results = []
-        for iid, row in movies_db.items():
-            if q_lower in str(row.get("title", "")).lower():
-                results.append({
-                    "item_id": iid,
-                    "title": str(row.get("title", "")),
-                    "poster_url": str(row.get("poster_url", "")),
-                    "content_type": str(row.get("content_type", "movie")),
-                    "genres": str(row.get("genres", "")).split("|")[:2],
-                    "rating": float(row.get("rating", 7.0)),
-                    "director": str(row.get("director", ""))
-                })
-                if len(results) >= 6:
-                    break
-        return results
+        from services.repository.catalog_db import CatalogRepository, Content, ContentMetadata, ContentArtwork
+        repo = CatalogRepository()
+        with repo.get_session() as session:
+            rows = session.query(Content.id, ContentMetadata.title, ContentArtwork.poster_url)\
+                .join(ContentMetadata, Content.id == ContentMetadata.content_id)\
+                .outerjoin(ContentArtwork, Content.id == ContentArtwork.content_id)\
+                .filter(ContentMetadata.title.ilike(f"%{q}%"), Content.is_deleted == False)\
+                .limit(6).all()
+            return [
+                {
+                    "item_id": r.id,
+                    "title": r.title,
+                    "poster_url": r.poster_url or "",
+                    "content_type": "movie"
+                }
+                for r in rows
+            ]
     except Exception as e:
         print("Autocomplete error:", e)
     return []
