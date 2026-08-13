@@ -98,8 +98,11 @@ import time
 @v2_router.get("/home")
 async def get_home_v2(request: Request, response: Response, format: str = "all", current_user: dict = Depends(get_optional_user)):
     start_time = time.time()
-    user_id = current_user["id"] if (current_user and isinstance(current_user, dict) and "id" in current_user) else None
-    payload = get_home_service().get_home_payload(format=format, user_id=user_id)
+    user_id = str(current_user["id"]) if (current_user and isinstance(current_user, dict) and "id" in current_user) else "demo_user"
+    
+    from services.recommendation.precomputation_worker import PrecomputationWorker
+    worker = PrecomputationWorker(repo=CatalogRepository())
+    payload = worker.get_precomputed_home_slate(user_id, format) or worker.precompute_user_home_slate(user_id, format)
     
     sections = payload.get("sections", [])
     trending_items = sections[0].get("items", []) if len(sections) > 0 else []
@@ -110,7 +113,7 @@ async def get_home_v2(request: Request, response: Response, format: str = "all",
     return {
         "generated_at": datetime.utcnow().isoformat() + "Z",
         "cache_age": 120,
-        "algorithm_version": "2.0",
+        "algorithm_version": "3.1-bounded",
         "hero": payload.get("hero", {}),
         "continue_watching": payload.get("continue_watching", []),
         "trending": trending_items,

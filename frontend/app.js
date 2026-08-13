@@ -1632,7 +1632,7 @@ async function loadHomePage() {
     window.shownItems = []; 
 
     const format = window.currentFormat || 'all';
-    const endpoint = `/api/v2/home?format=${format}`;
+    const endpoint = `/api/v3/home?format=${format}`;
 
     const removeSkeletons = () => {
         clearSkeletons();
@@ -1691,6 +1691,13 @@ async function loadHomePage() {
                 });
             } else {
                 renderErrorState("No content available right now.");
+            }
+        } else if (resp.status === 409) {
+            try {
+                await authFetch('/api/v3/auth/onboarding?categories=Action%20%26%20Adventure&categories=Sci-Fi%20%26%20Fantasy', { method: 'POST' });
+                return loadHomePage();
+            } catch (onboardErr) {
+                renderErrorState('Preference onboarding required.');
             }
         } else {
             renderErrorState(`Server returned HTTP ${resp.status}`);
