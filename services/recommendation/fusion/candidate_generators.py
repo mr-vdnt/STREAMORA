@@ -112,3 +112,49 @@ class CastCrewCandidateGenerator:
                     }
                 })
         return candidates
+
+
+class TrendingCandidateGenerator:
+    """Generates popular and trending candidate items."""
+
+    def generate(self, target_content: Dict[str, Any], catalog: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        candidates = []
+        for item in catalog:
+            if item["id"] == target_content.get("id"):
+                continue
+            pop = item.get("popularity", 0.0)
+            if pop >= 5.0:
+                candidates.append({
+                    "content_id": item["id"],
+                    "item": item,
+                    "signal": {
+                        "type": "trending_popularity",
+                        "strength": min(1.0, pop / 100.0 + 0.60),
+                        "description": "✓ Popular Across Community"
+                    }
+                })
+        return candidates
+
+
+class ContentCandidateGenerator:
+    """Generates direct content genre/tag match candidates."""
+
+    def generate(self, target_content: Dict[str, Any], catalog: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        candidates = []
+        target_genres = [g.lower() for g in target_content.get("genres", [])]
+
+        for item in catalog:
+            if item["id"] == target_content.get("id"):
+                continue
+            item_genres = [g.lower() for g in item.get("genres", [])]
+            if set(target_genres).intersection(set(item_genres)):
+                candidates.append({
+                    "content_id": item["id"],
+                    "item": item,
+                    "signal": {
+                        "type": "content_genre_match",
+                        "strength": 0.80,
+                        "description": "✓ Matching Favorite Genre"
+                    }
+                })
+        return candidates

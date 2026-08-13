@@ -13,32 +13,54 @@ from services.recommendation.fusion.candidate_generators import (
     FranchiseCandidateGenerator,
     UniverseCandidateGenerator,
     SemanticCandidateGenerator,
-    CastCrewCandidateGenerator
+    CastCrewCandidateGenerator,
+    TrendingCandidateGenerator,
+    ContentCandidateGenerator
 )
+from services.recommendation.collaborative_filtering import CollaborativeCandidateGenerator
 
 
 class CandidateFusionEngine:
-    """Fuses multi-signal candidates and applies weighted LTR ranking with exploration."""
+    """Fuses multi-signal candidates across 7 generators and applies weighted LTR ranking with exploration."""
 
     def __init__(self):
         self.franchise_gen = FranchiseCandidateGenerator()
         self.universe_gen = UniverseCandidateGenerator()
         self.semantic_gen = SemanticCandidateGenerator()
         self.cast_crew_gen = CastCrewCandidateGenerator()
+        self.trending_gen = TrendingCandidateGenerator()
+        self.content_gen = ContentCandidateGenerator()
+        self.collaborative_gen = CollaborativeCandidateGenerator()
 
     def fuse_and_rank(
         self,
         target_content: Dict[str, Any],
         catalog: List[Dict[str, Any]],
         user_preference_vector: Dict[str, float],
-        top_k: int = 10
+        top_k: int = 10,
+        user_id: str = "guest_user"
     ) -> List[Dict[str, Any]]:
-        # 1. Collect candidates across all 4 generators
+        # 1. Collect candidates across all 7 generators
         raw_candidates = []
         raw_candidates.extend(self.franchise_gen.generate(target_content, catalog))
         raw_candidates.extend(self.universe_gen.generate(target_content, catalog))
         raw_candidates.extend(self.semantic_gen.generate(target_content, catalog))
         raw_candidates.extend(self.cast_crew_gen.generate(target_content, catalog))
+        raw_candidates.extend(self.trending_gen.generate(target_content, catalog))
+        raw_candidates.extend(self.content_gen.generate(target_content, catalog))
+        
+        # Collaborative filtering candidate generator
+        collab_items = self.collaborative_gen.generate(user_id, target_content, catalog)
+        for c in collab_items:
+            raw_candidates.append({
+                "content_id": c["candidate_id"],
+                "item": c["item"],
+                "signal": {
+                    "type": "collaborative_filtering",
+                    "strength": c["signals"][0]["strength"],
+                    "description": c["rationale_hint"]
+                }
+            })
 
         # Deduplicate candidates while collecting all signals
         fused_map: Dict[int, Dict[str, Any]] = {}
