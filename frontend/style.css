@@ -131,6 +131,16 @@ a:focus-visible,button:focus-visible,input:focus-visible{
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:3px}
 ::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.15)}
 
+.row-scroll, .streamora-cards, .modal-similar-row, .modal-cast-row {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+.row-scroll::-webkit-scrollbar, .streamora-cards::-webkit-scrollbar, .modal-similar-row::-webkit-scrollbar, .modal-cast-row::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
 /* ══════════════════════════════════════════════════════════════════════
    SIDEBAR
    ══════════════════════════════════════════════════════════════════════ */
